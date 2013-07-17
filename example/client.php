@@ -1,7 +1,6 @@
 <?php
 
 use Clue\Redis\React\Client;
-
 use Clue\Redis\React\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -15,11 +14,11 @@ $factory = new Factory($loop, $connector);
 $factory->createClient()->then(function (Client $client) {
     $client->incr('test');
 
-    $client->get('test')->then(function ($result) {
+    $client->get('test')->then(function ($result) use ($client) {
         var_dump($result);
-    });
 
-    $client->end();
+        $client->end();
+    });
 });
 
 $loop->run();
