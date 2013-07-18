@@ -50,7 +50,7 @@ class Client extends EventEmitter
 
         $deferred = new Deferred();
         $this->deferreds []= $deferred;
-        return $deferred;
+        return $deferred->promise();
     }
 
     public function handleReply($data)
