@@ -5,6 +5,7 @@ namespace Clue\Redis\React;
 use Evenement\EventEmitter;
 use React\Stream\Stream;
 use Clue\Redis\Protocol\ProtocolInterface;
+use Clue\Redis\Protocol\ParserException;
 use React\Promise\Deferred;
 
 class Client extends EventEmitter
@@ -16,7 +17,14 @@ class Client extends EventEmitter
     {
         $that = $this;
         $stream->on('data', function($chunk) use ($protocol, $that) {
-            $protocol->pushIncoming($chunk);
+            try {
+                $protocol->pushIncoming($chunk);
+            }
+            catch (ParserException $error) {
+                $that->emit('error', array($error));
+                $that->close();
+                return;
+            }
 
             while ($protocol->hasIncoming()) {
                 $that->emit('message', array($protocol->popIncoming(), $that));
