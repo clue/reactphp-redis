@@ -40,11 +40,6 @@ class Client extends EventEmitter
         return new Deferred();
     }
 
-    public function pipeline()
-    {
-        return new Pipeline($this);
-    }
-
     public function end()
     {
         $this->stream->end();
