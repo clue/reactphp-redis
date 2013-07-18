@@ -32,6 +32,7 @@ class Client extends EventEmitter
         });
         $stream->on('close', function () use ($that) {
             $that->close();
+            $that->emit('close');
         });
         $stream->resume();
         $this->stream = $stream;
