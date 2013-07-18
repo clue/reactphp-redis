@@ -8,6 +8,7 @@ use Clue\Redis\Protocol\ProtocolInterface;
 use Clue\Redis\Protocol\ParserException;
 use Clue\Redis\Protocol\ErrorReplyException;
 use React\Promise\Deferred;
+use UnderflowException;
 
 class Client extends EventEmitter
 {
@@ -29,7 +30,16 @@ class Client extends EventEmitter
             }
 
             while ($protocol->hasIncoming()) {
-                $that->handleReply($protocol->popIncoming());
+                $data = $protocol->popIncoming();
+
+                try {
+                    $that->handleReply($data);
+                }
+                catch (UnderflowException $error) {
+                    $that->emit('error', array($error));
+                    $that->close();
+                    return;
+                }
             }
         });
         $stream->on('close', function () use ($that) {
@@ -56,6 +66,10 @@ class Client extends EventEmitter
     public function handleReply($data)
     {
         $this->emit('message', array($data, $this));
+
+        if (!$this->deferreds) {
+            throw new UnderflowException('Unexpected reply received, no matching request found');
+        }
 
         $deferred = array_shift($this->deferreds);
         /* @var $deferred Deferred */
