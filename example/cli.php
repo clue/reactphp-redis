@@ -1,0 +1,64 @@
+<?php
+
+use Clue\Redis\Protocol\ErrorReplyException;
+
+use Clue\Redis\React\Client;
+use Clue\Redis\React\Factory;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$loop = React\EventLoop\Factory::create();
+$factory = new React\Dns\Resolver\Factory();
+$resolver = $factory->create('6.6.6.6', $loop);
+$connector = new React\SocketClient\Connector($loop, $resolver);
+$factory = new Factory($loop, $connector);
+
+echo '# connecting to redis...' . PHP_EOL;
+
+$factory->createClient()->then(function (Client $client) use ($loop) {
+    echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
+
+    $client->on('message', function ($data) {
+        if ($data instanceof ErrorReplyException) {
+            echo '# error reply: ' . $data->getMessage() . PHP_EOL;
+        } else {
+            echo '# reply: ' . json_encode($data) . PHP_EOL;
+        }
+    });
+
+    $loop->addReadStream(STDIN, function () use ($client, $loop) {
+        $line = fgets(STDIN);
+        if ($line === false || $line === '') {
+            echo '# CTRL-D -> Ending connection...' . PHP_EOL;
+            $client->end();
+        } else {
+            $line = rtrim($line);
+
+            if ($line === '') {
+
+            } else {
+                $params = explode(' ', $line);
+                $method = array_shift($params);
+                call_user_func_array(array($client, $method), $params);
+            }
+        }
+    });
+
+    $client->on('close', function() use ($loop) {
+        echo '## DISCONNECTED' . PHP_EOL;
+
+        $loop->removeReadStream(STDIN);
+    });
+
+    $client->on('error', function(Exception $error) {
+        echo '## ERROR: ' . $error->getMessage() . PHP_EOL;
+    });
+
+    //$client->end();
+}, function (Exception $error) {
+    echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
+    exit(1);
+});
+
+
+$loop->run();
