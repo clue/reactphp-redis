@@ -16,10 +16,10 @@ class Client extends EventEmitter
     {
         $that = $this;
         $stream->on('data', function($chunk) use ($protocol, $that) {
-            $protocol->pushIncomingChunk($chunk);
+            $protocol->pushIncoming($chunk);
 
-            while ($protocol->hasIncomingMessage()) {
-                $that->emit('message', array($protocol->popIncomingMessage(), $that));
+            while ($protocol->hasIncoming()) {
+                $that->emit('message', array($protocol->popIncoming(), $that));
             }
         });
         $stream->on('close', function () use ($that) {
