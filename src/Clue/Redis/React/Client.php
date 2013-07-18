@@ -6,12 +6,14 @@ use Evenement\EventEmitter;
 use React\Stream\Stream;
 use Clue\Redis\Protocol\ProtocolInterface;
 use Clue\Redis\Protocol\ParserException;
+use Clue\Redis\Protocol\ErrorReplyException;
 use React\Promise\Deferred;
 
 class Client extends EventEmitter
 {
     private $stream;
     private $protocol;
+    private $deferreds = array();
 
     public function __construct(Stream $stream, ProtocolInterface $protocol)
     {
@@ -27,7 +29,7 @@ class Client extends EventEmitter
             }
 
             while ($protocol->hasIncoming()) {
-                $that->emit('message', array($protocol->popIncoming(), $that));
+                $that->handleReply($protocol->popIncoming());
             }
         });
         $stream->on('close', function () use ($that) {
@@ -46,7 +48,23 @@ class Client extends EventEmitter
 
         $this->stream->write($this->protocol->createMessage($args));
 
-        return new Deferred();
+        $deferred = new Deferred();
+        $this->deferreds []= $deferred;
+        return $deferred;
+    }
+
+    public function handleReply($data)
+    {
+        $this->emit('message', array($data, $this));
+
+        $deferred = array_shift($this->deferreds);
+        /* @var $deferred Deferred */
+
+        if ($data instanceof ErrorReplyException) {
+            $deferred->reject($data);
+        } else {
+            $deferred->resolve($data);
+        }
     }
 
     public function end()
