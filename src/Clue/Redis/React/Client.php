@@ -8,7 +8,9 @@ use Clue\Redis\Protocol\ProtocolInterface;
 use Clue\Redis\Protocol\ParserException;
 use Clue\Redis\Protocol\ErrorReplyException;
 use React\Promise\Deferred;
+use React\Promise\When;
 use UnderflowException;
+use RuntimeException;
 
 class Client extends EventEmitter
 {
@@ -54,6 +56,10 @@ class Client extends EventEmitter
 
     public function __call($name, $args)
     {
+        if ($this->ending) {
+            return When::reject(new RuntimeException('Connection closed'));
+        }
+
         /* Build the Redis unified protocol command */
         array_unshift($args, strtoupper($name));
 
@@ -108,6 +114,8 @@ class Client extends EventEmitter
 
     public function close()
     {
+        $this->ending = true;
+
         $this->stream->close();
     }
 }
