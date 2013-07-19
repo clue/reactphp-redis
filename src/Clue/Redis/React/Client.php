@@ -117,5 +117,12 @@ class Client extends EventEmitter
         $this->ending = true;
 
         $this->stream->close();
+
+        // reject all remaining deferreds in the queue
+        while($this->deferreds) {
+            $deferred = array_shift($this->deferreds);
+            /* @var $deferred Deferred */
+            $deferred->reject(new RuntimeException('Connection closing'));
+        }
     }
 }
