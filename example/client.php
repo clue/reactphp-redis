@@ -14,11 +14,11 @@ $factory = new Factory($loop, $connector);
 $factory->createClient()->then(function (Client $client) {
     $client->incr('test');
 
-    $client->get('test')->then(function ($result) use ($client) {
+    $client->get('test')->then(function ($result) {
         var_dump($result);
-
-        $client->end();
     });
+
+    $client->end();
 });
 
 $loop->run();
