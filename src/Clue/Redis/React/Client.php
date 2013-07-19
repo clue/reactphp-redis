@@ -7,6 +7,7 @@ use React\Stream\Stream;
 use Clue\Redis\Protocol\ProtocolInterface;
 use Clue\Redis\Protocol\ParserException;
 use Clue\Redis\Protocol\ErrorReplyException;
+use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\Promise\Deferred;
 use React\Promise\When;
 use UnderflowException;
@@ -19,8 +20,12 @@ class Client extends EventEmitter
     private $deferreds = array();
     private $ending = false;
 
-    public function __construct(Stream $stream, ProtocolInterface $protocol)
+    public function __construct(Stream $stream, ProtocolInterface $protocol = null)
     {
+        if ($protocol === null) {
+            $protocol = ProtocolFactory::create();
+        }
+
         $that = $this;
         $stream->on('data', function($chunk) use ($protocol, $that) {
             try {
