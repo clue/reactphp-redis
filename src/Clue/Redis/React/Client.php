@@ -15,6 +15,7 @@ class Client extends EventEmitter
     private $stream;
     private $protocol;
     private $deferreds = array();
+    private $ending = false;
 
     public function __construct(Stream $stream, ProtocolInterface $protocol)
     {
@@ -79,11 +80,30 @@ class Client extends EventEmitter
         } else {
             $deferred->resolve($data);
         }
+
+        if ($this->ending && !$this->isBusy()) {
+            $this->close();
+        }
     }
 
+    public function isBusy()
+    {
+        return !!$this->deferreds;
+    }
+
+    /**
+     * end connection once all pending requests have been replied to
+     *
+     * @uses self::close() once all replies have been received
+     * @see self::close() for closing the connection immediately
+     */
     public function end()
     {
-        $this->stream->end();
+        $this->ending = true;
+
+        if (!$this->isBusy()) {
+            $this->close();
+        }
     }
 
     public function close()
