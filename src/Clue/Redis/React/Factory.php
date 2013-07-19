@@ -3,22 +3,22 @@
 namespace Clue\Redis\React;
 
 use React\Socket\Server as ServerSocket;
-use Clue\Redis\Protocol\ErrorReplyException;
 use React\Promise\When;
 use React\EventLoop\LoopInterface;
 use React\SocketClient\ConnectorInterface;
-use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\Stream\Stream;
 use Clue\Redis\React\Client;
-use InvalidArgumentException;
 use Clue\Redis\React\Server;
+use Clue\Redis\Protocol\Factory as ProtocolFactory;
+use InvalidArgumentException;
+use BadMethodCallException;
 
 class Factory
 {
     private $loop;
     private $connector;
 
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector)
+    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null)
     {
         $this->loop = $loop;
         $this->connector = $connector;
@@ -82,6 +82,10 @@ class Factory
         $parts = parse_url($target);
         if ($parts === false || !isset($parts['host']) || !isset($parts['port'])) {
             return When::reject(new InvalidArgumentException('Invalid target host given'));
+        }
+
+        if ($this->connector === null) {
+            return When::reject(new BadMethodCallException('No Connector instance given in Factory constructor'));
         }
 
         return $this->connector->create($parts['host'], $parts['port']);
