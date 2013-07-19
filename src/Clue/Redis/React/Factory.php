@@ -55,6 +55,19 @@ class Factory
         });
     }
 
+    public function createServer($address)
+    {
+        $parts = parse_url($address);
+        if ($parts === false || !isset($parts['host']) || !isset($parts['port'])) {
+            return When::reject(new InvalidArgumentException('Invalid server address given'));
+        }
+
+        $socket = new ServerSocket($this->loop);
+        $socket->listen($parts['port'], $parts['host']);
+
+        return When::resolve(new Server($socket, $this->loop));
+    }
+
     public function createProtocol()
     {
         return ProtocolFactory::create();
