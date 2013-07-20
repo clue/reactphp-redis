@@ -7,9 +7,18 @@ class TestCase extends PHPUnit_Framework_TestCase
     protected function expectCallableOnce()
     {
         $mock = $this->createCallableMock();
-        $mock
-            ->expects($this->once())
-            ->method('__invoke');
+
+
+        if (func_num_args() > 0) {
+            $mock
+                ->expects($this->once())
+                ->method('__invoke')
+                ->with($this->equalTo(func_get_arg(0)));
+        } else {
+            $mock
+                ->expects($this->once())
+                ->method('__invoke');
+        }
 
         return $mock;
     }
