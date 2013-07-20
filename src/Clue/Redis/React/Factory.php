@@ -12,6 +12,7 @@ use Clue\Redis\React\Server;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use InvalidArgumentException;
 use BadMethodCallException;
+use Exception;
 
 class Factory
 {
@@ -63,7 +64,12 @@ class Factory
         }
 
         $socket = new ServerSocket($this->loop);
-        $socket->listen($parts['port'], $parts['host']);
+        try {
+            $socket->listen($parts['port'], $parts['host']);
+        }
+        catch (Exception $e) {
+            return When::reject($e);
+        }
 
         return When::resolve(new Server($socket, $this->loop));
     }
