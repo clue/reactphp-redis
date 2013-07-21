@@ -22,7 +22,7 @@
     "repositories": [
         {
             "type": "vcs",
-            "url": "file:///home/me/workspace/redis-protocol"
+            "url": "https://github.com/clue/redis-protocol"
         }
     ]
 }

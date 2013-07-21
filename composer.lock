@@ -3,15 +3,21 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "c71d4317ad9e0be646fff7f6ef14238e",
+    "hash": "30dca0b812bfa00ec9112f6610aa2dae",
     "packages": [
         {
             "name": "clue/redis-protocol",
             "version": "dev-master",
             "source": {
                 "type": "git",
-                "url": "/home/me/workspace/redis-protocol",
-                "reference": "d0604bde7c242156b03b1071684e01f90b92e978"
+                "url": "https://github.com/clue/redis-protocol.git",
+                "reference": "6f81fb6f553fd37cca5a247c84a2222e108643e1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/6f81fb6f553fd37cca5a247c84a2222e108643e1",
+                "reference": "6f81fb6f553fd37cca5a247c84a2222e108643e1",
+                "shasum": ""
             },
             "require": {
                 "php": ">=5.3"
@@ -41,7 +47,11 @@
                 "protocol",
                 "redis"
             ],
-            "time": "2013-07-05 16:57:15"
+            "support": {
+                "source": "https://github.com/clue/redis-protocol/tree/master",
+                "issues": "https://github.com/clue/redis-protocol/issues"
+            },
+            "time": "2013-07-09 15:22:44"
         },
         {
             "name": "evenement/evenement",
@@ -168,17 +178,17 @@
         },
         {
             "name": "react/event-loop",
-            "version": "v0.3.2",
+            "version": "v0.3.3",
             "target-dir": "React/EventLoop",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/event-loop.git",
-                "reference": "v0.3.2"
+                "reference": "v0.3.3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/event-loop/zipball/v0.3.2",
-                "reference": "v0.3.2",
+                "url": "https://api.github.com/repos/reactphp/event-loop/zipball/v0.3.3",
+                "reference": "v0.3.3",
                 "shasum": ""
             },
             "require": {
@@ -207,7 +217,7 @@
             "keywords": [
                 "event-loop"
             ],
-            "time": "2013-01-14 23:11:47"
+            "time": "2013-07-08 22:38:22"
         },
         {
             "name": "react/promise",
@@ -338,17 +348,17 @@
         },
         {
             "name": "react/stream",
-            "version": "v0.3.2",
+            "version": "v0.3.3",
             "target-dir": "React/Stream",
             "source": {
                 "type": "git",
                 "url": "https://github.com/reactphp/stream.git",
-                "reference": "v0.3.2"
+                "reference": "v0.3.3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/reactphp/stream/zipball/v0.3.2",
-                "reference": "v0.3.2",
+                "url": "https://api.github.com/repos/reactphp/stream/zipball/v0.3.3",
+                "reference": "v0.3.3",
                 "shasum": ""
             },
             "require": {
@@ -379,7 +389,7 @@
                 "pipe",
                 "stream"
             ],
-            "time": "2013-05-10 15:12:22"
+            "time": "2013-07-09 00:44:12"
         }
     ],
     "packages-dev": [
