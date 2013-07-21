@@ -8,7 +8,7 @@ use Clue\Redis\Protocol\ProtocolInterface;
 use Clue\Redis\Protocol\ParserException;
 use Clue\Redis\Protocol\ErrorReplyException;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use React\Promise\Deferred;
+use Clue\Redis\React\Request;
 use React\Promise\When;
 use UnderflowException;
 use RuntimeException;
@@ -17,7 +17,7 @@ class Client extends EventEmitter
 {
     private $stream;
     private $protocol;
-    private $deferreds = array();
+    private $requests = array();
     private $ending = false;
 
     public function __construct(Stream $stream, ProtocolInterface $protocol = null)
@@ -65,32 +65,31 @@ class Client extends EventEmitter
             return When::reject(new RuntimeException('Connection closed'));
         }
 
+        $name = strtoupper($name);
+
         /* Build the Redis unified protocol command */
-        array_unshift($args, strtoupper($name));
+        array_unshift($args, $name);
 
         $this->stream->write($this->protocol->createMessage($args));
 
-        $deferred = new Deferred();
-        $this->deferreds []= $deferred;
-        return $deferred->promise();
+        $request = new Request($name);
+        $this->requests []= $request;
+
+        return $request->promise();
     }
 
     public function handleReply($data)
     {
         $this->emit('message', array($data, $this));
 
-        if (!$this->deferreds) {
+        if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');
         }
 
-        $deferred = array_shift($this->deferreds);
-        /* @var $deferred Deferred */
+        $request = array_shift($this->requests);
+        /* @var $request Request */
 
-        if ($data instanceof ErrorReplyException) {
-            $deferred->reject($data);
-        } else {
-            $deferred->resolve($data);
-        }
+        $request->handleReply($data);
 
         if ($this->ending && !$this->isBusy()) {
             $this->close();
@@ -99,7 +98,7 @@ class Client extends EventEmitter
 
     public function isBusy()
     {
-        return !!$this->deferreds;
+        return !!$this->requests;
     }
 
     /**
@@ -123,11 +122,11 @@ class Client extends EventEmitter
 
         $this->stream->close();
 
-        // reject all remaining deferreds in the queue
-        while($this->deferreds) {
-            $deferred = array_shift($this->deferreds);
-            /* @var $deferred Deferred */
-            $deferred->reject(new RuntimeException('Connection closing'));
+        // reject all remaining requests in the queue
+        while($this->requests) {
+            $request = array_shift($this->requests);
+            /* @var $request Request */
+            $request->reject(new RuntimeException('Connection closing'));
         }
     }
 }
