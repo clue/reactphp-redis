@@ -3,27 +3,24 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "30dca0b812bfa00ec9112f6610aa2dae",
+    "hash": "a14c14bc71e5fccca8b5493154b2a086",
     "packages": [
         {
             "name": "clue/redis-protocol",
-            "version": "dev-master",
+            "version": "v0.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/clue/redis-protocol.git",
-                "reference": "6f81fb6f553fd37cca5a247c84a2222e108643e1"
+                "reference": "12722a774d64c661d016483c07a59e1c344b26aa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/6f81fb6f553fd37cca5a247c84a2222e108643e1",
-                "reference": "6f81fb6f553fd37cca5a247c84a2222e108643e1",
+                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/12722a774d64c661d016483c07a59e1c344b26aa",
+                "reference": "12722a774d64c661d016483c07a59e1c344b26aa",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.3"
-            },
-            "suggest": {
-                "ext-phpiredis": "Optionally use phpiredis extension (https://github.com/nrk/phpiredis) for improved protocol parser"
             },
             "type": "library",
             "autoload": {
@@ -31,6 +28,7 @@
                     "Clue\\Redis\\Protocol": "src"
                 }
             },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -47,11 +45,7 @@
                 "protocol",
                 "redis"
             ],
-            "support": {
-                "source": "https://github.com/clue/redis-protocol/tree/master",
-                "issues": "https://github.com/clue/redis-protocol/issues"
-            },
-            "time": "2013-07-09 15:22:44"
+            "time": "2013-09-09 22:22:49"
         },
         {
             "name": "evenement/evenement",
@@ -399,9 +393,9 @@
 
     ],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "clue/redis-protocol": 20
-    },
+    "stability-flags": [
+
+    ],
     "platform": [
 
     ],

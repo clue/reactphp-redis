@@ -14,15 +14,9 @@
         "react/promise": "~1",
         "react/socket-client": "0.3.*",
         "react/event-loop": "0.3.*",
-        "clue/redis-protocol": "dev-master"
+        "clue/redis-protocol": "0.1.*"
     },
     "autoload": {
         "psr-0": { "Clue\\Redis\\React": "src" }
-    },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/clue/redis-protocol"
-        }
-    ]
+    }
 }
