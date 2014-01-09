@@ -164,12 +164,20 @@ class ClientTest extends TestCase
     protected function createClient()
     {
         $client = null;
+        $exception = null;
+
         self::$factory->createClient()->then(function ($c) use (&$client) {
             $client = $c;
+        }, function($error) use (&$exception) {
+            $exception = $error;
         });
 
-        while ($client === null) {
+        while ($client === null && $exception === null) {
             self::$loop->tick();
+        }
+
+        if ($exception !== null) {
+            throw $exception;
         }
 
         return $client;
