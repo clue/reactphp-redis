@@ -56,6 +56,11 @@ class TestCase extends PHPUnit_Framework_TestCase
     {
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
 
+        $that = $this;
+        $promise->then(null, function($error) use ($that) {
+            $that->assertNull($error);
+            $that->fail('promise rejected');
+        });
         $promise->then($this->expectCallableOnce(), $this->expectCallableNever());
 
         return $promise;
@@ -64,6 +69,12 @@ class TestCase extends PHPUnit_Framework_TestCase
     protected function expectPromiseReject($promise)
     {
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+
+        $that = $this;
+        $promise->then(function($value) use ($that) {
+            $that->assertNull($value);
+            $that->fail('promise resolved');
+        });
 
         $promise->then($this->expectCallableNever(), $this->expectCallableOnce());
 
