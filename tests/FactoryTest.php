@@ -118,9 +118,9 @@ class FactoryTest extends TestCase
 
         $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
 
-        $this->loop->tick();
-        $this->loop->tick();
-        $this->loop->tick();
+        for ($i = 0; $i < 6; ++$i) {
+            $this->loop->tick();
+        }
     }
 
     public function testServerAddressInvalidFail()
