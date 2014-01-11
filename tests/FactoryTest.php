@@ -12,7 +12,7 @@ class FactoryTest extends TestCase
 {
     public function setUp()
     {
-        $this->loop = React\EventLoop\Factory::create();
+        $this->loop = new React\EventLoop\StreamSelectLoop();
         $factory = new React\Dns\Resolver\Factory();
         $resolver = $factory->create('6.6.6.6', $this->loop);
         $connector = new React\SocketClient\Connector($this->loop, $resolver);
@@ -119,15 +119,18 @@ class FactoryTest extends TestCase
             // we expect the client to close the connection once he receives an ERR messages.
             $connection->on('close', $once);
 
-            // close the server once the client is disconnected, nobody else will connect anyway.
-            // also, this closing the last remaining stream will end the loop.
-            $connection->on('close', array($server, 'close'));
+            // end the loop (stop ticking)
+            $connection->on('close', function() use (&$done) {
+                $done = true;
+            });
         });
 
         // we expect the factory to fail because of the ERR message.
         $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
 
-        $this->loop->run();
+        while (!$done) {
+            $this->loop->tick();
+        }
     }
 
     public function testServerAddressInvalidFail()
