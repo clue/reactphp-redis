@@ -93,14 +93,14 @@ class ClientTest extends TestCase
      * @param Client $client
      * @depends testMultiExecEmpty
      */
-    public function testMultiExecInnerResolveOnExec(Client $client)
+    public function testMultiExecQueuedExecHasValues(Client $client)
     {
         $client->multi()->then($this->expectCallableOnce('OK'));
-        $client->set('b', 10)->then($this->expectCallableOnce('OK'));
-        $client->expire('b', 20)->then($this->expectCallableOnce('OK'));
-        $client->incrBy('b', 2)->then($this->expectCallableOnce(12));
-        $client->ttl('b')->then($this->expectCallableOnce(20));
-        $client->exec()->then($this->expectCallableOnce(array('OK', 'OK', 12, 20)));
+        $client->set('b', 10)->then($this->expectCallableOnce('QUEUED'));
+        $client->expire('b', 20)->then($this->expectCallableOnce('QUEUED'));
+        $client->incrBy('b', 2)->then($this->expectCallableOnce('QUEUED'));
+        $client->ttl('b')->then($this->expectCallableOnce('QUEUED'));
+        $client->exec()->then($this->expectCallableOnce(array('OK', 1, 12, 20)));
 
         $this->waitFor($client);
 
