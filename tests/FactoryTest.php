@@ -20,6 +20,14 @@ class FactoryTest extends TestCase
         $this->factory = new Factory($this->loop, $connector);
     }
 
+    public function testPrequisiteServerAcceptsAnyPassword()
+    {
+        $this->markTestSkipped();
+    }
+
+    /**
+     * @depends testPrequisiteServerAcceptsAnyPassword
+     */
     public function testClientDefaultSuccess()
     {
         $promise = $this->factory->createClient();
@@ -31,6 +39,9 @@ class FactoryTest extends TestCase
         $this->loop->run();
     }
 
+    /**
+     * @depends testPrequisiteServerAcceptsAnyPassword
+     */
     public function testClientAuthSelect()
     {
         $promise = $this->factory->createClient('tcp://authenticationpassword@127.0.0.1:6379/0');
@@ -42,6 +53,9 @@ class FactoryTest extends TestCase
         $this->loop->run();
     }
 
+    /**
+     * @depends testPrequisiteServerAcceptsAnyPassword
+     */
     public function testClientAuthenticationContainsColons()
     {
         $promise = $this->factory->createClient('tcp://authentication:can:contain:colons@127.0.0.1:6379');
