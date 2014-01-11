@@ -102,25 +102,32 @@ class FactoryTest extends TestCase
     public function testPairAuthRejectDisconnects()
     {
         $server = null;
+        $done = false;
 
+        // start a server that only sends ERR messages.
         $this->factory->createServer('tcp://localhost:1337')->then(function (Server $s) use (&$server) {
             $server = $s;
         });
 
         $this->assertNotNull($server);
 
+        // we expect a single single client
         $server->on('connection', $this->expectCallableOnce());
 
         $once = $this->expectCallableOnce();
-        $server->on('connection', function(ConnectionInterface $connection) use ($once) {
+        $server->on('connection', function(ConnectionInterface $connection) use ($once, &$done, $server) {
+            // we expect the client to close the connection once he receives an ERR messages.
             $connection->on('close', $once);
+
+            // close the server once the client is disconnected, nobody else will connect anyway.
+            // also, this closing the last remaining stream will end the loop.
+            $connection->on('close', array($server, 'close'));
         });
 
+        // we expect the factory to fail because of the ERR message.
         $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
 
-        for ($i = 0; $i < 6; ++$i) {
-            $this->loop->tick();
-        }
+        $this->loop->run();
     }
 
     public function testServerAddressInvalidFail()
