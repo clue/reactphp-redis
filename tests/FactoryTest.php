@@ -106,7 +106,7 @@ class FactoryTest extends TestCase
 
         // start a server that only sends ERR messages.
         $this->factory->createServer('tcp://localhost:1337')->then(function (Server $s) use (&$server) {
-            echo '1. server: created' . PHP_EOL;
+            fwrite(STDOUT, '1. server: created' . PHP_EOL);
             $server = $s;
         });
 
@@ -120,27 +120,25 @@ class FactoryTest extends TestCase
             // we expect the client to close the connection once he receives an ERR messages.
             $connection->on('close', $once);
 
-            echo '2. server: incomming connection' . PHP_EOL;
+            fwrite(STDOUT, '2. server: incomming connection' . PHP_EOL);
 
             // end the loop (stop ticking)
-            $connection->on('close', function() use (&$done) {
-                echo '4. server: connection closed' . PHP_EOL;
+            $connection->on('close', function() use (&$done, $server) {
+                fwrite(STDOUT, '4. server: connection closed' . PHP_EOL);
                 $done = true;
+                $server->close();
             });
         });
 
         // we expect the factory to fail because of the ERR message.
         $promise = $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
         $promise->then(null, function() {
-            echo '3. client: creating failed' . PHP_EOL;
+            fwrite(STDOUT, '3. client: creating failed' . PHP_EOL);
         });
 
-        while (!$done) {
-            echo 'X';
-            $this->loop->tick();
-        }
+        $this->loop->run();
 
-        echo '5. done' . PHP_EOL;
+        fwrite(STDOUT, '5. done' . PHP_EOL);
     }
 
     public function testServerAddressInvalidFail()
