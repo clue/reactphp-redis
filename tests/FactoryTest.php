@@ -102,21 +102,12 @@ class FactoryTest extends TestCase
     public function testPairAuthRejectDisconnects()
     {
         $server = null;
-        $done = false;
 
         $address = '127.0.0.1:1337';
 
         // start a server that only sends ERR messages.
         $this->factory->createServer('tcp://' . $address)->then(function (Server $s) use (&$server) {
-            fwrite(STDOUT, '1. server: created' . PHP_EOL);
             $server = $s;
-
-            fwrite(STDOUT, stream_socket_get_name($server->socket->master, false) . PHP_EOL);
-
-            ob_start();
-            var_dump($server);
-            $r = ob_get_clean();
-            fwrite(STDOUT, $r . PHP_EOL);
         });
 
         $this->assertNotNull($server);
@@ -125,29 +116,20 @@ class FactoryTest extends TestCase
         $server->on('connection', $this->expectCallableOnce());
 
         $once = $this->expectCallableOnce();
-        $server->on('connection', function(ConnectionInterface $connection) use ($once, &$done, $server) {
+        $server->on('connection', function(ConnectionInterface $connection) use ($once, $server) {
             // we expect the client to close the connection once he receives an ERR messages.
             $connection->on('close', $once);
 
-            fwrite(STDOUT, '2. server: incomming connection' . PHP_EOL);
-
             // end the loop (stop ticking)
-            $connection->on('close', function() use (&$done, $server) {
-                fwrite(STDOUT, '4. server: connection closed' . PHP_EOL);
-                $done = true;
+            $connection->on('close', function() use ($server) {
                 $server->close();
             });
         });
 
         // we expect the factory to fail because of the ERR message.
-        $promise = $this->expectPromiseReject($this->factory->createClient('tcp://auth@' . $address));
-        $promise->then(null, function() {
-            fwrite(STDOUT, '3. client: creating failed' . PHP_EOL);
-        });
+        $this->expectPromiseReject($this->factory->createClient('tcp://auth@' . $address));
 
         $this->loop->run();
-
-        fwrite(STDOUT, '5. done' . PHP_EOL);
     }
 
     public function testServerAddressInvalidFail()
