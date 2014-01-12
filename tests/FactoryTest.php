@@ -12,7 +12,7 @@ class FactoryTest extends TestCase
 {
     public function setUp()
     {
-        $this->loop = React\EventLoop\Factory::create();
+        $this->loop = new React\EventLoop\StreamSelectLoop();
         $factory = new React\Dns\Resolver\Factory();
         $resolver = $factory->create('6.6.6.6', $this->loop);
         $connector = new React\SocketClient\Connector($this->loop, $resolver);
@@ -102,10 +102,11 @@ class FactoryTest extends TestCase
     public function testPairAuthRejectDisconnects()
     {
         $server = null;
-        $done = false;
+
+        $address = '127.0.0.1:1337';
 
         // start a server that only sends ERR messages.
-        $this->factory->createServer('tcp://localhost:1337')->then(function (Server $s) use (&$server) {
+        $this->factory->createServer('tcp://' . $address)->then(function (Server $s) use (&$server) {
             $server = $s;
         });
 
@@ -115,17 +116,18 @@ class FactoryTest extends TestCase
         $server->on('connection', $this->expectCallableOnce());
 
         $once = $this->expectCallableOnce();
-        $server->on('connection', function(ConnectionInterface $connection) use ($once, &$done, $server) {
+        $server->on('connection', function(ConnectionInterface $connection) use ($once, $server) {
             // we expect the client to close the connection once he receives an ERR messages.
             $connection->on('close', $once);
 
-            // close the server once the client is disconnected, nobody else will connect anyway.
-            // also, this closing the last remaining stream will end the loop.
-            $connection->on('close', array($server, 'close'));
+            // end the loop (stop ticking)
+            $connection->on('close', function() use ($server) {
+                $server->close();
+            });
         });
 
         // we expect the factory to fail because of the ERR message.
-        $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
+        $this->expectPromiseReject($this->factory->createClient('tcp://auth@' . $address));
 
         $this->loop->run();
     }
