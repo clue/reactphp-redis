@@ -78,7 +78,7 @@ class FactoryTest extends TestCase
 
     public function testClientInvalidAddress()
     {
-        $promise = $this->factory->createClient('invalid target');
+        $promise = $this->factory->createClient('http://invalid target');
 
         $this->expectPromiseReject($promise);
     }

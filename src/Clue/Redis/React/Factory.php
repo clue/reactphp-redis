@@ -58,10 +58,7 @@ class Factory
 
     public function createServer($address)
     {
-        $parts = parse_url($address);
-        if ($parts === false || !isset($parts['host']) || !isset($parts['port'])) {
-            return When::reject(new InvalidArgumentException('Invalid server address given'));
-        }
+        $parts = $this->parseUrl($address);
 
         $socket = new ServerSocket($this->loop);
         try {
@@ -79,15 +76,38 @@ class Factory
         return ProtocolFactory::create();
     }
 
-    private function connect($target)
+    private function parseUrl($target)
     {
         if ($target === null) {
-            $target = 'tcp://127.0.0.1:6379';
+            $target = 'tcp://127.0.0.1';
+        }
+        if (strpos($target, '://') === false) {
+            $target = 'tcp://' . $target;
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['host']) || !isset($parts['port'])) {
-            return When::reject(new InvalidArgumentException('Invalid target host given'));
+        if ($parts === false || !isset($parts['host']) || $parts['scheme'] !== 'tcp') {
+            throw new Exception('Given URL can not be parsed');
+        }
+
+        if (!isset($parts['port'])) {
+            $parts['port'] = '6379';
+        }
+
+        if ($parts['host'] === 'localhost') {
+            $parts['host'] = '127.0.0.1';
+        }
+
+        return $parts;
+    }
+
+    private function connect($target)
+    {
+        try {
+            $parts = $this->parseUrl($target);
+        }
+        catch (Exception $e) {
+            return When::reject($e);
         }
 
         if ($this->connector === null) {
