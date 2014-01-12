@@ -108,6 +108,13 @@ class FactoryTest extends TestCase
         $this->factory->createServer('tcp://localhost:1337')->then(function (Server $s) use (&$server) {
             fwrite(STDOUT, '1. server: created' . PHP_EOL);
             $server = $s;
+
+            fwrite(STDOUT, stream_socket_get_name($server->socket->master, false) . PHP_EOL);
+
+            ob_start();
+            var_dump($server);
+            $r = ob_get_clean();
+            fwrite(STDOUT, $r . PHP_EOL);
         });
 
         $this->assertNotNull($server);
