@@ -104,8 +104,10 @@ class FactoryTest extends TestCase
         $server = null;
         $done = false;
 
+        $address = '127.0.0.1:1337';
+
         // start a server that only sends ERR messages.
-        $this->factory->createServer('tcp://localhost:1337')->then(function (Server $s) use (&$server) {
+        $this->factory->createServer('tcp://' . $address)->then(function (Server $s) use (&$server) {
             fwrite(STDOUT, '1. server: created' . PHP_EOL);
             $server = $s;
 
@@ -138,7 +140,7 @@ class FactoryTest extends TestCase
         });
 
         // we expect the factory to fail because of the ERR message.
-        $promise = $this->expectPromiseReject($this->factory->createClient('tcp://auth@127.0.0.1:1337'));
+        $promise = $this->expectPromiseReject($this->factory->createClient('tcp://auth@' . $address));
         $promise->then(null, function() {
             fwrite(STDOUT, '3. client: creating failed' . PHP_EOL);
         });
