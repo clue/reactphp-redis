@@ -1,9 +1,9 @@
 <?php
 
-use Clue\Redis\Protocol\ErrorReplyException;
-
+use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\React\Client;
 use Clue\Redis\React\Factory;
+use Clue\Redis\Protocol\Model\ModelInterface;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -18,11 +18,11 @@ echo '# connecting to redis...' . PHP_EOL;
 $factory->createClient()->then(function (Client $client) use ($loop) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
-    $client->on('message', function ($data) {
-        if ($data instanceof ErrorReplyException) {
+    $client->on('message', function (ModelInterface $data) {
+        if ($data instanceof ErrorReply) {
             echo '# error reply: ' . $data->getMessage() . PHP_EOL;
         } else {
-            echo '# reply: ' . json_encode($data) . PHP_EOL;
+            echo '# reply: ' . json_encode($data->getValueNative()) . PHP_EOL;
         }
     });
 
