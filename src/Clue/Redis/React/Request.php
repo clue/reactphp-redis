@@ -2,17 +2,18 @@
 
 namespace Clue\Redis\React;
 
-use Clue\Redis\Protocol\ErrorReplyException;
+use Clue\Redis\Protocol\Model\ModelInterface;
+use Clue\Redis\Protocol\Model\ErrorReply;
 use React\Promise\Deferred;
 
 class Request extends Deferred
 {
-    public function handleReply($data)
+    public function handleReply(ModelInterface $data)
     {
-        if ($data instanceof ErrorReplyException) {
+        if ($data instanceof ErrorReply) {
             $this->reject($data);
         } else {
-            $this->resolve($data);
+            $this->resolve($data->getValueNative());
         }
     }
 }

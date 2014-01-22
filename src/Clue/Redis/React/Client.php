@@ -4,9 +4,10 @@ namespace Clue\Redis\React;
 
 use Evenement\EventEmitter;
 use React\Stream\Stream;
-use Clue\Redis\Protocol\ProtocolInterface;
-use Clue\Redis\Protocol\ParserException;
-use Clue\Redis\Protocol\ErrorReplyException;
+use Clue\Redis\Protocol\Parser\ParserInterface;
+use Clue\Redis\Protocol\Parser\ParserException;
+use Clue\Redis\Protocol\Model\ErrorReplyException;
+use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use Clue\Redis\React\Request;
 use React\Promise\When;
@@ -16,20 +17,27 @@ use RuntimeException;
 class Client extends EventEmitter
 {
     private $stream;
-    private $protocol;
+    private $parser;
+    private $serializer;
     private $requests = array();
     private $ending = false;
 
-    public function __construct(Stream $stream, ProtocolInterface $protocol = null)
+    public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
-        if ($protocol === null) {
-            $protocol = ProtocolFactory::create();
+        if ($parser === null || $serializer === null) {
+            $factory = new ProtocolFactory();
+            if ($parser === null) {
+                $parser = $factory->createParser();
+            }
+            if ($serializer === null) {
+                $serializer = $factory->createSerializer();
+            }
         }
 
         $that = $this;
-        $stream->on('data', function($chunk) use ($protocol, $that) {
+        $stream->on('data', function($chunk) use ($parser, $that) {
             try {
-                $protocol->pushIncoming($chunk);
+                $parser->pushIncoming($chunk);
             }
             catch (ParserException $error) {
                 $that->emit('error', array($error));
@@ -37,8 +45,8 @@ class Client extends EventEmitter
                 return;
             }
 
-            while ($protocol->hasIncoming()) {
-                $data = $protocol->popIncoming();
+            while ($parser->hasIncomingModel()) {
+                $data = $parser->popIncomingModel();
 
                 try {
                     $that->handleReply($data);
@@ -56,7 +64,8 @@ class Client extends EventEmitter
         });
         $stream->resume();
         $this->stream = $stream;
-        $this->protocol = $protocol;
+        $this->parser = $parser;
+        $this->serializer = $serializer;
     }
 
     public function __call($name, $args)
@@ -70,7 +79,7 @@ class Client extends EventEmitter
         /* Build the Redis unified protocol command */
         array_unshift($args, $name);
 
-        $this->stream->write($this->protocol->createMessage($args));
+        $this->stream->write($this->serializer->createRequestMessage($args));
 
         $request = new Request($name);
         $this->requests []= $request;

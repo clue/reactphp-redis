@@ -3,20 +3,20 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "a14c14bc71e5fccca8b5493154b2a086",
+    "hash": "405394b0c248a8ce0e8e4d45dc00e0ad",
     "packages": [
         {
             "name": "clue/redis-protocol",
-            "version": "v0.1.0",
+            "version": "v0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/clue/redis-protocol.git",
-                "reference": "12722a774d64c661d016483c07a59e1c344b26aa"
+                "reference": "eff088be0ee96f877866f975bcf3356ae6f03625"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/12722a774d64c661d016483c07a59e1c344b26aa",
-                "reference": "12722a774d64c661d016483c07a59e1c344b26aa",
+                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/eff088be0ee96f877866f975bcf3356ae6f03625",
+                "reference": "eff088be0ee96f877866f975bcf3356ae6f03625",
                 "shasum": ""
             },
             "require": {
@@ -38,14 +38,16 @@
                     "email": "christian@lueck.tv"
                 }
             ],
-            "description": "Redis wire protocol implementation in PHP",
+            "description": "A streaming redis wire protocol parser and serializer implementation in PHP",
             "homepage": "https://github.com/clue/redis-protocol",
             "keywords": [
                 "parser",
                 "protocol",
-                "redis"
+                "redis",
+                "serializer",
+                "streaming"
             ],
-            "time": "2013-09-09 22:22:49"
+            "time": "2014-01-21 21:28:04"
         },
         {
             "name": "evenement/evenement",

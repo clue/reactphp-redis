@@ -18,11 +18,17 @@ class Factory
 {
     private $loop;
     private $connector;
+    private $protocol;
 
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null)
+    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         $this->loop = $loop;
         $this->connector = $connector;
+
+        if ($protocol === null) {
+            $protocol = new ProtocolFactory();
+        }
+        $this->protocol = $protocol;
     }
 
     /**
@@ -33,12 +39,12 @@ class Factory
      */
     public function createClient($target = null)
     {
-        $that = $this;
         $auth = $this->getAuthFromTarget($target);
         $db   = $this->getDatabaseFromTarget($target);
+        $protocol = $this->protocol;
 
-        return $this->connect($target)->then(function (Stream $stream) use ($that, $auth, $db) {
-            $client = new Client($stream, $that->createProtocol());
+        return $this->connect($target)->then(function (Stream $stream) use ($auth, $db, $protocol) {
+            $client = new Client($stream, $protocol->createParser(), $protocol->createSerializer());
 
             return When::all(
                 array(
@@ -54,11 +60,6 @@ class Factory
                 }
             );
         });
-    }
-
-    public function createProtocol()
-    {
-        return ProtocolFactory::create();
     }
 
     private function parseUrl($target)
