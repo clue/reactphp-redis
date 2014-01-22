@@ -56,21 +56,6 @@ class Factory
         });
     }
 
-    public function createServer($address)
-    {
-        $parts = $this->parseUrl($address);
-
-        $socket = new ServerSocket($this->loop);
-        try {
-            $socket->listen($parts['port'], $parts['host']);
-        }
-        catch (Exception $e) {
-            return When::reject($e);
-        }
-
-        return When::resolve(new Server($socket, $this->loop));
-    }
-
     public function createProtocol()
     {
         return ProtocolFactory::create();

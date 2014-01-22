@@ -83,66 +83,10 @@ class FactoryTest extends TestCase
         $this->expectPromiseReject($promise);
     }
 
-    public function testServerSuccess()
-    {
-        $promise = $this->factory->createServer('tcp://localhost:1337');
-
-        $this->expectPromiseResolve($promise)->then(function (Server $server) {
-            $server->close();
-        });
-    }
-
     public function testClientRequiresConnector()
     {
         $factory = new Factory($this->loop);
 
         $this->expectPromiseReject($factory->createClient());
-    }
-
-    public function testPairAuthRejectDisconnects()
-    {
-        $server = null;
-
-        $address = '127.0.0.1:1337';
-
-        // start a server that only sends ERR messages.
-        $this->factory->createServer('tcp://' . $address)->then(function (Server $s) use (&$server) {
-            $server = $s;
-        });
-
-        $this->assertNotNull($server);
-
-        // we expect a single single client
-        $server->on('connection', $this->expectCallableOnce());
-
-        $once = $this->expectCallableOnce();
-        $server->on('connection', function(ConnectionInterface $connection) use ($once, $server) {
-            // we expect the client to close the connection once he receives an ERR messages.
-            $connection->on('close', $once);
-
-            // end the loop (stop ticking)
-            $connection->on('close', function() use ($server) {
-                $server->close();
-            });
-        });
-
-        // we expect the factory to fail because of the ERR message.
-        $this->expectPromiseReject($this->factory->createClient('tcp://auth@' . $address));
-
-        $this->loop->run();
-    }
-
-    public function testServerAddressInvalidFail()
-    {
-        $promise = $this->factory->createServer('invalid address');
-
-        $this->expectPromiseReject($promise);
-    }
-
-    public function testServerAddressInUseFail()
-    {
-        $promise = $this->factory->createServer('tcp://localhost:6379');
-
-        $this->expectPromiseReject($promise);
     }
 }
