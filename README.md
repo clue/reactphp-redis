@@ -11,7 +11,7 @@ local redis server and send some requests:
 
 ```php
 
-$factory = new Factory($loop, $connector);
+$factory = new Factory($connector);
 $factory->createClient()->then(function (Client $client) use ($loop) {
     $client->SET('greeting', 'Hello world');
     $client->APPEND('greeting', '!');

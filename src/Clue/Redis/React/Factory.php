@@ -4,7 +4,6 @@ namespace Clue\Redis\React;
 
 use React\Socket\Server as ServerSocket;
 use React\Promise\When;
-use React\EventLoop\LoopInterface;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use Clue\Redis\React\Client;
@@ -16,13 +15,11 @@ use Exception;
 
 class Factory
 {
-    private $loop;
     private $connector;
     private $protocol;
 
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
+    public function __construct(ConnectorInterface $connector, ProtocolFactory $protocol = null)
     {
-        $this->loop = $loop;
         $this->connector = $connector;
 
         if ($protocol === null) {
@@ -94,10 +91,6 @@ class Factory
         }
         catch (Exception $e) {
             return When::reject($e);
-        }
-
-        if ($this->connector === null) {
-            return When::reject(new BadMethodCallException('No Connector instance given in Factory constructor'));
         }
 
         return $this->connector->create($parts['host'], $parts['port']);
