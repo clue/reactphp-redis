@@ -17,7 +17,7 @@ class FactoryTest extends TestCase
         $resolver = $factory->create('6.6.6.6', $this->loop);
         $connector = new React\SocketClient\Connector($this->loop, $resolver);
 
-        $this->factory = new Factory($this->loop, $connector);
+        $this->factory = new Factory($connector);
     }
 
     public function testPrequisiteServerAcceptsAnyPassword()
@@ -81,12 +81,5 @@ class FactoryTest extends TestCase
         $promise = $this->factory->createClient('http://invalid target');
 
         $this->expectPromiseReject($promise);
-    }
-
-    public function testClientRequiresConnector()
-    {
-        $factory = new Factory($this->loop);
-
-        $this->expectPromiseReject($factory->createClient());
     }
 }

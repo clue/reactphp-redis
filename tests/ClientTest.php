@@ -20,7 +20,7 @@ class ClientTest extends TestCase
         $resolver = $factory->create('6.6.6.6', self::$loop);
         $connector = new React\SocketClient\Connector(self::$loop, $resolver);
 
-        self::$factory = new Factory(self::$loop, $connector);
+        self::$factory = new Factory($connector);
     }
 
     public function testPing()
