@@ -3,20 +3,20 @@
         "This file locks the dependencies of your project to a known state",
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
     ],
-    "hash": "405394b0c248a8ce0e8e4d45dc00e0ad",
+    "hash": "4bec9948b42dc5ef6240ae85531161a1",
     "packages": [
         {
             "name": "clue/redis-protocol",
-            "version": "v0.2.0",
+            "version": "v0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/clue/redis-protocol.git",
-                "reference": "eff088be0ee96f877866f975bcf3356ae6f03625"
+                "reference": "2ffcdfa281b1084f666340e13f05a1d26d35ed26"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/eff088be0ee96f877866f975bcf3356ae6f03625",
-                "reference": "eff088be0ee96f877866f975bcf3356ae6f03625",
+                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/2ffcdfa281b1084f666340e13f05a1d26d35ed26",
+                "reference": "2ffcdfa281b1084f666340e13f05a1d26d35ed26",
                 "shasum": ""
             },
             "require": {
@@ -47,7 +47,7 @@
                 "serializer",
                 "streaming"
             ],
-            "time": "2014-01-21 21:28:04"
+            "time": "2014-01-26 23:49:05"
         },
         {
             "name": "evenement/evenement",

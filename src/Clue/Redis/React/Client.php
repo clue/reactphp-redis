@@ -27,7 +27,7 @@ class Client extends EventEmitter
         if ($parser === null || $serializer === null) {
             $factory = new ProtocolFactory();
             if ($parser === null) {
-                $parser = $factory->createParser();
+                $parser = $factory->createResponseParser();
             }
             if ($serializer === null) {
                 $serializer = $factory->createSerializer();
@@ -37,7 +37,7 @@ class Client extends EventEmitter
         $that = $this;
         $stream->on('data', function($chunk) use ($parser, $that) {
             try {
-                $parser->pushIncoming($chunk);
+                $models = $parser->pushIncoming($chunk);
             }
             catch (ParserException $error) {
                 $that->emit('error', array($error));
@@ -45,9 +45,7 @@ class Client extends EventEmitter
                 return;
             }
 
-            while ($parser->hasIncomingModel()) {
-                $data = $parser->popIncomingModel();
-
+            foreach ($models as $data) {
                 try {
                     $that->handleReply($data);
                 }
@@ -74,12 +72,7 @@ class Client extends EventEmitter
             return When::reject(new RuntimeException('Connection closed'));
         }
 
-        $name = strtoupper($name);
-
-        /* Build the Redis unified protocol command */
-        array_unshift($args, $name);
-
-        $this->stream->write($this->serializer->createRequestMessage($args));
+        $this->stream->write($this->serializer->getRequestMessage($name, $args));
 
         $request = new Request($name);
         $this->requests []= $request;

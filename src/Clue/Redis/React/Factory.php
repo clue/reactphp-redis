@@ -41,7 +41,7 @@ class Factory
         $protocol = $this->protocol;
 
         return $this->connect($target)->then(function (Stream $stream) use ($auth, $db, $protocol) {
-            $client = new Client($stream, $protocol->createParser(), $protocol->createSerializer());
+            $client = new Client($stream, $protocol->createResponseParser(), $protocol->createSerializer());
 
             return When::all(
                 array(
