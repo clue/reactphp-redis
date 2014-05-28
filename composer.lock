@@ -1,21 +1,22 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file"
+        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
     ],
-    "hash": "4bec9948b42dc5ef6240ae85531161a1",
+    "hash": "bd277d3d139cd6ab131da4375191ab6a",
     "packages": [
         {
             "name": "clue/redis-protocol",
             "version": "v0.3.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/clue/redis-protocol.git",
+                "url": "https://github.com/clue/php-redis-protocol.git",
                 "reference": "2ffcdfa281b1084f666340e13f05a1d26d35ed26"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/clue/redis-protocol/zipball/2ffcdfa281b1084f666340e13f05a1d26d35ed26",
+                "url": "https://api.github.com/repos/clue/php-redis-protocol/zipball/2ffcdfa281b1084f666340e13f05a1d26d35ed26",
                 "reference": "2ffcdfa281b1084f666340e13f05a1d26d35ed26",
                 "shasum": ""
             },
