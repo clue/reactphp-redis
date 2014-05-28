@@ -11,9 +11,9 @@
         }
     ],
     "require": {
-        "react/promise": "~1",
-        "react/socket-client": "0.3.*",
-        "react/event-loop": "0.3.*",
+        "react/promise": "1.*|2.*",
+        "react/socket-client": "0.3.*|0.4.*",
+        "react/event-loop": "0.3.*|0.4.*",
         "clue/redis-protocol": "0.3.*"
     },
     "autoload": {

@@ -10,7 +10,6 @@ use Clue\Redis\Protocol\Model\ErrorReplyException;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use Clue\React\Redis\Request;
-use React\Promise\When;
 use UnderflowException;
 use RuntimeException;
 
@@ -69,7 +68,13 @@ class Client extends EventEmitter
     public function __call($name, $args)
     {
         if ($this->ending) {
-            return When::reject(new RuntimeException('Connection closed'));
+            $e = new RuntimeException('Connection closed');
+
+            if (class_exists('React\Promise\When')) {
+                return \React\Promise\When::reject($e);
+            } else {
+                return \React\Promise\reject($e);
+            }
         }
 
         $this->stream->write($this->serializer->getRequestMessage($name, $args));

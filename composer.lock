@@ -4,7 +4,7 @@
         "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "ee18e08d506687325e4238861ad6830b",
+    "hash": "842adb1cec554122b4ad776d1f8b5071",
     "packages": [
         {
             "name": "clue/redis-protocol",

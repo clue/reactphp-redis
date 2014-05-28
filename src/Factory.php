@@ -3,7 +3,6 @@
 namespace Clue\React\Redis;
 
 use React\Socket\Server as ServerSocket;
-use React\Promise\When;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use Clue\React\Redis\Client;
@@ -39,23 +38,39 @@ class Factory
         $db   = $this->getDatabaseFromTarget($target);
         $protocol = $this->protocol;
 
-        return $this->connect($target)->then(function (Stream $stream) use ($auth, $db, $protocol) {
-            $client = new Client($stream, $protocol->createResponseParser(), $protocol->createSerializer());
-
-            return When::all(
-                array(
-                    ($auth !== null ? $client->auth($auth) : null),
-                    ($db   !== null ? $client->select($db) : null)
-                ),
-                function() use ($client) {
-                    return $client;
-                },
-                function($error) use ($client) {
-                    $client->close();
-                    throw $error;
-                }
-            );
+        $promise = $this->connect($target)->then(function (Stream $stream) use ($protocol) {
+            return new Client($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
+
+        if ($auth !== null) {
+            $promise = $promise->then(function (Client $client) use ($auth) {
+                return $client->auth($auth)->then(
+                    function () use ($client) {
+                        return $client;
+                    },
+                    function ($error) use ($client) {
+                        $client->close();
+                        throw $error;
+                    }
+                );
+            });
+        }
+
+        if ($db !== null) {
+            $promise = $promise->then(function (Client $client) use ($db) {
+                return $client->select($db)->then(
+                    function () use ($client) {
+                        return $client;
+                    },
+                    function ($error) use ($client) {
+                        $client->close();
+                        throw $error;
+                    }
+                );
+            });
+        }
+
+        return $promise;
     }
 
     private function parseUrl($target)
@@ -89,7 +104,11 @@ class Factory
             $parts = $this->parseUrl($target);
         }
         catch (Exception $e) {
-            return When::reject($e);
+            if (class_exists('React\Promise\When')) {
+                return \React\Promise\When::reject($e);
+            } else {
+                return \React\Promise\reject($e);
+            }
         }
 
         return $this->connector->create($parts['host'], $parts['port']);
