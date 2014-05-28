@@ -1,13 +1,12 @@
 <?php
 
-namespace Clue\Redis\React;
+namespace Clue\React\Redis;
 
 use React\Socket\Server as ServerSocket;
 use React\Promise\When;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
-use Clue\Redis\React\Client;
-use Clue\Redis\React\Server;
+use Clue\React\Redis\Client;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use InvalidArgumentException;
 use BadMethodCallException;

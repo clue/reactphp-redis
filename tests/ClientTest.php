@@ -4,9 +4,9 @@ use React\Stream\Stream;
 
 use React\Stream\ReadableStream;
 
-use Clue\Redis\React\Factory;
+use Clue\React\Redis\Factory;
 
-use Clue\Redis\React\Client;
+use Clue\React\Redis\Client;
 
 class ClientTest extends TestCase
 {

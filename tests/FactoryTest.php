@@ -2,11 +2,11 @@
 
 use React\Socket\ConnectionInterface;
 
-use Clue\Redis\React\Server;
+use Clue\React\Redis\Server;
 
-use Clue\Redis\React\Client;
+use Clue\React\Redis\Client;
 
-use Clue\Redis\React\Factory;
+use Clue\React\Redis\Factory;
 
 class FactoryTest extends TestCase
 {

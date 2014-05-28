@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\Redis\React;
+namespace Clue\React\Redis;
 
 use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\ErrorReply;

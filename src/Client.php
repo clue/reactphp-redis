@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\Redis\React;
+namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
 use React\Stream\Stream;
@@ -9,7 +9,7 @@ use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\ErrorReplyException;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use Clue\Redis\React\Request;
+use Clue\React\Redis\Request;
 use React\Promise\When;
 use UnderflowException;
 use RuntimeException;

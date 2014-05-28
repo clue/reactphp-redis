@@ -1,7 +1,7 @@
 <?php
 
-use Clue\Redis\React\Client;
-use Clue\Redis\React\Factory;
+use Clue\React\Redis\Client;
+use Clue\React\Redis\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 

@@ -17,6 +17,6 @@
         "clue/redis-protocol": "0.3.*"
     },
     "autoload": {
-        "psr-4": { "Clue\\Redis\\React\\": "src/" }
+        "psr-4": { "Clue\\React\\Redis\\": "src/" }
     }
 }
