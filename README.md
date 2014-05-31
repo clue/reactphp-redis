@@ -38,7 +38,7 @@ The recommended way to install this library is [through composer](http://getcomp
 ```JSON
 {
     "require": {
-        "clue/redis-react": "dev-master"
+        "clue/redis-react": "0.3.*"
     }
 }
 ```
