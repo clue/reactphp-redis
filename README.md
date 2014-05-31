@@ -1,8 +1,8 @@
 # clue/redis-react [![Build Status](https://travis-ci.org/clue/reactphp-redis.png?branch=master)](https://travis-ci.org/clue/reactphp-redis)
 
-Async redis client implementation built on top of reactphp.
+Async redis client implementation built on top of React PHP.
 
-> Note: This project is in early alpha stage! Feel free to report any issues you encounter.
+> Note: This project is in beta stage! Feel free to report any issues you encounter.
 
 ## Quickstart example
 
