@@ -11,6 +11,7 @@
         }
     ],
     "require": {
+        "php": ">=5.3",
         "react/promise": "1.*|2.*",
         "react/socket-client": "0.3.*|0.4.*",
         "react/event-loop": "0.3.*|0.4.*",
