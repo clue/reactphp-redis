@@ -15,7 +15,8 @@
         "react/promise": "1.*|2.*",
         "react/socket-client": "0.3.*|0.4.*",
         "react/event-loop": "0.3.*|0.4.*",
-        "clue/redis-protocol": "0.3.*"
+        "clue/redis-protocol": "0.3.*",
+        "evenement/evenement": "~1.0|~2.0"
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }

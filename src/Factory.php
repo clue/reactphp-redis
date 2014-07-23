@@ -2,7 +2,6 @@
 
 namespace Clue\React\Redis;
 
-use React\Socket\Server as ServerSocket;
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use Clue\React\Redis\Client;
