@@ -30,7 +30,7 @@ $factory->createClient()->then(function (Client $client) use ($loop) {
         $line = fgets(STDIN);
         if ($line === false || $line === '') {
             echo '# CTRL-D -> Ending connection...' . PHP_EOL;
-            $client->end();
+            $client->close();
         } else {
             $line = rtrim($line);
 
@@ -39,7 +39,7 @@ $factory->createClient()->then(function (Client $client) use ($loop) {
             } else {
                 $params = explode(' ', $line);
                 $method = array_shift($params);
-                call_user_func_array(array($client, $method), $params);
+                $client->send($method, $params);
             }
         }
     });
