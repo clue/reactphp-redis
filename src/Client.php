@@ -9,9 +9,10 @@ use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\ErrorReplyException;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use Clue\React\Redis\Request;
 use UnderflowException;
 use RuntimeException;
+use React\Promise\Deferred;
+use Clue\Redis\Protocol\Model\ErrorReply;
 
 class Client extends EventEmitter
 {
@@ -79,7 +80,7 @@ class Client extends EventEmitter
 
         $this->stream->write($this->serializer->getRequestMessage($name, $args));
 
-        $request = new Request($name);
+        $request = new Deferred();
         $this->requests []= $request;
 
         return $request->promise();
@@ -94,9 +95,13 @@ class Client extends EventEmitter
         }
 
         $request = array_shift($this->requests);
-        /* @var $request Request */
+        /* @var $request Deferred */
 
-        $request->handleReply($data);
+        if ($data instanceof ErrorReply) {
+            $request->reject($data);
+        } else {
+            $request->resolve($data->getValueNative());
+        }
 
         if ($this->ending && !$this->isBusy()) {
             $this->close();
