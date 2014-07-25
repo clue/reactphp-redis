@@ -69,20 +69,14 @@ class Client extends EventEmitter
 
     public function __call($name, $args)
     {
-        if ($this->ending) {
-            $e = new RuntimeException('Connection closed');
-
-            if (class_exists('React\Promise\When')) {
-                return \React\Promise\When::reject($e);
-            } else {
-                return \React\Promise\reject($e);
-            }
-        }
-
-        $this->stream->write($this->serializer->getRequestMessage($name, $args));
-
         $request = new Deferred();
-        $this->requests []= $request;
+
+        if ($this->ending) {
+            $request->reject(new RuntimeException('Connection closed'));
+        } else {
+            $this->stream->write($this->serializer->getRequestMessage($name, $args));
+            $this->requests []= $request;
+        }
 
         return $request->promise();
     }
