@@ -13,6 +13,7 @@ use UnderflowException;
 use RuntimeException;
 use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
+use Clue\Redis\Protocol\Model\ModelInterface;
 
 class Client extends EventEmitter
 {
@@ -47,7 +48,7 @@ class Client extends EventEmitter
 
             foreach ($models as $data) {
                 try {
-                    $that->handleReply($data);
+                    $that->handleMessage($data);
                 }
                 catch (UnderflowException $error) {
                     $that->emit('error', array($error));
@@ -86,9 +87,9 @@ class Client extends EventEmitter
         return $request->promise();
     }
 
-    public function handleReply($data)
+    public function handleMessage(ModelInterface $message)
     {
-        $this->emit('message', array($data, $this));
+        $this->emit('message', array($message, $this));
 
         if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');
@@ -97,10 +98,10 @@ class Client extends EventEmitter
         $request = array_shift($this->requests);
         /* @var $request Deferred */
 
-        if ($data instanceof ErrorReply) {
-            $request->reject($data);
+        if ($message instanceof ErrorReply) {
+            $request->reject($message);
         } else {
-            $request->resolve($data->getValueNative());
+            $request->resolve($message->getValueNative());
         }
 
         if ($this->ending && !$this->isBusy()) {
