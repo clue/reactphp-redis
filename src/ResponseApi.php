@@ -17,9 +17,6 @@ class ResponseApi
     public function __construct(Client $client)
     {
         $this->client = $client;
-
-        $client->on('message', array($this, 'handleMessage'));
-        $client->on('close', array($this, 'handleClose'));
     }
 
     public function __call($name, $args)
@@ -29,6 +26,11 @@ class ResponseApi
         if ($this->ending) {
             $request->reject(new RuntimeException('Connection closed'));
         } else {
+            if (!$this->isBusy()) {
+                $this->client->on('message', array($this, 'handleMessage'));
+                $this->client->on('close', array($this, 'handleClose'));
+            }
+
             $this->client->send($name, $args);
             $this->requests []= $request;
         }
@@ -38,10 +40,6 @@ class ResponseApi
 
     public function handleMessage(ModelInterface $message)
     {
-        if (!$this->requests) {
-            throw new UnderflowException('Unexpected reply received, no matching request found');
-        }
-
         $request = array_shift($this->requests);
         /* @var $request Deferred */
 
@@ -51,8 +49,13 @@ class ResponseApi
             $request->resolve($message->getValueNative());
         }
 
-        if ($this->ending && !$this->isBusy()) {
-            $this->client->close();
+        if (!$this->isBusy()) {
+            $this->client->removeListener('message', array($this, 'handleMessage'));
+            $this->client->removeListener('close', array($this, 'handleClose'));
+
+            if ($this->ending) {
+                $this->client->close();
+            }
         }
     }
 

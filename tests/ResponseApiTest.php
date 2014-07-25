@@ -55,9 +55,9 @@ class ResponseApiTest extends TestCase
 
     public function testClosedClientRejectsAllNewRequests()
     {
-        $this->client->emit('close');
-
         $promise = $this->responseApi->ping();
+
+        $this->client->emit('close');
 
         $this->expectPromiseReject($promise);
         $this->assertFalse($this->responseApi->isBusy());
@@ -85,11 +85,5 @@ class ResponseApiTest extends TestCase
 
         $this->client->emit('message', array(new BulkReply('PONG')));
         $this->assertEquals(1, $closed);
-    }
-
-    public function testReceivingUnexpectedMessageThrowsException()
-    {
-        $this->setExpectedException('UnderflowException');
-        $this->client->emit('message', array(new BulkReply('PONG')));
     }
 }

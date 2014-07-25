@@ -149,13 +149,10 @@ class FunctionalTest extends TestCase
         $this->waitFor($api);
     }
 
-    public function testInvalidServerRepliesWithDuplicateMessages()
+    public function testAdditionalServerRepliesAreBeingIgnored()
     {
         $client = $this->createClientResponse("+OK\r\n-ERR invalid\r\n");
         $api = new ResponseApi($client);
-
-        $client->on('error', $this->expectCallableOnce());
-        $client->on('close', $this->expectCallableOnce());
 
         $api->set('a', 0)->then($this->expectCallableOnce('OK'));
 
