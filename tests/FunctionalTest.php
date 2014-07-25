@@ -8,7 +8,7 @@ use Clue\React\Redis\Factory;
 
 use Clue\React\Redis\Client;
 
-class ClientTest extends TestCase
+class FunctionalTest extends TestCase
 {
     protected static $loop;
     protected static $factory;

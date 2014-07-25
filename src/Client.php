@@ -9,9 +9,11 @@ use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\ErrorReplyException;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use Clue\React\Redis\Request;
 use UnderflowException;
 use RuntimeException;
+use React\Promise\Deferred;
+use Clue\Redis\Protocol\Model\ErrorReply;
+use Clue\Redis\Protocol\Model\ModelInterface;
 
 class Client extends EventEmitter
 {
@@ -46,7 +48,7 @@ class Client extends EventEmitter
 
             foreach ($models as $data) {
                 try {
-                    $that->handleReply($data);
+                    $that->handleMessage($data);
                 }
                 catch (UnderflowException $error) {
                     $that->emit('error', array($error));
@@ -67,36 +69,34 @@ class Client extends EventEmitter
 
     public function __call($name, $args)
     {
+        $request = new Deferred();
+
         if ($this->ending) {
-            $e = new RuntimeException('Connection closed');
-
-            if (class_exists('React\Promise\When')) {
-                return \React\Promise\When::reject($e);
-            } else {
-                return \React\Promise\reject($e);
-            }
+            $request->reject(new RuntimeException('Connection closed'));
+        } else {
+            $this->stream->write($this->serializer->getRequestMessage($name, $args));
+            $this->requests []= $request;
         }
-
-        $this->stream->write($this->serializer->getRequestMessage($name, $args));
-
-        $request = new Request($name);
-        $this->requests []= $request;
 
         return $request->promise();
     }
 
-    public function handleReply($data)
+    public function handleMessage(ModelInterface $message)
     {
-        $this->emit('message', array($data, $this));
+        $this->emit('message', array($message, $this));
 
         if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');
         }
 
         $request = array_shift($this->requests);
-        /* @var $request Request */
+        /* @var $request Deferred */
 
-        $request->handleReply($data);
+        if ($message instanceof ErrorReply) {
+            $request->reject($message);
+        } else {
+            $request->resolve($message->getValueNative());
+        }
 
         if ($this->ending && !$this->isBusy()) {
             $this->close();
