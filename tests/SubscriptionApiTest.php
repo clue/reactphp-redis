@@ -24,8 +24,8 @@ class SubscriptionApiTest extends TestCase
         $this->expectPromiseResolve($promise);
         $this->pretendMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('a'), new IntegerReply(1))));
 
-        //$this->subscriptionApi->on('message', $this->expectCallableOnce());
-        //$this->pretendMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('a'), new BulkReply('data'))));
+        $this->subscriptionApi->on('message', $this->expectCallableOnce());
+        $this->pretendMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('a'), new BulkReply('data'))));
     }
 
     private function pretendMessage(ModelInterface $model)

@@ -23,6 +23,8 @@ class SubscriptionApi extends EventEmitter
 
         $this->client = $client;
         $this->requestApi = $requestApi;
+
+        $this->client->on('message', array($this, 'handleMessage'));
     }
 
     public function subscribe($channel)
@@ -48,5 +50,20 @@ class SubscriptionApi extends EventEmitter
     private function respond($name, $args)
     {
         return call_user_func_array(array($this->requestApi, $name), $args);
+    }
+
+    public function handleMessage(ModelInterface $message)
+    {
+        if (!($message instanceof MultiBulkReply)) {
+            return;
+        }
+
+        $parts = $message->getValueNative();
+        if (count($parts) !== 3) {
+            return;
+        }
+
+        $name = array_shift($parts);
+        $this->emit($name, $parts);
     }
 }
