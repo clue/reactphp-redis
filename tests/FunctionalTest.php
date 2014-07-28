@@ -7,7 +7,7 @@ use React\Stream\ReadableStream;
 use Clue\React\Redis\Factory;
 
 use Clue\React\Redis\Client;
-use Clue\React\Redis\ResponseApi;
+use Clue\React\Redis\RequestApi;
 
 class FunctionalTest extends TestCase
 {
@@ -41,10 +41,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param ResponseApi $client
+     * @param RequestApi $client
      * @depends testPing
      */
-    public function testPipeline(ResponseApi $client)
+    public function testPipeline(RequestApi $client)
     {
         $this->assertFalse($client->isBusy());
 
@@ -62,10 +62,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param ResponseApi $client
+     * @param RequestApi $client
      * @depends testPipeline
      */
-    public function testInvalidCommand(ResponseApi $client)
+    public function testInvalidCommand(RequestApi $client)
     {
         $client->doesnotexist(1, 2, 3)->then($this->expectCallableNever());
 
@@ -76,10 +76,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param ResponseApi $client
+     * @param RequestApi $client
      * @depends testInvalidCommand
      */
-    public function testMultiExecEmpty(ResponseApi $client)
+    public function testMultiExecEmpty(RequestApi $client)
     {
         $client->multi()->then($this->expectCallableOnce('OK'));
         $client->exec()->then($this->expectCallableOnce(array()));
@@ -91,10 +91,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param ResponseApi $client
+     * @param RequestApi $client
      * @depends testMultiExecEmpty
      */
-    public function testMultiExecQueuedExecHasValues(ResponseApi $client)
+    public function testMultiExecQueuedExecHasValues(RequestApi $client)
     {
         $client->multi()->then($this->expectCallableOnce('OK'));
         $client->set('b', 10)->then($this->expectCallableOnce('QUEUED'));
@@ -127,7 +127,7 @@ class FunctionalTest extends TestCase
     public function testClose()
     {
         $client = $this->createClient();
-        $api = new ResponseApi($client);
+        $api = new RequestApi($client);
 
         $api->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
@@ -139,7 +139,7 @@ class FunctionalTest extends TestCase
     public function testInvalidProtocol()
     {
         $client = $this->createClientResponse("communication does not conform to protocol\r\n");
-        $api = new ResponseApi($client);
+        $api = new RequestApi($client);
 
         $client->on('error', $this->expectCallableOnce());
         $client->on('close', $this->expectCallableOnce());
@@ -152,7 +152,7 @@ class FunctionalTest extends TestCase
     public function testAdditionalServerRepliesAreBeingIgnored()
     {
         $client = $this->createClientResponse("+OK\r\n-ERR invalid\r\n");
-        $api = new ResponseApi($client);
+        $api = new RequestApi($client);
 
         $api->set('a', 0)->then($this->expectCallableOnce('OK'));
 
@@ -186,7 +186,7 @@ class FunctionalTest extends TestCase
 
     protected function createClientApi()
     {
-        return new ResponseApi($this->createClient());
+        return new RequestApi($this->createClient());
     }
 
     protected function createClientResponse($response)
@@ -207,7 +207,7 @@ class FunctionalTest extends TestCase
 
     }
 
-    protected function waitFor(ResponseApi $client)
+    protected function waitFor(RequestApi $client)
     {
         $this->assertTrue($client->isBusy());
 

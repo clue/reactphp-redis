@@ -8,7 +8,7 @@ use RuntimeException;
 use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 
-class ResponseApi
+class RequestApi
 {
     private $client;
     private $requests = array();

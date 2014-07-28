@@ -13,7 +13,7 @@ local redis server and send some requests:
 
 $factory = new Factory($connector);
 $factory->createClient()->then(function (Client $client) use ($loop) {
-    $api = new ResponseApi($client);
+    $api = new RequestApi($client);
     
     $api->set('greeting', 'Hello world');
     $api->append('greeting', '!');

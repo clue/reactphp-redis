@@ -1,29 +1,29 @@
 <?php
 
-use Clue\React\Redis\ResponseApi;
+use Clue\React\Redis\RequestApi;
 use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\React\Redis\Client;
 
-class ResponseApiTest extends TestCase
+class RequestApiTest extends TestCase
 {
     private $stream;
     private $client;
-    private $responseApi;
+    private $RequestApi;
 
     public function setUp()
     {
         //$this->stream = $this->getMock('React\Stream\Stream');
         //$this->client = new Client($this->stream);
         $this->client = $this->getMockBuilder('Clue\React\Redis\Client')->disableOriginalConstructor()->setMethods(array('sendRequest', 'close'))->getMock();
-        $this->responseApi = new ResponseApi($this->client);
+        $this->RequestApi = new RequestApi($this->client);
     }
 
     public function testPingPong()
     {
         $this->client->expects($this->once())->method('sendRequest')->with($this->equalTo('ping'));
 
-        $promise = $this->responseApi->ping();
+        $promise = $this->RequestApi->ping();
 
         $this->client->emit('message', array(new BulkReply('PONG')));
 
@@ -33,7 +33,7 @@ class ResponseApiTest extends TestCase
 
     public function testErrorReply()
     {
-        $promise = $this->responseApi->invalid();
+        $promise = $this->RequestApi->invalid();
 
         $err = new ErrorReply('ERR invalid command');
         $this->client->emit('message', array($err));
@@ -44,29 +44,29 @@ class ResponseApiTest extends TestCase
 
     public function testClosingClientRejectsAllRemainingRequests()
     {
-        $promise = $this->responseApi->ping();
-        $this->assertTrue($this->responseApi->isBusy());
+        $promise = $this->RequestApi->ping();
+        $this->assertTrue($this->RequestApi->isBusy());
 
         $this->client->emit('close');
 
         $this->expectPromiseReject($promise);
-        $this->assertFalse($this->responseApi->isBusy());
+        $this->assertFalse($this->RequestApi->isBusy());
     }
 
     public function testClosedClientRejectsAllNewRequests()
     {
-        $promise = $this->responseApi->ping();
+        $promise = $this->RequestApi->ping();
 
         $this->client->emit('close');
 
         $this->expectPromiseReject($promise);
-        $this->assertFalse($this->responseApi->isBusy());
+        $this->assertFalse($this->RequestApi->isBusy());
     }
 
     public function testEndingNonBusyClosesClient()
     {
         $this->client->expects($this->once())->method('close');
-        $this->responseApi->end();
+        $this->RequestApi->end();
     }
 
     public function testEndingBusyClosesClientWhenNotBusyAnymore()
@@ -77,10 +77,10 @@ class ResponseApiTest extends TestCase
             ++$closed;
         }));
 
-        $promise = $this->responseApi->ping();
+        $promise = $this->RequestApi->ping();
         $this->assertEquals(0, $closed);
 
-        $this->responseApi->end();
+        $this->RequestApi->end();
         $this->assertEquals(0, $closed);
 
         $this->client->emit('message', array(new BulkReply('PONG')));
