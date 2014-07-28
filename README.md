@@ -13,19 +13,21 @@ local redis server and send some requests:
 
 $factory = new Factory($connector);
 $factory->createClient()->then(function (Client $client) use ($loop) {
-    $client->SET('greeting', 'Hello world');
-    $client->APPEND('greeting', '!');
+    $api = new ResponseApi($client);
     
-    $client->GET('greeting')->then(function ($greeting) {
+    $api->set('greeting', 'Hello world');
+    $api->append('greeting', '!');
+    
+    $api->get('greeting')->then(function ($greeting) {
         echo $greeting . PHP_EOL;
     });
     
-    $client->INCR('invocation')->then(function ($n) {
+    $api->incr('invocation')->then(function ($n) {
         echo 'count: ' . $n . PHP_EOL;
     });
     
     // end connection once all pending requests have been resolved
-    $client->end();
+    $api->end();
 });
 
 $loop->run();
