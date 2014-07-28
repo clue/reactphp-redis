@@ -65,11 +65,30 @@ class Client extends EventEmitter
         $this->serializer = $serializer;
     }
 
-    public function send($name, $args)
+    /**
+     * Sends command with given $name and additial $args
+     *
+     * @param name $name
+     * @param array $args
+     */
+    public function sendRequest($name, array $args = array())
     {
         $this->stream->write($this->serializer->getRequestMessage($name, $args));
     }
 
+    /**
+     * Sends given message model (request message)
+     *
+     * @param ModelInterface $message
+     */
+    public function sendMessage(ModelInterface $message)
+    {
+        $this->stream->write($message->getMessageSerialized($this->serializer));
+    }
+
+    /**
+     * Immediately terminate the connection and discard incoming and outgoing buffers
+     */
     public function close()
     {
         $this->stream->close();

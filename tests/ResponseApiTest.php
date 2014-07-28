@@ -15,13 +15,13 @@ class ResponseApiTest extends TestCase
     {
         //$this->stream = $this->getMock('React\Stream\Stream');
         //$this->client = new Client($this->stream);
-        $this->client = $this->getMockBuilder('Clue\React\Redis\Client')->disableOriginalConstructor()->setMethods(array('send', 'close'))->getMock();
+        $this->client = $this->getMockBuilder('Clue\React\Redis\Client')->disableOriginalConstructor()->setMethods(array('sendRequest', 'close'))->getMock();
         $this->responseApi = new ResponseApi($this->client);
     }
 
     public function testPingPong()
     {
-        $this->client->expects($this->once())->method('send')->with($this->equalTo('ping'));
+        $this->client->expects($this->once())->method('sendRequest')->with($this->equalTo('ping'));
 
         $promise = $this->responseApi->ping();
 

@@ -25,7 +25,7 @@ class ClientTest extends TestCase
         $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('ping'))->will($this->returnValue('message'));
         $this->stream->expects($this->once())->method('write')->with($this->equalTo('message'));
 
-        $this->client->send('ping', array());
+        $this->client->sendRequest('ping', array());
     }
 
     public function testClosingClientEmitsEvent()

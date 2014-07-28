@@ -31,7 +31,7 @@ class ResponseApi
                 $this->client->on('close', array($this, 'handleClose'));
             }
 
-            $this->client->send($name, $args);
+            $this->client->sendRequest($name, $args);
             $this->requests []= $request;
         }
 
