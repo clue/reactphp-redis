@@ -43,7 +43,8 @@ class Factory
 
         if ($auth !== null) {
             $promise = $promise->then(function (Client $client) use ($auth) {
-                return $client->auth($auth)->then(
+                $api = new RequestApi($client);
+                return $api->auth($auth)->then(
                     function () use ($client) {
                         return $client;
                     },
@@ -57,7 +58,8 @@ class Factory
 
         if ($db !== null) {
             $promise = $promise->then(function (Client $client) use ($db) {
-                return $client->select($db)->then(
+                $api = new RequestApi($client);
+                return $api->select($db)->then(
                     function () use ($client) {
                         return $client;
                     },
