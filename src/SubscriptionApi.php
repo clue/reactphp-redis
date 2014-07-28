@@ -3,6 +3,8 @@
 namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
+use Clue\Redis\Protocol\Model\ModelInterface;
+use Clue\Redis\Protocol\Model\MultiBulkReply;
 
 /**
  * http://redis.io/topics/pubsub
@@ -11,16 +13,16 @@ use Evenement\EventEmitter;
 class SubscriptionApi extends EventEmitter
 {
     private $client;
-    private $responseApi;
+    private $requestApi;
 
-    public function __construct(Client $client, ResponseApi $responseApi = null)
+    public function __construct(Client $client, RequestApi $requestApi = null)
     {
-        if ($responseApi === null) {
-            $responseApi = new ResponseApi($client);
+        if ($requestApi === null) {
+            $requestApi = new RequestApi($client);
         }
 
         $this->client = $client;
-        $this->responseApi = $responseApi;
+        $this->requestApi = $requestApi;
     }
 
     public function subscribe($channel)
@@ -40,11 +42,11 @@ class SubscriptionApi extends EventEmitter
 
     public function publish($channel, $message)
     {
-        return $this->responseApi->publish($channel, $message);
+        return $this->requestApi->publish($channel, $message);
     }
 
     private function respond($name, $args)
     {
-        return call_user_func_array(array($this->responseApi, $name), $args);
+        return call_user_func_array(array($this->requestApi, $name), $args);
     }
 }
