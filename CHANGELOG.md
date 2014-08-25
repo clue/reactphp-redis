@@ -4,7 +4,7 @@ This file is a manually maintained list of changes for each release. Feel free
 to add your changes here when sending pull requests. Also send corrections if
 you spot any mistakes.
 
-## 0.4.0 (2014-08-xx)
+## 0.4.0 (2014-08-25)
 
 * BC break: The `Client` class has been renamed to `StreamingClient`.
   Added new `Client` interface.
