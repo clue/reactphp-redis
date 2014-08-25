@@ -4,7 +4,7 @@ namespace Clue\React\Redis;
 
 use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
-use Clue\React\Redis\Client;
+use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use InvalidArgumentException;
 use BadMethodCallException;
@@ -38,11 +38,11 @@ class Factory
         $protocol = $this->protocol;
 
         $promise = $this->connect($target)->then(function (Stream $stream) use ($protocol) {
-            return new Client($stream, $protocol->createResponseParser(), $protocol->createSerializer());
+            return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 
         if ($auth !== null) {
-            $promise = $promise->then(function (Client $client) use ($auth) {
+            $promise = $promise->then(function (StreamingClient $client) use ($auth) {
                 return $client->auth($auth)->then(
                     function () use ($client) {
                         return $client;
@@ -56,7 +56,7 @@ class Factory
         }
 
         if ($db !== null) {
-            $promise = $promise->then(function (Client $client) use ($db) {
+            $promise = $promise->then(function (StreamingClient $client) use ($db) {
                 return $client->select($db)->then(
                     function () use ($client) {
                         return $client;

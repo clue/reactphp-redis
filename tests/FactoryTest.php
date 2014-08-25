@@ -4,7 +4,7 @@ use React\Socket\ConnectionInterface;
 
 use Clue\React\Redis\Server;
 
-use Clue\React\Redis\Client;
+use Clue\React\Redis\StreamingClient;
 
 use Clue\React\Redis\Factory;
 
@@ -32,7 +32,7 @@ class FactoryTest extends TestCase
     {
         $promise = $this->factory->createClient();
 
-        $this->expectPromiseResolve($promise)->then(function (Client $client) {
+        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
             $client->end();
         });
 
@@ -46,7 +46,7 @@ class FactoryTest extends TestCase
     {
         $promise = $this->factory->createClient('tcp://authenticationpassword@127.0.0.1:6379/0');
 
-        $this->expectPromiseResolve($promise)->then(function (Client $client) {
+        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
             $client->end();
         });
 
@@ -60,7 +60,7 @@ class FactoryTest extends TestCase
     {
         $promise = $this->factory->createClient('tcp://authentication:can:contain:colons@127.0.0.1:6379');
 
-        $this->expectPromiseResolve($promise)->then(function (Client $client) {
+        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
             $client->end();
         });
 

@@ -15,7 +15,7 @@ use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
 
-class Client extends EventEmitter
+class StreamingClient extends EventEmitter
 {
     private $stream;
     private $parser;
