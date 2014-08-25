@@ -16,11 +16,7 @@ class FunctionalTest extends TestCase
     public static function setUpBeforeClass()
     {
         self::$loop = new React\EventLoop\StreamSelectLoop();
-        $factory = new React\Dns\Resolver\Factory();
-        $resolver = $factory->create('6.6.6.6', self::$loop);
-        $connector = new React\SocketClient\Connector(self::$loop, $resolver);
-
-        self::$factory = new Factory($connector);
+        self::$factory = new Factory(self::$loop);
     }
 
     public function testPing()

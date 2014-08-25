@@ -6,22 +6,30 @@ use React\SocketClient\ConnectorInterface;
 use React\Stream\Stream;
 use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
+use React\SocketClient\Connector;
+use React\Dns\Resolver\Factory as ResolverFactory;
 use InvalidArgumentException;
 use BadMethodCallException;
 use Exception;
+use React\EventLoop\LoopInterface;
 
 class Factory
 {
     private $connector;
     private $protocol;
 
-    public function __construct(ConnectorInterface $connector, ProtocolFactory $protocol = null)
+    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
-        $this->connector = $connector;
+        if ($connector === null) {
+            $resolverFactory = new ResolverFactory();
+            $connector = new Connector($loop, $resolverFactory->create('8.8.8.8', $loop));
+        }
 
         if ($protocol === null) {
             $protocol = new ProtocolFactory();
         }
+
+        $this->connector = $connector;
         $this->protocol = $protocol;
     }
 

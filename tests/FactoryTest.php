@@ -13,11 +13,7 @@ class FactoryTest extends TestCase
     public function setUp()
     {
         $this->loop = new React\EventLoop\StreamSelectLoop();
-        $factory = new React\Dns\Resolver\Factory();
-        $resolver = $factory->create('6.6.6.6', $this->loop);
-        $connector = new React\SocketClient\Connector($this->loop, $resolver);
-
-        $this->factory = new Factory($connector);
+        $this->factory = new Factory($this->loop);
     }
 
     public function testPrequisiteServerAcceptsAnyPassword()

@@ -6,10 +6,7 @@ use Clue\React\Redis\Factory;
 require __DIR__ . '/../vendor/autoload.php';
 
 $loop = React\EventLoop\Factory::create();
-$factory = new React\Dns\Resolver\Factory();
-$resolver = $factory->create('6.6.6.6', $loop);
-$connector = new React\SocketClient\Connector($loop, $resolver);
-$factory = new Factory($connector);
+$factory = new Factory($loop);
 
 $factory->createClient()->then(function (Client $client) {
     $client->incr('test');
