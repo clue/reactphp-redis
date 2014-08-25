@@ -22,6 +22,7 @@ class StreamingClient extends EventEmitter implements Client
     private $serializer;
     private $requests = array();
     private $ending = false;
+    private $closed = false;
 
     public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
@@ -57,11 +58,10 @@ class StreamingClient extends EventEmitter implements Client
                 }
             }
         });
-        $stream->on('close', function () use ($that) {
-            $that->close();
-            $that->emit('close');
-        });
+
+        $stream->on('close', array($this, 'close'));
         $stream->resume();
+
         $this->stream = $stream;
         $this->parser = $parser;
         $this->serializer = $serializer;
@@ -119,9 +119,16 @@ class StreamingClient extends EventEmitter implements Client
 
     public function close()
     {
+        if ($this->closed) {
+            return;
+        }
+
         $this->ending = true;
+        $this->closed = true;
 
         $this->stream->close();
+
+        $this->emit('close');
 
         // reject all remaining requests in the queue
         while($this->requests) {
