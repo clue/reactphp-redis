@@ -18,7 +18,7 @@ echo '# connecting to redis...' . PHP_EOL;
 $factory->createClient()->then(function (Client $client) use ($loop) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
-    $client->on('message', function (ModelInterface $data) {
+    $client->on('data', function (ModelInterface $data) {
         if ($data instanceof ErrorReply) {
             echo '# error reply: ' . $data->getMessage() . PHP_EOL;
         } else {
