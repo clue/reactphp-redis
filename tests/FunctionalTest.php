@@ -6,7 +6,7 @@ use React\Stream\ReadableStream;
 
 use Clue\React\Redis\Factory;
 
-use Clue\React\Redis\Client;
+use Clue\React\Redis\StreamingClient;
 
 class FunctionalTest extends TestCase
 {
@@ -40,10 +40,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param Client $client
+     * @param StreamingClient $client
      * @depends testPing
      */
-    public function testPipeline(Client $client)
+    public function testPipeline(StreamingClient $client)
     {
         $this->assertFalse($client->isBusy());
 
@@ -61,10 +61,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param Client $client
+     * @param StreamingClient $client
      * @depends testPipeline
      */
-    public function testInvalidCommand(Client $client)
+    public function testInvalidCommand(StreamingClient $client)
     {
         $client->doesnotexist(1, 2, 3)->then($this->expectCallableNever());
 
@@ -75,10 +75,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param Client $client
+     * @param StreamingClient $client
      * @depends testInvalidCommand
      */
-    public function testMultiExecEmpty(Client $client)
+    public function testMultiExecEmpty(StreamingClient $client)
     {
         $client->multi()->then($this->expectCallableOnce('OK'));
         $client->exec()->then($this->expectCallableOnce(array()));
@@ -90,10 +90,10 @@ class FunctionalTest extends TestCase
 
     /**
      *
-     * @param Client $client
+     * @param StreamingClient $client
      * @depends testMultiExecEmpty
      */
-    public function testMultiExecQueuedExecHasValues(Client $client)
+    public function testMultiExecQueuedExecHasValues(StreamingClient $client)
     {
         $client->multi()->then($this->expectCallableOnce('OK'));
         $client->set('b', 10)->then($this->expectCallableOnce('QUEUED'));
@@ -191,7 +191,7 @@ class FunctionalTest extends TestCase
 
         $stream = new Stream($fp, self::$loop);
 
-        return new Client($stream);
+        return new StreamingClient($stream);
     }
 
     protected function createServer($response)
@@ -201,7 +201,7 @@ class FunctionalTest extends TestCase
 
     }
 
-    protected function waitFor(Client $client)
+    protected function waitFor(StreamingClient $client)
     {
         $this->assertTrue($client->isBusy());
 

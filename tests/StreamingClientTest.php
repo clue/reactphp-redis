@@ -1,6 +1,6 @@
 <?php
 
-use Clue\React\Redis\Client;
+use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\IntegerReply;
 use Clue\Redis\Protocol\Model\BulkReply;
@@ -19,7 +19,7 @@ class ClientTest extends TestCase
         $this->parser = $this->getMock('Clue\Redis\Protocol\Parser\ParserInterface');
         $this->serializer = $this->getMock('Clue\Redis\Protocol\Serializer\SerializerInterface');
 
-        $this->client = new Client($this->stream, $this->parser, $this->serializer);
+        $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
     }
 
     public function testSending()
@@ -76,7 +76,7 @@ class ClientTest extends TestCase
 
     public function testDefaultCtor()
     {
-        $client = new Client($this->stream);
+        $client = new StreamingClient($this->stream);
     }
 
     public function testPingPong()
