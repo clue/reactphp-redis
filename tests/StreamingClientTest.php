@@ -186,4 +186,22 @@ class ClientTest extends TestCase
         $client->on('message', $this->expectCallableOnce());
         $client->handleMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('test'), new BulkReply('payload'))));
     }
+
+    public function testPubsubSubscribeMultiple()
+    {
+        $this->markTestIncomplete();
+
+        $promise = $this->client->subscribe('first', 'second');
+        $this->expectPromiseResolve($promise);
+
+        // expect two "subscribe" events
+        $mock = $this->createCallableMock();
+        $mock->expects($this->exactly(2))->method('__invoke');
+        $this->client->on('subscribe', $mock);
+
+        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('first'), new IntegerReply(1))));
+        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('second'), new IntegerReply(2))));
+
+        return $this->client;
+    }
 }
