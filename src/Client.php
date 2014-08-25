@@ -10,6 +10,7 @@ use Clue\Redis\Protocol\Model\ModelInterface;
  * Simple interface for executing redis commands
  *
  * @event message(ModelInterface $model, Client $thisClient)
+ * @event close()
  */
 interface Client extends EventEmitterInterface
 {
@@ -42,6 +43,8 @@ interface Client extends EventEmitterInterface
 
     /**
      * close connection immediately
+     *
+     * This will emit the "close" event.
      *
      * @see self::end() for closing the connection once the client is idle
      */
