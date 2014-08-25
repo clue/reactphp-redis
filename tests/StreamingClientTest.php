@@ -125,8 +125,6 @@ class ClientTest extends TestCase
 
     public function testEndingNonBusyClosesClient()
     {
-        $this->markTestIncomplete();
-
         $this->assertFalse($this->client->isBusy());
 
         $this->client->on('close', $this->expectCallableOnce());
@@ -135,8 +133,6 @@ class ClientTest extends TestCase
 
     public function testEndingBusyClosesClientWhenNotBusyAnymore()
     {
-        $this->markTestIncomplete();
-
         // count how often the "close" method has been called
         $closed = 0;
         $this->client->on('close', function() use (&$closed) {
@@ -150,7 +146,16 @@ class ClientTest extends TestCase
         $this->assertEquals(0, $closed);
 
         $this->client->handleMessage(new BulkReply('PONG'));
+        $promise->then($this->expectCallableOnce('PONG'));
         $this->assertEquals(1, $closed);
+    }
+
+    public function testClosingMultipleTimesEmitsOnce()
+    {
+        $this->client->on('close', $this->expectCallableOnce());
+
+        $this->client->close();
+        $this->client->close();
     }
 
     public function testReceivingUnexpectedMessageThrowsException()
