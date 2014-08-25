@@ -5,6 +5,8 @@ use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\IntegerReply;
 use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
+use Clue\Redis\Protocol\Model\MultiBulkReply;
+use Clue\React\Redis\Client;
 
 class ClientTest extends TestCase
 {
@@ -162,5 +164,26 @@ class ClientTest extends TestCase
     {
         $this->setExpectedException('UnderflowException');
         $this->client->handleMessage(new BulkReply('PONG'));
+    }
+
+    public function testPubsubSubscribe()
+    {
+        $promise = $this->client->subscribe('test');
+        $this->expectPromiseResolve($promise);
+
+        $this->client->on('subscribe', $this->expectCallableOnce());
+        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('test'), new IntegerReply(1))));
+
+        return $this->client;
+    }
+
+    /**
+     * @depends testPubsubSubscribe
+     * @param Client $client
+     */
+    public function testPubsubMessage(Client $client)
+    {
+        $client->on('message', $this->expectCallableOnce());
+        $client->handleMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('test'), new BulkReply('payload'))));
     }
 }

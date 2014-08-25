@@ -14,6 +14,7 @@ use RuntimeException;
 use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
+use Clue\Redis\Protocol\Model\MultiBulkReply;
 
 class StreamingClient extends EventEmitter implements Client
 {
@@ -23,6 +24,9 @@ class StreamingClient extends EventEmitter implements Client
     private $requests = array();
     private $ending = false;
     private $closed = false;
+
+    private $subscribed = 0;
+    private $psubscribed = 0;
 
     public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
@@ -84,6 +88,21 @@ class StreamingClient extends EventEmitter implements Client
     public function handleMessage(ModelInterface $message)
     {
         $this->emit('data', array($message, $this));
+
+        if (/*($this->subscribed !== 0 || $this->psubscribed !== 0) &&*/ $message instanceof MultiBulkReply) {
+            $array = $message->getValueNative();
+            $first = array_shift($array);
+
+            // pub/sub events are to be forwarded
+            if (in_array($first, array('message', 'subscribe', 'unsubscribe', 'pmessage', 'psubscribe', 'punsubscribe'))) {
+                $this->emit($first, $array);
+            }
+
+            // pub/sub message events should not be processed as request responses
+            if (in_array($first, array('message', 'pmessage'))) {
+                return;
+            }
+        }
 
         if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');

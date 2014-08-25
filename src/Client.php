@@ -11,6 +11,14 @@ use Clue\Redis\Protocol\Model\ModelInterface;
  *
  * @event data(ModelInterface $messageModel, Client $thisClient)
  * @event close()
+ *
+ * @event message($channel, $message)
+ * @event subscribe($channel, $numberOfChannels)
+ * @event unsubscribe($channel, $numberOfChannels)
+ *
+ * @event pmessage($pattern, $channel, $message)
+ * @event psubscribe($channel, $numberOfChannels)
+ * @event punsubscribe($channel, $numberOfChannels)
  */
 interface Client extends EventEmitterInterface
 {
