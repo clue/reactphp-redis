@@ -10,8 +10,9 @@ Once [installed](#install), you can use the following code to connect to your
 local redis server and send some requests:
 
 ```php
+$loop = React\EventLoop\Factory::create();
+$factory = new Factory($loop);
 
-$factory = new Factory($connector);
 $factory->createClient()->then(function (Client $client) use ($loop) {
     $client->SET('greeting', 'Hello world');
     $client->APPEND('greeting', '!');
