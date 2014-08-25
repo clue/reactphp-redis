@@ -49,12 +49,6 @@ $factory->createClient()->then(function (Client $client) use ($loop) {
 
         $loop->removeReadStream(STDIN);
     });
-
-    $client->on('error', function(Exception $error) {
-        echo '## ERROR: ' . $error->getMessage() . PHP_EOL;
-    });
-
-    //$client->end();
 }, function (Exception $error) {
     echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
     exit(1);
