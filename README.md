@@ -31,6 +31,8 @@ $factory->createClient()->then(function (Client $client) use ($loop) {
 $loop->run();
 ```
 
+See also the [examples](examples).
+
 ## Install
 
 The recommended way to install this library is [through composer](http://getcomposer.org). [New to composer?](http://getcomposer.org/doc/00-intro.md)
