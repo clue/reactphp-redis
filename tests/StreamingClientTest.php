@@ -55,7 +55,7 @@ class ClientTest extends TestCase
 
     public function testReceiveMessageEmitsEvent()
     {
-        $this->client->on('message', $this->expectCallableOnce());
+        $this->client->on('data', $this->expectCallableOnce());
 
         $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->returnValue(array(new IntegerReply(2))));
         $this->stream->emit('data', array('message'));
@@ -63,8 +63,8 @@ class ClientTest extends TestCase
 
     public function testReceiveThrowMessageEmitsErrorEvent()
     {
-        $this->client->on('message', $this->expectCallableOnce());
-        $this->client->on('message', function() {
+        $this->client->on('data', $this->expectCallableOnce());
+        $this->client->on('data', function() {
             throw new UnderflowException();
         });
 

@@ -83,7 +83,7 @@ class StreamingClient extends EventEmitter implements Client
 
     public function handleMessage(ModelInterface $message)
     {
-        $this->emit('message', array($message, $this));
+        $this->emit('data', array($message, $this));
 
         if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');
