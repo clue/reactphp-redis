@@ -15,7 +15,7 @@ use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
 
-class StreamingClient extends EventEmitter
+class StreamingClient extends EventEmitter implements Client
 {
     private $stream;
     private $parser;
@@ -108,12 +108,6 @@ class StreamingClient extends EventEmitter
         return !!$this->requests;
     }
 
-    /**
-     * end connection once all pending requests have been replied to
-     *
-     * @uses self::close() once all replies have been received
-     * @see self::close() for closing the connection immediately
-     */
     public function end()
     {
         $this->ending = true;
