@@ -20,6 +20,8 @@ class Client extends EventEmitter
     private $stream;
     private $parser;
     private $serializer;
+    private $requests = array();
+    private $ending = false;
 
     public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
@@ -46,7 +48,7 @@ class Client extends EventEmitter
 
             foreach ($models as $data) {
                 try {
-                    $that->emit('message', array($data, $that));
+                    $that->handleMessage($data);
                 }
                 catch (UnderflowException $error) {
                     $that->emit('error', array($error));
@@ -65,32 +67,73 @@ class Client extends EventEmitter
         $this->serializer = $serializer;
     }
 
-    /**
-     * Sends command with given $name and additial $args
-     *
-     * @param name $name
-     * @param array $args
-     */
-    public function sendRequest($name, array $args = array())
+    public function __call($name, $args)
     {
-        $this->stream->write($this->serializer->getRequestMessage($name, $args));
+        $request = new Deferred();
+
+        if ($this->ending) {
+            $request->reject(new RuntimeException('Connection closed'));
+        } else {
+            $this->stream->write($this->serializer->getRequestMessage($name, $args));
+            $this->requests []= $request;
+        }
+
+        return $request->promise();
+    }
+
+    public function handleMessage(ModelInterface $message)
+    {
+        $this->emit('message', array($message, $this));
+
+        if (!$this->requests) {
+            throw new UnderflowException('Unexpected reply received, no matching request found');
+        }
+
+        $request = array_shift($this->requests);
+        /* @var $request Deferred */
+
+        if ($message instanceof ErrorReply) {
+            $request->reject($message);
+        } else {
+            $request->resolve($message->getValueNative());
+        }
+
+        if ($this->ending && !$this->isBusy()) {
+            $this->close();
+        }
+    }
+
+    public function isBusy()
+    {
+        return !!$this->requests;
     }
 
     /**
-     * Sends given message model (request message)
+     * end connection once all pending requests have been replied to
      *
-     * @param ModelInterface $message
+     * @uses self::close() once all replies have been received
+     * @see self::close() for closing the connection immediately
      */
-    public function sendMessage(ModelInterface $message)
+    public function end()
     {
-        $this->stream->write($message->getMessageSerialized($this->serializer));
+        $this->ending = true;
+
+        if (!$this->isBusy()) {
+            $this->close();
+        }
     }
 
-    /**
-     * Immediately terminate the connection and discard incoming and outgoing buffers
-     */
     public function close()
     {
+        $this->ending = true;
+
         $this->stream->close();
+
+        // reject all remaining requests in the queue
+        while($this->requests) {
+            $request = array_shift($this->requests);
+            /* @var $request Request */
+            $request->reject(new RuntimeException('Connection closing'));
+        }
     }
 }

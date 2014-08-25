@@ -2,7 +2,6 @@
 
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
-use Clue\React\Redis\RequestApi;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -13,15 +12,13 @@ $connector = new React\SocketClient\Connector($loop, $resolver);
 $factory = new Factory($connector);
 
 $factory->createClient()->then(function (Client $client) {
-    $api = new RequestApi($client);
+    $client->incr('test');
 
-    $api->incr('test');
-
-    $api->get('test')->then(function ($result) {
+    $client->get('test')->then(function ($result) {
         var_dump($result);
     });
 
-    $api->end();
+    $client->end();
 });
 
 $loop->run();
