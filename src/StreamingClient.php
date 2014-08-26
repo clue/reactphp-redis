@@ -14,6 +14,7 @@ use RuntimeException;
 use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
+use Clue\Redis\Protocol\Model\StatusReply;
 
 class StreamingClient extends EventEmitter implements Client
 {
@@ -23,6 +24,8 @@ class StreamingClient extends EventEmitter implements Client
     private $requests = array();
     private $ending = false;
     private $closed = false;
+
+    private $monitoring = false;
 
     public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
@@ -78,12 +81,24 @@ class StreamingClient extends EventEmitter implements Client
             $this->requests []= $request;
         }
 
+        if (strtolower($name) === 'monitor') {
+            $monitoring =& $this->monitoring;
+            $request->then(function () use (&$monitoring) {
+                $monitoring = true;
+            });
+        }
+
         return $request->promise();
     }
 
     public function handleMessage(ModelInterface $message)
     {
         $this->emit('data', array($message, $this));
+
+        if ($this->monitoring && $message instanceof StatusReply) {
+            $this->emit('monitor', array($message, $this));
+            return;
+        }
 
         if (!$this->requests) {
             throw new UnderflowException('Unexpected reply received, no matching request found');
