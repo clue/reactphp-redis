@@ -95,8 +95,8 @@ class StreamingClient extends EventEmitter implements Client
     {
         $this->emit('data', array($message, $this));
 
-        if ($this->monitoring && $message instanceof StatusReply) {
-            $this->emit('monitor', array($message, $this));
+        if ($this->monitoring && $this->isMonitorMessage($message)) {
+            $this->emit('monitor', array($message));
             return;
         }
 
@@ -151,5 +151,11 @@ class StreamingClient extends EventEmitter implements Client
             /* @var $request Request */
             $request->reject(new RuntimeException('Connection closing'));
         }
+    }
+
+    private function isMonitorMessage(ModelInterface $message)
+    {
+        // Check status '1409172115.207170 [0 127.0.0.1:58567] "ping"' contains otherwise uncommon '] "'
+        return ($message instanceof StatusReply && strpos($message->getValueNative(), '] "') !== false);
     }
 }
