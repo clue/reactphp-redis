@@ -11,6 +11,8 @@ use Clue\Redis\Protocol\Model\ModelInterface;
  *
  * @event data(ModelInterface $messageModel, Client $thisClient)
  * @event close()
+ *
+ * @event monitor(ModelInterface $statusModel)
  */
 interface Client extends EventEmitterInterface
 {
