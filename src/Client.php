@@ -10,6 +10,7 @@ use Clue\Redis\Protocol\Model\ModelInterface;
  * Simple interface for executing redis commands
  *
  * @event data(ModelInterface $messageModel, Client $thisClient)
+ * @event error(Exception $error)
  * @event close()
  *
  * @event message($channel, $message)
