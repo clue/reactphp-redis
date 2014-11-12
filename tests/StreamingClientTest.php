@@ -5,6 +5,8 @@ use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\IntegerReply;
 use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
+use Clue\Redis\Protocol\Model\MultiBulkReply;
+use Clue\React\Redis\Client;
 use Clue\Redis\Protocol\Model\StatusReply;
 
 class ClientTest extends TestCase
@@ -209,5 +211,48 @@ class ClientTest extends TestCase
     {
         $this->setExpectedException('UnderflowException');
         $this->client->handleMessage(new BulkReply('PONG'));
+    }
+
+    public function testPubsubSubscribe()
+    {
+        $promise = $this->client->subscribe('test');
+        $this->expectPromiseResolve($promise);
+
+        $this->client->on('subscribe', $this->expectCallableOnce());
+        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('test'), new IntegerReply(1))));
+
+        return $this->client;
+    }
+
+    /**
+     * @depends testPubsubSubscribe
+     * @param Client $client
+     */
+    public function testPubsubPatternSubscribe(Client $client)
+    {
+         $promise = $client->psubscribe('demo_*');
+         $this->expectPromiseResolve($promise);
+
+         $client->on('psubscribe', $this->expectCallableOnce());
+         $client->handleMessage(new MultiBulkReply(array(new BulkReply('psubscribe'), new BulkReply('demo_*'), new IntegerReply(1))));
+
+        return $client;
+    }
+
+    /**
+     * @depends testPubsubPatternSubscribe
+     * @param Client $client
+     */
+    public function testPubsubMessage(Client $client)
+    {
+        $client->on('message', $this->expectCallableOnce());
+        $client->handleMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('test'), new BulkReply('payload'))));
+    }
+
+    public function testPubsubSubscribeSingleOnly()
+    {
+        $this->expectPromiseReject($this->client->subscribe('a', 'b'));
+        $this->expectPromiseReject($this->client->unsubscribe('a', 'b'));
+        $this->expectPromiseReject($this->client->unsubscribe());
     }
 }

@@ -11,9 +11,11 @@ use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use UnderflowException;
 use RuntimeException;
+use InvalidArgumentException;
 use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
+use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\Redis\Protocol\Model\StatusReply;
 
 class StreamingClient extends EventEmitter implements Client
@@ -25,6 +27,8 @@ class StreamingClient extends EventEmitter implements Client
     private $ending = false;
     private $closed = false;
 
+    private $subscribed = 0;
+    private $psubscribed = 0;
     private $monitoring = false;
 
     public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
@@ -74,17 +78,42 @@ class StreamingClient extends EventEmitter implements Client
     {
         $request = new Deferred();
 
+        $name = strtolower($name);
+
+        // special (p)(un)subscribe commands only accept a single parameter and have custom response logic applied
+        static $pubsubs = array('subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe');
+
         if ($this->ending) {
             $request->reject(new RuntimeException('Connection closed'));
+        } elseif (count($args) !== 1 && in_array($name, $pubsubs)) {
+            $request->reject(new InvalidArgumentException('PubSub commands limited to single argument'));
         } else {
             $this->stream->write($this->serializer->getRequestMessage($name, $args));
             $this->requests []= $request;
         }
 
-        if (strtolower($name) === 'monitor') {
+        if ($name === 'monitor') {
             $monitoring =& $this->monitoring;
             $request->then(function () use (&$monitoring) {
                 $monitoring = true;
+            });
+        } elseif (in_array($name, $pubsubs)) {
+            $that = $this;
+            $subscribed =& $this->subscribed;
+            $psubscribed =& $this->psubscribed;
+
+            $request->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
+                $first = array_shift($array);
+
+                // (p)(un)subscribe messages are to be forwarded
+                $that->emit($first, $array);
+
+                // remember number of (p)subscribe topics
+                if ($first === 'subscribe' || $first === 'unsubscribe') {
+                    $subscribed = $array[1];
+                } else {
+                    $psubscribed = $array[1];
+                }
             });
         }
 
@@ -98,6 +127,17 @@ class StreamingClient extends EventEmitter implements Client
         if ($this->monitoring && $this->isMonitorMessage($message)) {
             $this->emit('monitor', array($message));
             return;
+        }
+
+        if (($this->subscribed !== 0 || $this->psubscribed !== 0) && $message instanceof MultiBulkReply) {
+            $array = $message->getValueNative();
+            $first = array_shift($array);
+
+            // pub/sub messages are to be forwarded and should not be processed as request responses
+            if (in_array($first, array('message', 'pmessage'))) {
+                $this->emit($first, $array);
+                return;
+            }
         }
 
         if (!$this->requests) {

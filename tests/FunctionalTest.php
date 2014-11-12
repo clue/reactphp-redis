@@ -34,6 +34,18 @@ class FunctionalTest extends TestCase
         return $client;
     }
 
+    public function testMgetIsNotInterpretedAsSubMessage()
+    {
+        $client = $this->createClient();
+
+        $client->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
+
+        $client->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
+        $client->on('message', $this->expectCallableNever());
+
+        $this->waitFor($client);
+    }
+
     /**
      *
      * @param StreamingClient $client
