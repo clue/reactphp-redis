@@ -36,8 +36,6 @@ class FunctionalTest extends TestCase
 
     public function testMgetIsNotInterpretedAsSubMessage()
     {
-        $this->markTestIncomplete();
-
         $client = $this->createClient();
 
         $client->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');

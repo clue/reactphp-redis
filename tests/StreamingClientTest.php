@@ -228,27 +228,31 @@ class ClientTest extends TestCase
      * @depends testPubsubSubscribe
      * @param Client $client
      */
+    public function testPubsubPatternSubscribe(Client $client)
+    {
+         $promise = $client->psubscribe('demo_*');
+         $this->expectPromiseResolve($promise);
+
+         $client->on('psubscribe', $this->expectCallableOnce());
+         $client->handleMessage(new MultiBulkReply(array(new BulkReply('psubscribe'), new BulkReply('demo_*'), new IntegerReply(1))));
+
+        return $client;
+    }
+
+    /**
+     * @depends testPubsubPatternSubscribe
+     * @param Client $client
+     */
     public function testPubsubMessage(Client $client)
     {
         $client->on('message', $this->expectCallableOnce());
         $client->handleMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('test'), new BulkReply('payload'))));
     }
 
-    public function testPubsubSubscribeMultiple()
+    public function testPubsubSubscribeSingleOnly()
     {
-        $this->markTestIncomplete();
-
-        $promise = $this->client->subscribe('first', 'second');
-        $this->expectPromiseResolve($promise);
-
-        // expect two "subscribe" events
-        $mock = $this->createCallableMock();
-        $mock->expects($this->exactly(2))->method('__invoke');
-        $this->client->on('subscribe', $mock);
-
-        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('first'), new IntegerReply(1))));
-        $this->client->handleMessage(new MultiBulkReply(array(new BulkReply('subscribe'), new BulkReply('second'), new IntegerReply(2))));
-
-        return $this->client;
+        $this->expectPromiseReject($this->client->subscribe('a', 'b'));
+        $this->expectPromiseReject($this->client->unsubscribe('a', 'b'));
+        $this->expectPromiseReject($this->client->unsubscribe());
     }
 }
