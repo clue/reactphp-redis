@@ -4,9 +4,9 @@ Async [Redis](http://redis.io/) client implementation built on top of [React PHP
 
 [Redis](http://redis.io/) is an open source, advanced, in-memory key-value database.
 It offers a set of simple, atomic operations in order to work with its primitive data types.
-Its lightweight design and fast operation makes it an idial candidate in modern application stacks.
+Its lightweight design and fast operation makes it an ideal candidate for modern application stacks.
 This library provides you a simple API to work with your Redis database from within PHP.
-It enables you to set and query its data or use Redis PubSub topics to react to incoming events.
+It enables you to set and query its data or use its PubSub topics to react to incoming events.
 
 * **Async execution of Commands** -
   Send any number commands to  Redis in parallel (automatic pipeline) and
@@ -26,7 +26,7 @@ It enables you to set and query its data or use Redis PubSub topics to react to 
 ## Quickstart example
 
 Once [installed](#install), you can use the following code to connect to your
-local redis server and send some requests:
+local Redis server and send some requests:
 
 ```php
 $loop = React\EventLoop\Factory::create();
