@@ -4,6 +4,18 @@ This file is a manually maintained list of changes for each release. Feel free
 to add your changes here when sending pull requests. Also send corrections if
 you spot any mistakes.
 
+## 0.5.0 (2014-11-12)
+
+* Feature: Support PubSub commands (P)(UN)SUBSCRIBE and watching for "message",
+  "subscribe" and "unsubscribe" events
+  (#24)
+
+* Feature: Support MONITOR command and watching for "monitor" events
+  (#23)
+
+* Improve documentation, update locked dependencies and add first class support for HHVM
+  (#25, #26 and others)
+
 ## 0.4.0 (2014-08-25)
 
 * BC break: The `Client` class has been renamed to `StreamingClient`.
