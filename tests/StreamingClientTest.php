@@ -7,6 +7,7 @@ use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\React\Redis\Client;
+use Clue\Redis\Protocol\Model\StatusReply;
 
 class ClientTest extends TestCase
 {
@@ -91,6 +92,52 @@ class ClientTest extends TestCase
 
         $this->expectPromiseResolve($promise);
         $promise->then($this->expectCallableOnce('PONG'));
+    }
+
+    /**
+     * @expectedException UnderflowException
+     */
+    public function testInvalidMonitor()
+    {
+        $this->client->handleMessage(new StatusReply('+1409171800.312243 [0 127.0.0.1:58542] "ping"'));
+    }
+
+    public function testMonitor()
+    {
+        $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('monitor'));
+
+        $promise = $this->client->monitor();
+
+        $this->client->handleMessage(new StatusReply('OK'));
+
+        $this->expectPromiseResolve($promise);
+        $promise->then($this->expectCallableOnce('OK'));
+
+        return $this->client;
+    }
+
+    /**
+     * @depends testMonitor
+     * @param StreamingClient $client
+     */
+    public function testMonitorEvent(StreamingClient $client)
+    {
+        $client->on('monitor', $this->expectCallableOnce());
+
+        $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
+    }
+
+    /**
+     * @depends testMonitor
+     * @param StreamingClient $client
+     */
+    public function testMonitorPing(StreamingClient $client)
+    {
+        $client->on('monitor', $this->expectCallableOnce());
+
+        $client->ping();
+        $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
+        $client->handleMessage(new StatusReply('PONG'));
     }
 
     public function testErrorReply()

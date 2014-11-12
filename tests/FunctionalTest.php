@@ -117,6 +117,21 @@ class FunctionalTest extends TestCase
         return $client;
     }
 
+    /**
+     *
+     * @param StreamingClient $client
+     * @depends testPipeline
+     */
+    public function testMonitorPing(StreamingClient $client)
+    {
+        $client->on('monitor', $this->expectCallableOnce());
+
+        $client->monitor()->then($this->expectCallableOnce('OK'));
+        $client->ping()->then($this->expectCallableOnce('PONG'));
+
+        $this->waitFor($client);
+    }
+
     public function testPubSub()
     {
         $consumer = $this->createClient();
