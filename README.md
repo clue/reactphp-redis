@@ -53,6 +53,8 @@ $loop->run();
 
 See also the [examples](examples).
 
+## Usage
+
 ### Factory
 
 The `Factory` is responsible for creating your `Client` instance.
@@ -86,6 +88,40 @@ $factory->createClient('localhost')->then(
 
 The `Client` is responsible for exchanging messages with Redis
 and keeps track of pending commands.
+
+All [Redis commands](http://redis.io/commands) are automatically available as public methods (via the magic `__call()` method) like this:
+
+```php
+$client->get($key);
+$client->set($key, $value);
+$client->exists($key);
+$client->expire($key, $seconds);
+$client->mget($key1, $key2, $key3);
+
+$client->multi();
+$client->exec();
+
+$client->publish($channel, $payload);
+$client->subscribe($channel);
+
+$client->ping();
+$client->select($database);
+```
+
+Listing all available commands is out of scope here, please refer to the [Redis command reference](http://redis.io/commands).
+
+Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
+Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
+Sending commands uses a [Promise](https://github.com/reactphp/promise)-based interface that makes it easy to react to when a command is *fulfilled*
+(i.e. either successfully resolved or rejected with an error):
+
+```php
+$client->set('hello', 'world');
+$client->get('hello')->then(function ($response) {
+    // response received for GET command
+    echo 'hello ' . $response;
+});
+```
 
 The `on($eventName, $eventHandler)` method can be used to register a new event handler.
 Incoming events and errors will be forwarded to registered event handler callbacks:
@@ -127,40 +163,6 @@ $client->on('monitor', function (StatusReply $message) {
     // somebody executed a command
 });
 ```
-
-Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
-Redis will respond to each command request with a response message.
-Sending commands uses a Promise-based interface that makes it easy to react to when a command is *fulfilled*
-(i.e. either successfully resolved or rejected with an error):
-
-```php
-$client->set('hello', 'world');
-$client->get('hello')->then(function ($response) {
-    // response received for GET command
-    echo 'hello ' . $response;
-});
-```
-
-All [Redis commands](http://redis.io/commands) are automatically available as public methods (via the magic `__call()` method) like this:
-
-```php
-$client->get($key);
-$client->set($key, $value);
-$client->exists($key);
-$client->expire($key, $seconds);
-$client->mget($key1, $key2, $key3);
-
-$client->multi();
-$client->exec();
-
-$client->publish($channel, $payload);
-$client->subscribe($channel);
-
-$client->ping();
-$client->select($database);
-```
-
-Listing all available commands is out of scope here, please refer to the [Redis command reference](http://redis.io/commands).
 
 The `close()` method can be used to force-close the Redis connection and reject all pending commands.
 
