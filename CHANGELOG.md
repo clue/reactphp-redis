@@ -4,6 +4,11 @@ This file is a manually maintained list of changes for each release. Feel free
 to add your changes here when sending pull requests. Also send corrections if
 you spot any mistakes.
 
+## 0.5.1 (2015-01-12)
+
+* Fix: Fix compatibility with react/promise v2.0 for monitor and PubSub commands.
+  (#28)
+
 ## 0.5.0 (2014-11-12)
 
 * Feature: Support PubSub commands (P)(UN)SUBSCRIBE and watching for "message",
