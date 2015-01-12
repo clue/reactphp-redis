@@ -77,6 +77,7 @@ class StreamingClient extends EventEmitter implements Client
     public function __call($name, $args)
     {
         $request = new Deferred();
+        $promise = $request->promise();
 
         $name = strtolower($name);
 
@@ -94,7 +95,7 @@ class StreamingClient extends EventEmitter implements Client
 
         if ($name === 'monitor') {
             $monitoring =& $this->monitoring;
-            $request->then(function () use (&$monitoring) {
+            $promise->then(function () use (&$monitoring) {
                 $monitoring = true;
             });
         } elseif (in_array($name, $pubsubs)) {
@@ -102,7 +103,7 @@ class StreamingClient extends EventEmitter implements Client
             $subscribed =& $this->subscribed;
             $psubscribed =& $this->psubscribed;
 
-            $request->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
+            $promise->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
                 $first = array_shift($array);
 
                 // (p)(un)subscribe messages are to be forwarded
@@ -117,7 +118,7 @@ class StreamingClient extends EventEmitter implements Client
             });
         }
 
-        return $request->promise();
+        return $promise;
     }
 
     public function handleMessage(ModelInterface $message)
