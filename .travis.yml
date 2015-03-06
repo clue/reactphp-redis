@@ -6,6 +6,6 @@ php:
 services:
   - redis-server
 before_script:
-  - composer update --dev --prefer-source --no-interaction
+  - composer install --prefer-source --no-interaction
 script:
   - phpunit --coverage-text
