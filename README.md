@@ -57,15 +57,24 @@ See also the [examples](examples).
 
 ### Factory
 
-The `Factory` is responsible for creating your `Client` instance.
-It also registers everything with the main `EventLoop`.
+The `Factory` is responsible for creating your [`Client`](#client) instance.
+It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
 
 ```php
 $loop = \React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 ```
 
-The `createClient($redisUri)` method can be used to create a new `Client`.
+If you need custom DNS, proxy or TLS settings, you can explicitly pass a
+custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket-client#connectorinterface):
+
+```php
+$factory = new Factory($loop, $connector);
+```
+
+#### createClient()
+
+The `createClient($redisUri)` method can be used to create a new [`Client`](#client).
 It helps with establishing a plain TCP/IP connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
@@ -89,6 +98,8 @@ $factory->createClient('localhost')->then(
 The `Client` is responsible for exchanging messages with Redis
 and keeps track of pending commands.
 
+#### Commands
+
 All [Redis commands](http://redis.io/commands) are automatically available as public methods (via the magic `__call()` method) like this:
 
 ```php
@@ -106,9 +117,13 @@ $client->subscribe($channel);
 
 $client->ping();
 $client->select($database);
+
+// many more…
 ```
 
 Listing all available commands is out of scope here, please refer to the [Redis command reference](http://redis.io/commands).
+
+#### Processing
 
 Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
 Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
@@ -122,6 +137,8 @@ $client->get('hello')->then(function ($response) {
     echo 'hello ' . $response;
 });
 ```
+
+#### on()
 
 The `on($eventName, $eventHandler)` method can be used to register a new event handler.
 Incoming events and errors will be forwarded to registered event handler callbacks:
@@ -164,14 +181,18 @@ $client->on('monitor', function (StatusReply $message) {
 });
 ```
 
+#### close()
+
 The `close()` method can be used to force-close the Redis connection and reject all pending commands.
+
+#### end()
 
 The `end()` method can be used to soft-close the Redis connection once all pending commands are completed.
 
-
 ## Install
 
-The recommended way to install this library is [through composer](http://getcomposer.org). [New to composer?](http://getcomposer.org/doc/00-intro.md)
+The recommended way to install this library is [through composer](http://getcomposer.org).
+[New to composer?](http://getcomposer.org/doc/00-intro.md)
 
 ```JSON
 {
