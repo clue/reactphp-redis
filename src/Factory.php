@@ -135,7 +135,7 @@ class Factory
     {
         $db   = null;
         $path = parse_url($target, PHP_URL_PATH);
-        if ($path !== null) {
+        if ($path !== null && $path !== '') {
             // skip first slash
             $db = substr($path, 1);
         }
