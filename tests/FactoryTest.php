@@ -2,77 +2,36 @@
 
 use React\Socket\ConnectionInterface;
 
-use Clue\React\Redis\Server;
-
-use Clue\React\Redis\StreamingClient;
-
 use Clue\React\Redis\Factory;
+use React\Promise;
 
 class FactoryTest extends TestCase
 {
+    private $loop;
+    private $connector;
+    private $factory;
+
     public function setUp()
     {
-        $this->loop = new React\EventLoop\StreamSelectLoop();
+        $this->loop = $this->getMock('React\EventLoop\LoopInterface');
+        $this->connector = $this->getMock('React\SocketClient\ConnectorInterface');
+        $this->factory = new Factory($this->loop, $this->connector);
+    }
+
+    public function testCtor()
+    {
         $this->factory = new Factory($this->loop);
     }
 
-    public function testPrequisiteServerAcceptsAnyPassword()
+    public function testWillRejectIfConnectorRejects()
     {
-        $this->markTestSkipped();
-    }
-
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientDefaultSuccess()
-    {
-        $promise = $this->factory->createClient();
-
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
-
-        $this->loop->run();
-    }
-
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientAuthSelect()
-    {
-        $promise = $this->factory->createClient('tcp://authenticationpassword@127.0.0.1:6379/0');
-
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
-
-        $this->loop->run();
-    }
-
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientAuthenticationContainsColons()
-    {
-        $promise = $this->factory->createClient('tcp://authentication:can:contain:colons@127.0.0.1:6379');
-
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
-
-        $this->loop->run();
-    }
-
-    public function testClientUnconnectableAddress()
-    {
+        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 2)->willReturn(Promise\reject(new \RuntimeException()));
         $promise = $this->factory->createClient('tcp://127.0.0.1:2');
 
         $this->expectPromiseReject($promise);
-
-        $this->loop->tick();
     }
 
-    public function testClientInvalidAddress()
+    public function testWillRejectIfTargetIsInvalid()
     {
         $promise = $this->factory->createClient('http://invalid target');
 
