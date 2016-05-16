@@ -67,7 +67,6 @@ class StreamingClient extends EventEmitter implements Client
         });
 
         $stream->on('close', array($this, 'close'));
-        $stream->resume();
 
         $this->stream = $stream;
         $this->parser = $parser;
