@@ -29,7 +29,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
     * [createClient()](#createclient)
   * [Client](#client)
     * [Commands](#commands)
-    * [Processing](#processing)
+    * [Promises](#promises)
     * [on()](#on)
     * [close()](#close)
     * [end()](#end)
@@ -113,7 +113,7 @@ and keeps track of pending commands.
 
 #### Commands
 
-All [Redis commands](http://redis.io/commands) are automatically available as public methods (via the magic `__call()` method) like this:
+All [Redis commands](http://redis.io/commands) are automatically available as public methods like this:
 
 ```php
 $client->get($key);
@@ -135,11 +135,17 @@ $client->select($database);
 ```
 
 Listing all available commands is out of scope here, please refer to the [Redis command reference](http://redis.io/commands).
+All [Redis commands](http://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
 
-#### Processing
+Each of these commands supports async operation and either *resolves* with
+its *results* or *rejects* with an `Exception`.
+Please see the following section about [promises](#promises) for more details.
+
+#### Promises
 
 Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
 Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
+
 Sending commands uses a [Promise](https://github.com/reactphp/promise)-based interface that makes it easy to react to when a command is *fulfilled*
 (i.e. either successfully resolved or rejected with an error):
 
