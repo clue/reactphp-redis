@@ -157,7 +157,7 @@ $client->on('error', function (Exception $e) {
 $client->on('message', function ($channel, $payload) {
     // pubsub message received on given $channel
 });
-$client->on('pmessage', function ($pattern, $payload) {
+$client->on('pmessage', function ($pattern, $channel, $payload) {
     // pubsub message received matching given $pattern
 });
 $client->on('subscribe', function ($channel, $total) {
