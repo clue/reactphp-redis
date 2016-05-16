@@ -12,6 +12,7 @@ use InvalidArgumentException;
 use BadMethodCallException;
 use Exception;
 use React\EventLoop\LoopInterface;
+use React\Promise;
 
 class Factory
 {
@@ -109,13 +110,8 @@ class Factory
     {
         try {
             $parts = $this->parseUrl($target);
-        }
-        catch (Exception $e) {
-            if (class_exists('React\Promise\When')) {
-                return \React\Promise\When::reject($e);
-            } else {
-                return \React\Promise\reject($e);
-            }
+        } catch (Exception $e) {
+            return Promise\reject($e);
         }
 
         return $this->connector->create($parts['host'], $parts['port']);
