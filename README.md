@@ -21,6 +21,21 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * **Good test coverage** -
   Comes with an automated tests suite and is regularly tested against versions as old as Redis v2.6+
 
+**Table of Contents**
+
+* [Quickstart example](#quickstart-example)
+* [Usage](#usage)
+  * [Factory](#factory)
+    * [createClient()](#createclient)
+  * [Client](#client)
+    * [Commands](#commands)
+    * [Processing](#processing)
+    * [on()](#on)
+    * [close()](#close)
+    * [end()](#end)
+* [Install](#install)
+* [License](#license)
+
 ## Quickstart example
 
 Once [installed](#install), you can use the following code to connect to your
