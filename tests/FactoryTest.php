@@ -2,77 +2,77 @@
 
 use React\Socket\ConnectionInterface;
 
-use Clue\React\Redis\Server;
-
-use Clue\React\Redis\StreamingClient;
-
 use Clue\React\Redis\Factory;
+use React\Promise;
 
 class FactoryTest extends TestCase
 {
+    private $loop;
+    private $connector;
+    private $factory;
+
     public function setUp()
     {
-        $this->loop = new React\EventLoop\StreamSelectLoop();
+        $this->loop = $this->getMock('React\EventLoop\LoopInterface');
+        $this->connector = $this->getMock('React\SocketClient\ConnectorInterface');
+        $this->factory = new Factory($this->loop, $this->connector);
+    }
+
+    public function testCtor()
+    {
         $this->factory = new Factory($this->loop);
     }
 
-    public function testPrequisiteServerAcceptsAnyPassword()
+    public function testWillConnectWithDefaultPort()
     {
-        $this->markTestSkipped();
+        $this->connector->expects($this->once())->method('create')->with('redis.example.com', 6379)->willReturn(Promise\reject(new \RuntimeException()));
+        $promise = $this->factory->createClient('redis.example.com');
     }
 
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientDefaultSuccess()
+    public function testWillConnectToLocalIpWhenTargetIsLocalhost()
     {
-        $promise = $this->factory->createClient();
-
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
-
-        $this->loop->run();
+        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 1337)->willReturn(Promise\reject(new \RuntimeException()));
+        $promise = $this->factory->createClient('tcp://localhost:1337');
     }
 
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientAuthSelect()
+    public function testWillResolveIfConnectorResolves()
     {
-        $promise = $this->factory->createClient('tcp://authenticationpassword@127.0.0.1:6379/0');
+        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream->expects($this->never())->method('write');
 
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
+        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 2)->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('tcp://127.0.0.1:2');
 
-        $this->loop->run();
+        $this->expectPromiseResolve($promise);
     }
 
-    /**
-     * @depends testPrequisiteServerAcceptsAnyPassword
-     */
-    public function testClientAuthenticationContainsColons()
+    public function testWillWriteSelectCommandIfTargetContainsPath()
     {
-        $promise = $this->factory->createClient('tcp://authentication:can:contain:colons@127.0.0.1:6379');
+        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
 
-        $this->expectPromiseResolve($promise)->then(function (StreamingClient $client) {
-            $client->end();
-        });
-
-        $this->loop->run();
+        $this->connector->expects($this->once())->method('create')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('tcp://127.0.0.1/demo');
     }
 
-    public function testClientUnconnectableAddress()
+    public function testWillWriteAuthCommandIfTargetContainsUserInfo()
     {
+        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$11\r\nhello:world\r\n");
+
+        $this->connector->expects($this->once())->method('create')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('tcp://hello:world@127.0.0.1');
+    }
+
+    public function testWillRejectIfConnectorRejects()
+    {
+        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 2)->willReturn(Promise\reject(new \RuntimeException()));
         $promise = $this->factory->createClient('tcp://127.0.0.1:2');
 
         $this->expectPromiseReject($promise);
-
-        $this->loop->tick();
     }
 
-    public function testClientInvalidAddress()
+    public function testWillRejectIfTargetIsInvalid()
     {
         $promise = $this->factory->createClient('http://invalid target');
 
