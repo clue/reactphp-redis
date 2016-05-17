@@ -23,16 +23,22 @@ class FactoryTest extends TestCase
         $this->factory = new Factory($this->loop);
     }
 
+    public function testWillConnectToLocalIpWithDefaultPortIfTargetIsNotGiven()
+    {
+        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 6379)->willReturn(Promise\reject(new \RuntimeException()));
+        $this->factory->createClient();
+    }
+
     public function testWillConnectWithDefaultPort()
     {
         $this->connector->expects($this->once())->method('create')->with('redis.example.com', 6379)->willReturn(Promise\reject(new \RuntimeException()));
-        $promise = $this->factory->createClient('redis.example.com');
+        $this->factory->createClient('redis.example.com');
     }
 
     public function testWillConnectToLocalIpWhenTargetIsLocalhost()
     {
         $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 1337)->willReturn(Promise\reject(new \RuntimeException()));
-        $promise = $this->factory->createClient('tcp://localhost:1337');
+        $this->factory->createClient('tcp://localhost:1337');
     }
 
     public function testWillResolveIfConnectorResolves()
@@ -40,8 +46,8 @@ class FactoryTest extends TestCase
         $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
         $stream->expects($this->never())->method('write');
 
-        $this->connector->expects($this->once())->method('create')->with('127.0.0.1', 2)->willReturn(Promise\resolve($stream));
-        $promise = $this->factory->createClient('tcp://127.0.0.1:2');
+        $this->connector->expects($this->once())->method('create')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient();
 
         $this->expectPromiseResolve($promise);
     }
