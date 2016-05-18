@@ -45,16 +45,17 @@ local Redis server and send some requests:
 $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
-$factory->createClient()->then(function (Client $client) use ($loop) {
-    $client->SET('greeting', 'Hello world');
-    $client->APPEND('greeting', '!');
+$factory->createClient('localhost:6379')->then(function (Client $client) use ($loop) {
+    $client->set('greeting', 'Hello world');
+    $client->append('greeting', '!');
     
-    $client->GET('greeting')->then(function ($greeting) {
+    $client->get('greeting')->then(function ($greeting) {
+        // Hello world!
         echo $greeting . PHP_EOL;
     });
     
-    $client->INCR('invocation')->then(function ($n) {
-        echo 'count: ' . $n . PHP_EOL;
+    $client->incr('invocation')->then(function ($n) {
+        echo 'This is invocation #' . $n . PHP_EOL;
     });
     
     // end connection once all pending requests have been resolved
@@ -87,24 +88,44 @@ $factory = new Factory($loop, $connector);
 
 #### createClient()
 
-The `createClient($redisUri)` method can be used to create a new [`Client`](#client).
+The `createClient($redisUri = null)` method can be used to create a new [`Client`](#client).
 It helps with establishing a plain TCP/IP connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
-$factory->createClient('localhost')->then(
+$factory->createClient('localhost:6379')->then(
     function (Client $client) {
-        // client connected and authenticated
+        // client connected (and authenticated)
     },
     function (Exception $e) {
-        // an error occured while trying to connect or authorize client
+        // an error occured while trying to connect (or authenticate) client
     }
 );
 ```
 
-> Note: The given $redisUri *can* include a scheme, password, host, port and database definition.
->
-> tcp://auth@localhost:6379/2
+You can omit the complete URI if you want to connect to the default address `localhost:6379`:
+
+```php
+$factory->createClient();
+```
+
+You can omit the port if you're connecting to the default port 6379:
+
+```php
+$factory->createClient('localhost');
+```
+
+You can optionally include a password that will be used to authenticate (AUTH command) the client:
+
+```php
+$factory->createClient('auth@localhost');
+```
+
+You can optionally include a path that will be used to select (SELECT command) the right database:
+
+```php
+$factory->createClient('localhost/2');
+```
 
 ### Client
 
