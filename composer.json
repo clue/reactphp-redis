@@ -20,5 +20,8 @@
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }
+    },
+    "require-dev": {
+        "clue/block-react": "^1.1"
     }
 }

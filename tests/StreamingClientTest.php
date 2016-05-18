@@ -9,7 +9,7 @@ use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\React\Redis\Client;
 use Clue\Redis\Protocol\Model\StatusReply;
 
-class ClientTest extends TestCase
+class StreamingClientTest extends TestCase
 {
     private $stream;
     private $parser;

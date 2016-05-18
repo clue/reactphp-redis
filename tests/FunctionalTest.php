@@ -1,12 +1,11 @@
 <?php
 
 use React\Stream\Stream;
-
 use React\Stream\ReadableStream;
-
 use Clue\React\Redis\Factory;
-
 use Clue\React\Redis\StreamingClient;
+use React\Promise\Deferred;
+use Clue\React\Block;
 
 class FunctionalTest extends TestCase
 {
@@ -135,15 +134,21 @@ class FunctionalTest extends TestCase
         $consumer = $this->createClient();
         $producer = $this->createClient();
 
-        $that = $this;
+        $channel = 'channel:test:' . mt_rand();
 
-        $producer->publish('channel:test', 'nobody sees this')->then($this->expectCallableOnce(0));
+        // consumer receives a single message
+        $deferred = new Deferred();
+        $consumer->on('message', $this->expectCallableOnce());
+        $consumer->on('message', array($deferred, 'resolve'));
+        $consumer->subscribe($channel)->then($this->expectCallableOnce());
+        $this->waitFor($consumer);
 
+        // producer sends a single message
+        $producer->publish($channel, 'hello world')->then($this->expectCallableOnce());
         $this->waitFor($producer);
 
-        $consumer->subscribe('channel:test')->then(function () {
-            // ?
-        });
+        // expect "message" event to take no longer than 0.1s
+        Block\await($deferred->promise(), self::$loop, 0.1);
     }
 
     public function testClose()
@@ -186,24 +191,7 @@ class FunctionalTest extends TestCase
      */
     protected function createClient()
     {
-        $client = null;
-        $exception = null;
-
-        self::$factory->createClient()->then(function ($c) use (&$client) {
-            $client = $c;
-        }, function($error) use (&$exception) {
-            $exception = $error;
-        });
-
-        while ($client === null && $exception === null) {
-            self::$loop->tick();
-        }
-
-        if ($exception !== null) {
-            throw $exception;
-        }
-
-        return $client;
+        return Block\await(self::$factory->createClient(), self::$loop);
     }
 
     protected function createClientResponse($response)
