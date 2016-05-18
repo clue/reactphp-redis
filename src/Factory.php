@@ -9,8 +9,6 @@ use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\SocketClient\Connector;
 use React\Dns\Resolver\Factory as ResolverFactory;
 use InvalidArgumentException;
-use BadMethodCallException;
-use Exception;
 use React\EventLoop\LoopInterface;
 use React\Promise;
 
@@ -42,17 +40,21 @@ class Factory
      */
     public function createClient($target = null)
     {
-        $auth = $this->getAuthFromTarget($target);
-        $db   = $this->getDatabaseFromTarget($target);
+        try {
+            $parts = $this->parseUrl($target);
+        } catch (InvalidArgumentException $e) {
+            return Promise\reject($e);
+        }
+
         $protocol = $this->protocol;
 
-        $promise = $this->connect($target)->then(function (Stream $stream) use ($protocol) {
+        $promise = $this->connector->create($parts['host'], $parts['port'])->then(function (Stream $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 
-        if ($auth !== null) {
-            $promise = $promise->then(function (StreamingClient $client) use ($auth) {
-                return $client->auth($auth)->then(
+        if (isset($parts['auth'])) {
+            $promise = $promise->then(function (StreamingClient $client) use ($parts) {
+                return $client->auth($parts['auth'])->then(
                     function () use ($client) {
                         return $client;
                     },
@@ -64,9 +66,9 @@ class Factory
             });
         }
 
-        if ($db !== null) {
-            $promise = $promise->then(function (StreamingClient $client) use ($db) {
-                return $client->select($db)->then(
+        if (isset($parts['db'])) {
+            $promise = $promise->then(function (StreamingClient $client) use ($parts) {
+                return $client->select($parts['db'])->then(
                     function () use ($client) {
                         return $client;
                     },
@@ -81,6 +83,11 @@ class Factory
         return $promise;
     }
 
+    /**
+     * @param string|null $target
+     * @return array with keys host, port, auth and db
+     * @throws InvalidArgumentException
+     */
     private function parseUrl($target)
     {
         if ($target === null) {
@@ -92,54 +99,35 @@ class Factory
 
         $parts = parse_url($target);
         if ($parts === false || !isset($parts['host']) || $parts['scheme'] !== 'tcp') {
-            throw new Exception('Given URL can not be parsed');
+            throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
         if (!isset($parts['port'])) {
-            $parts['port'] = '6379';
+            $parts['port'] = 6379;
         }
 
         if ($parts['host'] === 'localhost') {
             $parts['host'] = '127.0.0.1';
         }
 
-        return $parts;
-    }
-
-    private function connect($target)
-    {
-        try {
-            $parts = $this->parseUrl($target);
-        } catch (Exception $e) {
-            return Promise\reject($e);
-        }
-
-        return $this->connector->create($parts['host'], $parts['port']);
-    }
-
-    private function getAuthFromTarget($target)
-    {
         $auth = null;
-        $parts = parse_url($target);
         if (isset($parts['user'])) {
             $auth = $parts['user'];
         }
         if (isset($parts['pass'])) {
             $auth .= ':' . $parts['pass'];
         }
-
-        return $auth;
-    }
-
-    private function getDatabaseFromTarget($target)
-    {
-        $db   = null;
-        $path = parse_url($target, PHP_URL_PATH);
-        if ($path !== null && $path !== '') {
-            // skip first slash
-            $db = substr($path, 1);
+        if ($auth !== null) {
+            $parts['auth'] = $auth;
         }
 
-        return $db;
+        if (isset($parts['path']) && $parts['path'] !== '') {
+            // skip first slash
+            $parts['db'] = substr($parts['path'], 1);
+        }
+
+        unset($parts['scheme'], $parts['user'], $parts['pass'], $parts['path']);
+
+        return $parts;
     }
 }
