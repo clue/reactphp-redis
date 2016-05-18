@@ -112,29 +112,30 @@ class StreamingClientTest extends TestCase
 
         $this->expectPromiseResolve($promise);
         $promise->then($this->expectCallableOnce('OK'));
-
-        return $this->client;
     }
 
-    /**
-     * @depends testMonitor
-     * @param StreamingClient $client
-     */
-    public function testMonitorEvent(StreamingClient $client)
+    public function testMonitorEventFromOtherConnection()
     {
-        $client->on('monitor', $this->expectCallableOnce());
+        // enter MONITOR mode
+        $client = $this->client;
+        $client->monitor();
+        $client->handleMessage(new StatusReply('OK'));
 
+        // expect a single "monitor" event when a matching status reply comes in
+        $client->on('monitor', $this->expectCallableOnce());
         $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
     }
 
-    /**
-     * @depends testMonitor
-     * @param StreamingClient $client
-     */
-    public function testMonitorPing(StreamingClient $client)
+    public function testMonitorEventFromPingMessage()
     {
-        $client->on('monitor', $this->expectCallableOnce());
+        // enter MONITOR mode
+        $client = $this->client;
+        $client->monitor();
+        $client->handleMessage(new StatusReply('OK'));
 
+        // expect a single "monitor" event when a matching status reply comes in
+        // ignore the status reply for the command executed (ping)
+        $client->on('monitor', $this->expectCallableOnce());
         $client->ping();
         $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
         $client->handleMessage(new StatusReply('PONG'));

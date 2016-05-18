@@ -9,18 +9,20 @@ use Clue\React\Block;
 
 class FunctionalTest extends TestCase
 {
-    protected static $loop;
-    protected static $factory;
+    private $loop;
+    private $factory;
+    private $client;
 
-    public static function setUpBeforeClass()
+    public function setUp()
     {
-        self::$loop = new React\EventLoop\StreamSelectLoop();
-        self::$factory = new Factory(self::$loop);
+        $this->loop = new React\EventLoop\StreamSelectLoop();
+        $this->factory = new Factory($this->loop);
+        $this->client = $this->createClient();
     }
 
     public function testPing()
     {
-        $client = $this->createClient();
+        $client = $this->client;
 
         $promise = $client->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
@@ -35,7 +37,7 @@ class FunctionalTest extends TestCase
 
     public function testMgetIsNotInterpretedAsSubMessage()
     {
-        $client = $this->createClient();
+        $client = $this->client;
 
         $client->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
@@ -45,14 +47,9 @@ class FunctionalTest extends TestCase
         $this->waitFor($client);
     }
 
-    /**
-     *
-     * @param StreamingClient $client
-     * @depends testPing
-     */
-    public function testPipeline(StreamingClient $client)
+    public function testPipeline()
     {
-        $this->assertFalse($client->isBusy());
+        $client = $this->client;
 
         $client->set('a', 1)->then($this->expectCallableOnce('OK'));
         $client->incr('a')->then($this->expectCallableOnce(2));
@@ -62,46 +59,27 @@ class FunctionalTest extends TestCase
         $this->assertTrue($client->isBusy());
 
         $this->waitFor($client);
-
-        return $client;
     }
 
-    /**
-     *
-     * @param StreamingClient $client
-     * @depends testPipeline
-     */
-    public function testInvalidCommand(StreamingClient $client)
+    public function testInvalidCommand()
     {
-        $client->doesnotexist(1, 2, 3)->then($this->expectCallableNever());
+        $this->client->doesnotexist(1, 2, 3)->then($this->expectCallableNever());
 
-        $this->waitFor($client);
-
-        return $client;
+        $this->waitFor($this->client);
     }
 
-    /**
-     *
-     * @param StreamingClient $client
-     * @depends testInvalidCommand
-     */
-    public function testMultiExecEmpty(StreamingClient $client)
+    public function testMultiExecEmpty()
     {
-        $client->multi()->then($this->expectCallableOnce('OK'));
-        $client->exec()->then($this->expectCallableOnce(array()));
+        $this->client->multi()->then($this->expectCallableOnce('OK'));
+        $this->client->exec()->then($this->expectCallableOnce(array()));
 
-        $this->waitFor($client);
-
-        return $client;
+        $this->waitFor($this->client);
     }
 
-    /**
-     *
-     * @param StreamingClient $client
-     * @depends testMultiExecEmpty
-     */
-    public function testMultiExecQueuedExecHasValues(StreamingClient $client)
+    public function testMultiExecQueuedExecHasValues()
     {
+        $client = $this->client;
+
         $client->multi()->then($this->expectCallableOnce('OK'));
         $client->set('b', 10)->then($this->expectCallableOnce('QUEUED'));
         $client->expire('b', 20)->then($this->expectCallableOnce('QUEUED'));
@@ -110,17 +88,12 @@ class FunctionalTest extends TestCase
         $client->exec()->then($this->expectCallableOnce(array('OK', 1, 12, 20)));
 
         $this->waitFor($client);
-
-        return $client;
     }
 
-    /**
-     *
-     * @param StreamingClient $client
-     * @depends testPipeline
-     */
-    public function testMonitorPing(StreamingClient $client)
+    public function testMonitorPing()
     {
+        $client = $this->client;
+
         $client->on('monitor', $this->expectCallableOnce());
 
         $client->monitor()->then($this->expectCallableOnce('OK'));
@@ -131,7 +104,7 @@ class FunctionalTest extends TestCase
 
     public function testPubSub()
     {
-        $consumer = $this->createClient();
+        $consumer = $this->client;
         $producer = $this->createClient();
 
         $channel = 'channel:test:' . mt_rand();
@@ -148,18 +121,16 @@ class FunctionalTest extends TestCase
         $this->waitFor($producer);
 
         // expect "message" event to take no longer than 0.1s
-        Block\await($deferred->promise(), self::$loop, 0.1);
+        Block\await($deferred->promise(), $this->loop, 0.1);
     }
 
     public function testClose()
     {
-        $client = $this->createClient();
+        $this->client->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
-        $client->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
+        $this->client->close();
 
-        $client->close();
-
-        $client->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
+        $this->client->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
 
     public function testInvalidProtocol()
@@ -191,7 +162,7 @@ class FunctionalTest extends TestCase
      */
     protected function createClient()
     {
-        return Block\await(self::$factory->createClient(), self::$loop);
+        return Block\await($this->factory->createClient(), $this->loop);
     }
 
     protected function createClientResponse($response)
@@ -200,7 +171,7 @@ class FunctionalTest extends TestCase
         fwrite($fp, $response);
         fseek($fp, 0);
 
-        $stream = new Stream($fp, self::$loop);
+        $stream = new Stream($fp, $this->loop);
 
         return new StreamingClient($stream);
     }
@@ -217,7 +188,7 @@ class FunctionalTest extends TestCase
         $this->assertTrue($client->isBusy());
 
         while ($client->isBusy()) {
-            self::$loop->tick();
+            $this->loop->tick();
         }
     }
 }
