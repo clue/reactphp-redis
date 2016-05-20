@@ -9,7 +9,7 @@ use Clue\Redis\Protocol\Model\ModelInterface;
 /**
  * Simple interface for executing redis commands
  *
- * @event data(ModelInterface $messageModel, Client $thisClient)
+ * @event data(ModelInterface $messageModel)
  * @event error(Exception $error)
  * @event close()
  *
@@ -33,7 +33,7 @@ interface Client extends EventEmitterInterface
      *
      * @param string   $name
      * @param string[] $args
-     * @return PromiseInterface
+     * @return PromiseInterface Promise<mixed, Exception>
      */
     public function __call($name, $args);
 

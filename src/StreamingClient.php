@@ -18,6 +18,9 @@ use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\Redis\Protocol\Model\StatusReply;
 
+/**
+ * @internal
+ */
 class StreamingClient extends EventEmitter implements Client
 {
     private $stream;
@@ -122,7 +125,7 @@ class StreamingClient extends EventEmitter implements Client
 
     public function handleMessage(ModelInterface $message)
     {
-        $this->emit('data', array($message, $this));
+        $this->emit('data', array($message));
 
         if ($this->monitoring && $this->isMonitorMessage($message)) {
             $this->emit('monitor', array($message));
