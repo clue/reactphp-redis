@@ -1,8 +1,11 @@
-# CHANGELOG
+# Changelog
 
-This file is a manually maintained list of changes for each release. Feel free
-to add your changes here when sending pull requests. Also send corrections if
-you spot any mistakes.
+## 0.5.2 (2016-05-20)
+
+* Fix: Do not send empty SELECT statement when no database has been given
+  (#35, #36 by @clue)
+
+* Improve documentation, update dependencies and add first class support for PHP 7
 
 ## 0.5.1 (2015-01-12)
 
