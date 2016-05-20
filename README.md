@@ -1,6 +1,6 @@
 # clue/redis-react [![Build Status](https://travis-ci.org/clue/php-redis-react.svg?branch=master)](https://travis-ci.org/clue/php-redis-react)
 
-Async [Redis](http://redis.io/) client implementation built on top of [React PHP](http://reactphp.org/).
+Async [Redis](http://redis.io/) client implementation, built on top of [React PHP](http://reactphp.org/).
 
 [Redis](http://redis.io/) is an open source, advanced, in-memory key-value database.
 It offers a set of simple, atomic operations in order to work with its primitive data types.
@@ -237,7 +237,13 @@ The recommended way to install this library is [through Composer](http://getcomp
 This will install the latest supported version:
 
 ```bash
-$ composer require clue/redis-react:^0.5
+$ composer require clue/redis-react:^1.0
+```
+
+If you care a lot about backwards compatibility, you may also use this:
+
+```bash
+$ composer require "clue/redis-react:^1.0 || ^0.5"
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.

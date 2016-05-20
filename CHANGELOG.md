@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.0 (2016-05-20)
+
+* First stable release, now following SemVer
+
+* BC break: Consistent public API, mark internal APIs as such
+  (#38 by @clue)
+
+  ```php
+// old
+$client->on('data', function (MessageInterface $message, Client $client) {
+    // process an incoming message (raw message object)
+});
+
+// new
+$client->on('data', function (MessageInterface $message) use ($client) {
+    // process an incoming message (raw message object)
+});
+```
+
+> Contains no other changes, so it's actually fully compatible with the v0.5.2 release.
+
 ## 0.5.2 (2016-05-20)
 
 * Fix: Do not send empty SELECT statement when no database has been given
