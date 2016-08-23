@@ -98,7 +98,7 @@ $factory->createClient('localhost:6379')->then(
         // client connected (and authenticated)
     },
     function (Exception $e) {
-        // an error occured while trying to connect (or authenticate) client
+        // an error occurred while trying to connect (or authenticate) client
     }
 );
 ```
