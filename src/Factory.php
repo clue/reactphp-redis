@@ -98,7 +98,8 @@ class Factory
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['host']) || $parts['scheme'] !== 'tcp') {
+        $validSchemes = array('redis', 'tcp');
+        if ($parts === false || !isset($parts['host']) || !in_array($parts['scheme'], $validSchemes)) {
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
@@ -110,16 +111,14 @@ class Factory
             $parts['host'] = '127.0.0.1';
         }
 
-        $auth = null;
-        if (isset($parts['user'])) {
-            $auth = $parts['user'];
-        }
+        // username:password@ (Redis doesn't support usernames)
         if (isset($parts['pass'])) {
-            $auth .= ':' . $parts['pass'];
-        }
-        if ($auth !== null) {
-            $parts['auth'] = $auth;
-        }
+			$parts['auth'] = $parts['pass'];
+		}
+		// password@
+		else if (isset($parts['user'])) {
+			$parts['auth'] = $parts['user'];
+		}
 
         if (isset($parts['path']) && $parts['path'] !== '') {
             // skip first slash
