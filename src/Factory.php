@@ -111,14 +111,13 @@ class Factory
             $parts['host'] = '127.0.0.1';
         }
 
-        // username:password@ (Redis doesn't support usernames)
         if (isset($parts['pass'])) {
-			$parts['auth'] = $parts['pass'];
-		}
-		// password@
-		else if (isset($parts['user'])) {
-			$parts['auth'] = $parts['user'];
-		}
+            // username:password@ (Redis doesn't support usernames)
+            $parts['auth'] = $parts['pass'];
+        } elseif (isset($parts['user'])) {
+            // password@
+            $parts['auth'] = $parts['user'];
+        }
 
         if (isset($parts['path']) && $parts['path'] !== '') {
             // skip first slash
