@@ -22,6 +22,7 @@
         "psr-4": { "Clue\\React\\Redis\\": "src/" }
     },
     "require-dev": {
-        "clue/block-react": "^1.1"
+        "clue/block-react": "^1.1",
+        "phpunit/phpunit": "~5.7"
     }
 }
