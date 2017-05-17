@@ -1,7 +1,6 @@
 <?php
 
-use React\Stream\Stream;
-use React\Stream\ReadableStream;
+use React\Stream\DuplexResourceStream;
 use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
 use React\Promise\Deferred;
@@ -171,7 +170,8 @@ class FunctionalTest extends TestCase
         fwrite($fp, $response);
         fseek($fp, 0);
 
-        $stream = new Stream($fp, $this->loop);
+        //$stream = new Stream($fp, $this->loop);
+        $stream = new DuplexResourceStream($fp, $this->loop);
 
         return new StreamingClient($stream);
     }

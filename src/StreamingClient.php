@@ -3,10 +3,9 @@
 namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
-use React\Stream\Stream;
+use React\Stream\DuplexStreamInterface;
 use Clue\Redis\Protocol\Parser\ParserInterface;
 use Clue\Redis\Protocol\Parser\ParserException;
-use Clue\Redis\Protocol\Model\ErrorReplyException;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use UnderflowException;
@@ -18,9 +17,6 @@ use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\Redis\Protocol\Model\StatusReply;
 
-/**
- * @internal
- */
 class StreamingClient extends EventEmitter implements Client
 {
     private $stream;
@@ -34,7 +30,7 @@ class StreamingClient extends EventEmitter implements Client
     private $psubscribed = 0;
     private $monitoring = false;
 
-    public function __construct(Stream $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
+    public function __construct(DuplexStreamInterface $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
         if ($parser === null || $serializer === null) {
             $factory = new ProtocolFactory();
