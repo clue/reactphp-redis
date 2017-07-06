@@ -1,7 +1,6 @@
 <?php
 
 use React\Stream\Stream;
-use React\Stream\ReadableStream;
 use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
 use React\Promise\Deferred;

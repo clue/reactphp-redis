@@ -1,7 +1,5 @@
 <?php
 
-use React\Socket\ConnectionInterface;
-
 use Clue\React\Redis\Factory;
 use React\Promise;
 
@@ -13,8 +11,8 @@ class FactoryTest extends TestCase
 
     public function setUp()
     {
-        $this->loop = $this->getMock('React\EventLoop\LoopInterface');
-        $this->connector = $this->getMock('React\SocketClient\ConnectorInterface');
+        $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        $this->connector = $this->getMockBuilder('React\SocketClient\ConnectorInterface')->getMock();
         $this->factory = new Factory($this->loop, $this->connector);
     }
 
