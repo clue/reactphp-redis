@@ -19,8 +19,8 @@ class StreamingClientTest extends TestCase
     public function setUp()
     {
         $this->stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->setMethods(array('write', 'close', 'resume', 'pause'))->getMock();
-        $this->parser = $this->getMock('Clue\Redis\Protocol\Parser\ParserInterface');
-        $this->serializer = $this->getMock('Clue\Redis\Protocol\Serializer\SerializerInterface');
+        $this->parser = $this->getMockBuilder('Clue\Redis\Protocol\Parser\ParserInterface')->getMock();
+        $this->serializer = $this->getMockBuilder('Clue\Redis\Protocol\Serializer\SerializerInterface')->getMock();
 
         $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
     }
