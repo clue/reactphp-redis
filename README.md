@@ -34,6 +34,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
     * [close()](#close)
     * [end()](#end)
 * [Install](#install)
+* [Tests](#tests)
 * [License](#license)
 
 ## Quickstart example
@@ -247,6 +248,21 @@ $ composer require "clue/redis-react:^1.0 || ^0.5"
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
+
+## Tests
+
+To run the test suite, you first need to clone this repo and then install all
+dependencies [through Composer](http://getcomposer.org):
+
+```bash
+$ composer install
+```
+
+To run the test suite, go to the project root and run:
+
+```bash
+$ php vendor/bin/phpunit
+```
 
 ## License
 
