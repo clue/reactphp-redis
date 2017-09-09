@@ -264,6 +264,16 @@ To run the test suite, go to the project root and run:
 $ php vendor/bin/phpunit
 ```
 
+The test suite contains both unit tests and functional integration tests.
+The functional tests require access to a running Redis server instance
+and will be skipped by default.
+If you want to also run the functional tests, you need to supply *your* login
+details in an environment variable like this:
+
+```bash
+$ REDIS_URI=localhost:6379 php vendor/bin/phpunit
+```
+
 ## License
 
 MIT

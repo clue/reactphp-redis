@@ -20,6 +20,9 @@ services:
 
 sudo: false
 
+env:
+  - REDIS_URI=localhost
+
 install:
   - composer install --no-interaction
 
