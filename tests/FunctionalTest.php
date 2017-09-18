@@ -14,9 +14,14 @@ class FunctionalTest extends TestCase
 
     public function setUp()
     {
+        $uri = getenv('REDIS_URI');
+        if ($uri === false) {
+            $this->markTestSkipped('No REDIS_URI environment variable given');
+        }
+
         $this->loop = new React\EventLoop\StreamSelectLoop();
         $this->factory = new Factory($this->loop);
-        $this->client = $this->createClient();
+        $this->client = $this->createClient($uri);
     }
 
     public function testPing()
@@ -104,7 +109,7 @@ class FunctionalTest extends TestCase
     public function testPubSub()
     {
         $consumer = $this->client;
-        $producer = $this->createClient();
+        $producer = $this->createClient(getenv('REDIS_URI'));
 
         $channel = 'channel:test:' . mt_rand();
 
@@ -157,11 +162,12 @@ class FunctionalTest extends TestCase
     }
 
     /**
+     * @param string $uri
      * @return Client
      */
-    protected function createClient()
+    protected function createClient($uri)
     {
-        return Block\await($this->factory->createClient(), $this->loop);
+        return Block\await($this->factory->createClient($uri), $this->loop);
     }
 
     protected function createClientResponse($response)
