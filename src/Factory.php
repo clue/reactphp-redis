@@ -7,7 +7,6 @@ use React\Stream\Stream;
 use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\SocketClient\Connector;
-use React\Dns\Resolver\Factory as ResolverFactory;
 use InvalidArgumentException;
 use React\EventLoop\LoopInterface;
 use React\Promise;
@@ -20,8 +19,7 @@ class Factory
     public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         if ($connector === null) {
-            $resolverFactory = new ResolverFactory();
-            $connector = new Connector($loop, $resolverFactory->create('8.8.8.8', $loop));
+            $connector = new Connector($loop);
         }
 
         if ($protocol === null) {
@@ -48,7 +46,7 @@ class Factory
 
         $protocol = $this->protocol;
 
-        $promise = $this->connector->create($parts['host'], $parts['port'])->then(function (Stream $stream) use ($protocol) {
+        $promise = $this->connector->connect($parts['host'] . ':' . $parts['port'])->then(function (Stream $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 
