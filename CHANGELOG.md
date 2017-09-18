@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0 (2017-09-18)
+
+* Feature: Update SocketClient dependency to latest version
+  (#58 by @clue)
+
+* Improve test suite by adding PHPUnit to require-dev,
+  fix HHVM build for now again and ignore future HHVM build errors,
+  lock Travis distro so new defaults will not break the build and
+  skip functional integration tests by default
+  (#52, #53, #56 and #57 by @clue)
+
 ## 1.0.0 (2016-05-20)
 
 * First stable release, now following SemVer
