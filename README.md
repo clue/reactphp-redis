@@ -137,7 +137,9 @@ authentication mechanism does not employ a username, so you can pass the
 password "secret" as part of the URI like this:
 
 ```php
+// both forms are equivalent
 $factory->createClient('redis://ignored:secret@localhost');
+$factory->createClient('redis://localhost?password=secret');
 ```
 
 > Legacy notice: The `redis://` scheme is defined and preferred as of `v1.2.0`.
@@ -149,7 +151,9 @@ $factory->createClient('redis://ignored:secret@localhost');
 You can optionally include a path that will be used to select (SELECT command) the right database:
 
 ```php
+// both forms are equivalent
 $factory->createClient('redis://localhost/2');
+$factory->createClient('redis://localhost?db=2');
 ```
 
 You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)

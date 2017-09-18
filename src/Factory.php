@@ -141,6 +141,19 @@ class Factory
             $parts['host'] = 'tls://' . $parts['host'];
         }
 
+        if (isset($parts['query'])) {
+            $args = array();
+            parse_str($parts['query'], $args);
+
+            if (isset($args['password'])) {
+                $parts['auth'] = $args['password'];
+            }
+
+            if (isset($args['db'])) {
+                $parts['db'] = $args['db'];
+            }
+        }
+
         unset($parts['scheme'], $parts['user'], $parts['pass'], $parts['path']);
 
         return $parts;
