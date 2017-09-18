@@ -81,11 +81,28 @@ $factory = new Factory($loop);
 ```
 
 If you need custom DNS, proxy or TLS settings, you can explicitly pass a
-custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket-client#connectorinterface):
+custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
+$connector = new \React\Socket\Connector($loop, array(
+    'dns' => '127.0.0.1',
+    'tcp' => array(
+        'bindto' => '192.168.10.1:0'
+    ),
+    'tls' => array(
+        'verify_peer' => false,
+        'verify_peer_name' => false
+    )
+));
+
 $factory = new Factory($loop, $connector);
 ```
+
+> Legacy notice: As of `v1.2.0`, the optional connector should implement the new
+  `React\Socket\ConnectorInterface`. For BC reasons it also accepts the
+  legacy `React\SocketClient\ConnectorInterface`.
+  This legacy API will be removed in a future `v2.0.0` version, so it's highly
+  recommended to upgrade to the above API.
 
 #### createClient()
 
