@@ -109,7 +109,7 @@ class Factory
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['host']) || $parts['scheme'] !== 'tcp') {
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('tcp', 'redis'))) {
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
@@ -122,11 +122,11 @@ class Factory
         }
 
         $auth = null;
-        if (isset($parts['user'])) {
+        if (isset($parts['user']) && $parts['scheme'] === 'tcp') {
             $auth = $parts['user'];
         }
         if (isset($parts['pass'])) {
-            $auth .= ':' . $parts['pass'];
+            $auth .= ($parts['scheme'] === 'tcp' ? ':' : '') . $parts['pass'];
         }
         if ($auth !== null) {
             $parts['auth'] = $auth;
