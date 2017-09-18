@@ -121,12 +121,6 @@ $factory->createClient('localhost:6379')->then(
 );
 ```
 
-You can omit the complete URI if you want to connect to the default address `localhost:6379`:
-
-```php
-$factory->createClient();
-```
-
 You can omit the port if you're connecting to the default port 6379:
 
 ```php
@@ -143,6 +137,15 @@ You can optionally include a path that will be used to select (SELECT command) t
 
 ```php
 $factory->createClient('localhost/2');
+```
+
+[Deprecated] You can omit the complete URI if you want to connect to the default
+address `localhost:6379`. This legacy API will be removed in a future
+`v2.0.0` version, so it's highly recommended to upgrade to the above API.
+
+```php
+// deprecated
+$factory->createClient();
 ```
 
 ### Client

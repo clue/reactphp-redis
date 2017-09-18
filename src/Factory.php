@@ -44,7 +44,9 @@ class Factory
     /**
      * create redis client connected to address of given redis instance
      *
-     * @param string|null $target
+     * @param string|null $target Redis server URI to connect to. Not passing
+     *     this parameter is deprecated and only supported for BC reasons and
+     *     will be removed in future versions.
      * @return \React\Promise\PromiseInterface resolves with Client or rejects with \Exception
      */
     public function createClient($target = null)
