@@ -62,10 +62,19 @@ class FactoryTest extends TestCase
     public function testWillWriteAuthCommandIfTargetContainsUserInfo()
     {
         $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$11\r\nhello:world\r\n");
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
         $this->factory->createClient('tcp://hello:world@127.0.0.1');
+    }
+    
+    public function testWillWriteAuthCommandIfTargetContainsPasswordAsUser()
+    {
+        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('create')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('tcp://world@127.0.0.1');
     }
 
     public function testWillRejectIfConnectorRejects()
