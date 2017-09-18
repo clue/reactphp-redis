@@ -2,24 +2,35 @@
 
 namespace Clue\React\Redis;
 
-use React\SocketClient\ConnectorInterface;
-use React\Stream\Stream;
 use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use React\SocketClient\Connector;
-use InvalidArgumentException;
 use React\EventLoop\LoopInterface;
 use React\Promise;
+use React\Socket\ConnectionInterface;
+use React\Socket\Connector;
+use React\Socket\ConnectorInterface;
+use InvalidArgumentException;
 
 class Factory
 {
     private $connector;
     private $protocol;
 
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
+    /**
+     * @param LoopInterface $loop
+     * @param ConnectorInterface|\React\SocketClient\ConnectorInterface|null $connector
+     *     [optional] Connector to use. Should be `null` in order to use default
+     *     Connector. Passing a `\React\SocketClient\ConnectorInterface` is
+     *     deprecated and only supported for BC reasons and will be removed in
+     *     future versions.
+     * @param ProtocolFactory|null $protocol
+     */
+    public function __construct(LoopInterface $loop, $connector = null, ProtocolFactory $protocol = null)
     {
         if ($connector === null) {
             $connector = new Connector($loop);
+        } elseif (!$connector instanceof ConnectorInterface) {
+            $connector = new ConnectorUpcaster($connector);
         }
 
         if ($protocol === null) {
@@ -46,7 +57,7 @@ class Factory
 
         $protocol = $this->protocol;
 
-        $promise = $this->connector->connect($parts['host'] . ':' . $parts['port'])->then(function (Stream $stream) use ($protocol) {
+        $promise = $this->connector->connect($parts['host'] . ':' . $parts['port'])->then(function (ConnectionInterface $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 

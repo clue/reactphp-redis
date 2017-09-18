@@ -5,6 +5,7 @@ use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
 use React\Promise\Deferred;
 use Clue\React\Block;
+use React\SocketClient\Connector;
 
 class FunctionalTest extends TestCase
 {
@@ -37,6 +38,20 @@ class FunctionalTest extends TestCase
         $this->assertFalse($client->isBusy());
 
         return $client;
+    }
+
+    public function testPingClientWithLegacyConnector()
+    {
+        $this->client->close();
+        $this->factory = new Factory($this->loop, new Connector($this->loop));
+        $this->client = $this->createClient(getenv('REDIS_URI'));
+
+        $promise = $this->client->ping();
+        $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+        $promise->then($this->expectCallableOnce('PONG'));
+
+        $this->client->end();
+        $this->waitFor($this->client);
     }
 
     public function testMgetIsNotInterpretedAsSubMessage()

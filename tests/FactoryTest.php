@@ -12,7 +12,7 @@ class FactoryTest extends TestCase
     public function setUp()
     {
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
-        $this->connector = $this->getMockBuilder('React\SocketClient\ConnectorInterface')->getMock();
+        $this->connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
         $this->factory = new Factory($this->loop, $this->connector);
     }
 
@@ -39,9 +39,18 @@ class FactoryTest extends TestCase
         $this->factory->createClient('tcp://localhost:1337');
     }
 
+    public function testWillUpcastLegacyConnectorAndConnect()
+    {
+        $this->connector = $this->getMockBuilder('React\SocketClient\ConnectorInterface')->getMock();
+        $this->factory = new Factory($this->loop, $this->connector);
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:1337')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->factory->createClient('tcp://example.com:1337');
+    }
+
     public function testWillResolveIfConnectorResolves()
     {
-        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->never())->method('write');
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
@@ -52,7 +61,7 @@ class FactoryTest extends TestCase
 
     public function testWillWriteSelectCommandIfTargetContainsPath()
     {
-        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
@@ -61,7 +70,7 @@ class FactoryTest extends TestCase
 
     public function testWillWriteAuthCommandIfTargetContainsUserInfo()
     {
-        $stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->getMock();
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$11\r\nhello:world\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
