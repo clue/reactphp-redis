@@ -107,7 +107,7 @@ $factory = new Factory($loop, $connector);
 #### createClient()
 
 The `createClient($redisUri = null)` method can be used to create a new [`Client`](#client).
-It helps with establishing a plain TCP/IP connection to Redis
+It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
@@ -121,7 +121,9 @@ $factory->createClient('redis://localhost:6379')->then(
 );
 ```
 
-The `$redisUri` can be given in the form `[redis://][:auth@]host[:port][/db]`.
+The `$redisUri` can be given in the
+[standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
+`[redis[s]://][:auth@]host[:port][/db]`.
 You can omit the URI scheme and port if you're connecting to the default port 6379:
 
 ```php
@@ -148,6 +150,13 @@ You can optionally include a path that will be used to select (SELECT command) t
 
 ```php
 $factory->createClient('redis://localhost/2');
+```
+
+You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
+`rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
+
+```php
+$factory->createClient('rediss://redis.example.com:6340');
 ```
 
 [Deprecated] You can omit the complete URI if you want to connect to the default

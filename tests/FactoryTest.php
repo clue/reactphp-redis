@@ -73,8 +73,17 @@ class FactoryTest extends TestCase
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
 
-        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
-        $this->factory->createClient('redis://hello:world@127.0.0.1');
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://hello:world@example.com');
+    }
+
+    public function testWillWriteAuthCommandIfRedissUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('tls://example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('rediss://hello:world@example.com');
     }
 
     public function testWillWriteAuthCommandIfTcpUriContainsUserInfo()
