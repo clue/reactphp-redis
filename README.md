@@ -107,11 +107,11 @@ $factory = new Factory($loop, $connector);
 #### createClient()
 
 The `createClient($redisUri = null)` method can be used to create a new [`Client`](#client).
-It helps with establishing a plain TCP/IP connection to Redis
+It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
-$factory->createClient('localhost:6379')->then(
+$factory->createClient('redis://localhost:6379')->then(
     function (Client $client) {
         // client connected (and authenticated)
     },
@@ -121,28 +121,56 @@ $factory->createClient('localhost:6379')->then(
 );
 ```
 
-You can omit the complete URI if you want to connect to the default address `localhost:6379`:
+The `$redisUri` can be given in the
+[standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
+`[redis[s]://][:auth@]host[:port][/db]`.
+You can omit the URI scheme and port if you're connecting to the default port 6379:
 
 ```php
-$factory->createClient();
-```
-
-You can omit the port if you're connecting to the default port 6379:
-
-```php
+// both are equivalent due to defaults being applied
 $factory->createClient('localhost');
+$factory->createClient('redis://localhost:6379');
 ```
 
-You can optionally include a password that will be used to authenticate (AUTH command) the client:
+Redis supports password-based authentication (`AUTH` command). Note that Redis'
+authentication mechanism does not employ a username, so you can pass the
+password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
 
 ```php
-$factory->createClient('auth@localhost');
+// all forms are equivalent
+$factory->createClient('redis://:h%40llo@localhost');
+$factory->createClient('redis://ignored:h%40llo@localhost');
+$factory->createClient('redis://localhost?password=h%40llo');
 ```
+
+> Legacy notice: The `redis://` scheme is defined and preferred as of `v1.2.0`.
+  For BC reasons, the `Factory` defaults to the `tcp://` scheme in which case
+  the authentication details would include the otherwise unused username.
+  This legacy API will be removed in a future `v2.0.0` version, so it's highly
+  recommended to upgrade to the above API.
 
 You can optionally include a path that will be used to select (SELECT command) the right database:
 
 ```php
-$factory->createClient('localhost/2');
+// both forms are equivalent
+$factory->createClient('redis://localhost/2');
+$factory->createClient('redis://localhost?db=2');
+```
+
+You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
+`rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
+
+```php
+$factory->createClient('rediss://redis.example.com:6340');
+```
+
+[Deprecated] You can omit the complete URI if you want to connect to the default
+address `redis://localhost:6379`. This legacy API will be removed in a future
+`v2.0.0` version, so it's highly recommended to upgrade to the above API.
+
+```php
+// deprecated
+$factory->createClient();
 ```
 
 ### Client

@@ -65,10 +65,64 @@ class FactoryTest extends TestCase
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
-        $this->factory->createClient('tcp://127.0.0.1/demo');
+        $this->factory->createClient('redis://127.0.0.1/demo');
     }
 
-    public function testWillWriteAuthCommandIfTargetContainsUserInfo()
+    public function testWillWriteSelectCommandIfTargetContainsDbQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$1\r\n4\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://127.0.0.1?db=4');
+    }
+
+    public function testWillWriteAuthCommandIfRedisUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://hello:world@example.com');
+    }
+
+    public function testWillWriteAuthCommandIfRedisUriContainsEncodedUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://:h%40llo@example.com');
+    }
+
+    public function testWillWriteAuthCommandIfTargetContainsPasswordQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$6\r\nsecret\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://example.com?password=secret');
+    }
+
+    public function testWillWriteAuthCommandIfTargetContainsEncodedPasswordQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://example.com?password=h%40llo');
+    }
+
+    public function testWillWriteAuthCommandIfRedissUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('tls://example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('rediss://hello:world@example.com');
+    }
+
+    public function testWillWriteAuthCommandIfTcpUriContainsUserInfo()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$11\r\nhello:world\r\n");

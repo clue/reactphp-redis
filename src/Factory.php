@@ -44,7 +44,9 @@ class Factory
     /**
      * create redis client connected to address of given redis instance
      *
-     * @param string|null $target
+     * @param string|null $target Redis server URI to connect to. Not passing
+     *     this parameter is deprecated and only supported for BC reasons and
+     *     will be removed in future versions.
      * @return \React\Promise\PromiseInterface resolves with Client or rejects with \Exception
      */
     public function createClient($target = null)
@@ -107,7 +109,7 @@ class Factory
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['host']) || $parts['scheme'] !== 'tcp') {
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('tcp', 'redis', 'rediss'))) {
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
@@ -120,11 +122,11 @@ class Factory
         }
 
         $auth = null;
-        if (isset($parts['user'])) {
-            $auth = $parts['user'];
+        if (isset($parts['user']) && $parts['scheme'] === 'tcp') {
+            $auth = rawurldecode($parts['user']);
         }
         if (isset($parts['pass'])) {
-            $auth .= ':' . $parts['pass'];
+            $auth .= ($parts['scheme'] === 'tcp' ? ':' : '') . rawurldecode($parts['pass']);
         }
         if ($auth !== null) {
             $parts['auth'] = $auth;
@@ -133,6 +135,23 @@ class Factory
         if (isset($parts['path']) && $parts['path'] !== '') {
             // skip first slash
             $parts['db'] = substr($parts['path'], 1);
+        }
+
+        if ($parts['scheme'] === 'rediss') {
+            $parts['host'] = 'tls://' . $parts['host'];
+        }
+
+        if (isset($parts['query'])) {
+            $args = array();
+            parse_str($parts['query'], $args);
+
+            if (isset($args['password'])) {
+                $parts['auth'] = $args['password'];
+            }
+
+            if (isset($args['db'])) {
+                $parts['db'] = $args['db'];
+            }
         }
 
         unset($parts['scheme'], $parts['user'], $parts['pass'], $parts['path']);
