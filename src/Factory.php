@@ -18,19 +18,14 @@ class Factory
 
     /**
      * @param LoopInterface $loop
-     * @param ConnectorInterface|\React\SocketClient\ConnectorInterface|null $connector
-     *     [optional] Connector to use. Should be `null` in order to use default
-     *     Connector. Passing a `\React\SocketClient\ConnectorInterface` is
-     *     deprecated and only supported for BC reasons and will be removed in
-     *     future versions.
+     * @param ConnectorInterface|null $connector [optional] Connector to use.
+     *     Should be `null` in order to use default Connector.
      * @param ProtocolFactory|null $protocol
      */
-    public function __construct(LoopInterface $loop, $connector = null, ProtocolFactory $protocol = null)
+    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         if ($connector === null) {
             $connector = new Connector($loop);
-        } elseif (!$connector instanceof ConnectorInterface) {
-            $connector = new ConnectorUpcaster($connector);
         }
 
         if ($protocol === null) {
@@ -44,12 +39,10 @@ class Factory
     /**
      * create redis client connected to address of given redis instance
      *
-     * @param string|null $target Redis server URI to connect to. Not passing
-     *     this parameter is deprecated and only supported for BC reasons and
-     *     will be removed in future versions.
+     * @param string $target Redis server URI to connect to
      * @return \React\Promise\PromiseInterface resolves with Client or rejects with \Exception
      */
-    public function createClient($target = null)
+    public function createClient($target)
     {
         try {
             $parts = $this->parseUrl($target);
@@ -95,21 +88,18 @@ class Factory
     }
 
     /**
-     * @param string|null $target
+     * @param string $target
      * @return array with keys host, port, auth and db
      * @throws InvalidArgumentException
      */
     private function parseUrl($target)
     {
-        if ($target === null) {
-            $target = 'tcp://127.0.0.1';
-        }
         if (strpos($target, '://') === false) {
-            $target = 'tcp://' . $target;
+            $target = 'redis://' . $target;
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('tcp', 'redis', 'rediss'))) {
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss'))) {
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
@@ -121,15 +111,8 @@ class Factory
             $parts['host'] = '127.0.0.1';
         }
 
-        $auth = null;
-        if (isset($parts['user']) && $parts['scheme'] === 'tcp') {
-            $auth = rawurldecode($parts['user']);
-        }
         if (isset($parts['pass'])) {
-            $auth .= ($parts['scheme'] === 'tcp' ? ':' : '') . rawurldecode($parts['pass']);
-        }
-        if ($auth !== null) {
-            $parts['auth'] = $auth;
+            $parts['auth'] = rawurldecode($parts['pass']);
         }
 
         if (isset($parts['path']) && $parts['path'] !== '') {

@@ -46,7 +46,7 @@ local Redis server and send some requests:
 $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
-$factory->createClient('localhost:6379')->then(function (Client $client) use ($loop) {
+$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
     $client->set('greeting', 'Hello world');
     $client->append('greeting', '!');
     
@@ -98,15 +98,9 @@ $connector = new \React\Socket\Connector($loop, array(
 $factory = new Factory($loop, $connector);
 ```
 
-> Legacy notice: As of `v1.2.0`, the optional connector should implement the new
-  `React\Socket\ConnectorInterface`. For BC reasons it also accepts the
-  legacy `React\SocketClient\ConnectorInterface`.
-  This legacy API will be removed in a future `v2.0.0` version, so it's highly
-  recommended to upgrade to the above API.
-
 #### createClient()
 
-The `createClient($redisUri = null)` method can be used to create a new [`Client`](#client).
+The `createClient($redisUri)` method can be used to create a new [`Client`](#client).
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
@@ -143,12 +137,6 @@ $factory->createClient('redis://ignored:h%40llo@localhost');
 $factory->createClient('redis://localhost?password=h%40llo');
 ```
 
-> Legacy notice: The `redis://` scheme is defined and preferred as of `v1.2.0`.
-  For BC reasons, the `Factory` defaults to the `tcp://` scheme in which case
-  the authentication details would include the otherwise unused username.
-  This legacy API will be removed in a future `v2.0.0` version, so it's highly
-  recommended to upgrade to the above API.
-
 You can optionally include a path that will be used to select (SELECT command) the right database:
 
 ```php
@@ -162,15 +150,6 @@ You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/red
 
 ```php
 $factory->createClient('rediss://redis.example.com:6340');
-```
-
-[Deprecated] You can omit the complete URI if you want to connect to the default
-address `redis://localhost:6379`. This legacy API will be removed in a future
-`v2.0.0` version, so it's highly recommended to upgrade to the above API.
-
-```php
-// deprecated
-$factory->createClient();
 ```
 
 ### Client

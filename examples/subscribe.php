@@ -2,7 +2,6 @@
 
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
-use Clue\Redis\Protocol\Model\StatusReply;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -11,7 +10,7 @@ $factory = new Factory($loop);
 
 $channel = isset($argv[1]) ? $argv[1] : 'channel';
 
-$factory->createClient()->then(function (Client $client) use ($channel) {
+$factory->createClient('localhost')->then(function (Client $client) use ($channel) {
     $client->subscribe($channel)->then(function () {
         echo 'Now subscribed to channel ' . PHP_EOL;
     });

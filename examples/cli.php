@@ -12,7 +12,7 @@ $factory = new Factory($loop);
 
 echo '# connecting to redis...' . PHP_EOL;
 
-$factory->createClient()->then(function (Client $client) use ($loop) {
+$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
     $client->on('data', function (ModelInterface $data) {
