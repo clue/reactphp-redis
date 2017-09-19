@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.2.0 (2017-09-19)
+
+*   Feature: Support `redis[s]://` URI scheme and deprecate legacy URIs
+    (#60 by @clue)
+
+    ```php
+    $factory->createClient('redis://:secret@localhost:6379/4');
+    $factory->createClient('redis://localhost:6379?password=secret&db=4');
+    ```
+
+*   Feature: Factory accepts Connector from Socket and deprecate legacy SocketClient
+    (#59 by @clue)
+
+    If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
+    proxy servers etc.), you can explicitly pass a custom instance of the
+    [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
+
+    ```php
+    $connector = new \React\Socket\Connector($loop, array(
+        'dns' => '127.0.0.1',
+        'tcp' => array(
+            'bindto' => '192.168.10.1:0'
+        ),
+        'tls' => array(
+            'verify_peer' => false,
+            'verify_peer_name' => false
+        )
+    ));
+
+    $factory = new Factory($loop, $connector);
+    ```
+
 ## 1.1.0 (2017-09-18)
 
 * Feature: Update SocketClient dependency to latest version
