@@ -134,12 +134,13 @@ $factory->createClient('redis://localhost:6379');
 
 Redis supports password-based authentication (`AUTH` command). Note that Redis'
 authentication mechanism does not employ a username, so you can pass the
-password "secret" as part of the URI like this:
+password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
 
 ```php
-// both forms are equivalent
-$factory->createClient('redis://ignored:secret@localhost');
-$factory->createClient('redis://localhost?password=secret');
+// all forms are equivalent
+$factory->createClient('redis://:h%40llo@localhost');
+$factory->createClient('redis://ignored:h%40llo@localhost');
+$factory->createClient('redis://localhost?password=h%40llo');
 ```
 
 > Legacy notice: The `redis://` scheme is defined and preferred as of `v1.2.0`.

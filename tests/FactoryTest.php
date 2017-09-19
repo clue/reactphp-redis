@@ -86,6 +86,15 @@ class FactoryTest extends TestCase
         $this->factory->createClient('redis://hello:world@example.com');
     }
 
+    public function testWillWriteAuthCommandIfRedisUriContainsEncodedUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://:h%40llo@example.com');
+    }
+
     public function testWillWriteAuthCommandIfTargetContainsPasswordQueryParameter()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
@@ -93,6 +102,15 @@ class FactoryTest extends TestCase
 
         $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
         $this->factory->createClient('redis://example.com?password=secret');
+    }
+
+    public function testWillWriteAuthCommandIfTargetContainsEncodedPasswordQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis://example.com?password=h%40llo');
     }
 
     public function testWillWriteAuthCommandIfRedissUriContainsUserInfo()

@@ -123,10 +123,10 @@ class Factory
 
         $auth = null;
         if (isset($parts['user']) && $parts['scheme'] === 'tcp') {
-            $auth = $parts['user'];
+            $auth = rawurldecode($parts['user']);
         }
         if (isset($parts['pass'])) {
-            $auth .= ($parts['scheme'] === 'tcp' ? ':' : '') . $parts['pass'];
+            $auth .= ($parts['scheme'] === 'tcp' ? ':' : '') . rawurldecode($parts['pass']);
         }
         if ($auth !== null) {
             $parts['auth'] = $auth;
