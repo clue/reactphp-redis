@@ -1,9 +1,8 @@
 <?php
 
-use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
-use Clue\Redis\Protocol\Model\ModelInterface;
+use React\Promise\PromiseInterface;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -15,30 +14,33 @@ echo '# connecting to redis...' . PHP_EOL;
 $factory->createClient()->then(function (Client $client) use ($loop) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
-    $client->on('data', function (ModelInterface $data) {
-        if ($data instanceof ErrorReply) {
-            echo '# error reply: ' . $data->getMessage() . PHP_EOL;
-        } else {
-            echo '# reply: ' . json_encode($data->getValueNative()) . PHP_EOL;
-        }
-    });
-
     $loop->addReadStream(STDIN, function () use ($client, $loop) {
         $line = fgets(STDIN);
         if ($line === false || $line === '') {
             echo '# CTRL-D -> Ending connection...' . PHP_EOL;
-            $client->end();
-        } else {
-            $line = rtrim($line);
-
-            if ($line === '') {
-
-            } else {
-                $params = explode(' ', $line);
-                $method = array_shift($params);
-                call_user_func_array(array($client, $method), $params);
-            }
+            $loop->removeReadStream(STDIN);
+            return $client->end();
         }
+
+        $line = rtrim($line);
+        if ($line === '') {
+            return;
+        }
+
+        $params = explode(' ', $line);
+        $method = array_shift($params);
+        $promise = call_user_func_array(array($client, $method), $params);
+
+        // special method such as end() / close() called
+        if (!$promise instanceof PromiseInterface) {
+            return;
+        }
+
+        $promise->then(function ($data) {
+            echo '# reply: ' . json_encode($data) . PHP_EOL;
+        }, function ($e) {
+            echo '# error reply: ' . $e->getMessage() . PHP_EOL;
+        });
     });
 
     $client->on('close', function() use ($loop) {

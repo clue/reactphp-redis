@@ -4,12 +4,10 @@ namespace Clue\React\Redis;
 
 use Evenement\EventEmitterInterface;
 use React\Promise\PromiseInterface;
-use Clue\Redis\Protocol\Model\ModelInterface;
 
 /**
  * Simple interface for executing redis commands
  *
- * @event data(ModelInterface $messageModel)
  * @event error(Exception $error)
  * @event close()
  *
