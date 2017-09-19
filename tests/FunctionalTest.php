@@ -30,11 +30,10 @@ class FunctionalTest extends TestCase
 
         $promise = $client->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
-        $promise->then($this->expectCallableOnce('PONG'));
 
-        $this->assertTrue($client->isBusy());
-        $this->waitFor($client);
-        $this->assertFalse($client->isBusy());
+        $ret = Block\await($promise, $this->loop);
+
+        $this->assertEquals('PONG', $ret);
 
         return $client;
     }
@@ -45,10 +44,10 @@ class FunctionalTest extends TestCase
 
         $client->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
-        $client->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
+        $promise = $client->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $client->on('message', $this->expectCallableNever());
 
-        $this->waitFor($client);
+        Block\await($promise, $this->loop);
     }
 
     public function testPipeline()
@@ -58,26 +57,25 @@ class FunctionalTest extends TestCase
         $client->set('a', 1)->then($this->expectCallableOnce('OK'));
         $client->incr('a')->then($this->expectCallableOnce(2));
         $client->incr('a')->then($this->expectCallableOnce(3));
-        $client->get('a')->then($this->expectCallableOnce('3'));
+        $promise = $client->get('a')->then($this->expectCallableOnce('3'));
 
-        $this->assertTrue($client->isBusy());
-
-        $this->waitFor($client);
+        Block\await($promise, $this->loop);
     }
 
     public function testInvalidCommand()
     {
-        $this->client->doesnotexist(1, 2, 3)->then($this->expectCallableNever());
+        $promise = $this->client->doesnotexist(1, 2, 3);
 
-        $this->waitFor($this->client);
+        $this->setExpectedException('Exception');
+        Block\await($promise, $this->loop);
     }
 
     public function testMultiExecEmpty()
     {
         $this->client->multi()->then($this->expectCallableOnce('OK'));
-        $this->client->exec()->then($this->expectCallableOnce(array()));
+        $promise = $this->client->exec()->then($this->expectCallableOnce(array()));
 
-        $this->waitFor($this->client);
+        Block\await($promise, $this->loop);
     }
 
     public function testMultiExecQueuedExecHasValues()
@@ -89,9 +87,9 @@ class FunctionalTest extends TestCase
         $client->expire('b', 20)->then($this->expectCallableOnce('QUEUED'));
         $client->incrBy('b', 2)->then($this->expectCallableOnce('QUEUED'));
         $client->ttl('b')->then($this->expectCallableOnce('QUEUED'));
-        $client->exec()->then($this->expectCallableOnce(array('OK', 1, 12, 20)));
+        $promise = $client->exec()->then($this->expectCallableOnce(array('OK', 1, 12, 20)));
 
-        $this->waitFor($client);
+        Block\await($promise, $this->loop);
     }
 
     public function testPubSub()
@@ -106,11 +104,9 @@ class FunctionalTest extends TestCase
         $consumer->on('message', $this->expectCallableOnce());
         $consumer->on('message', array($deferred, 'resolve'));
         $consumer->subscribe($channel)->then($this->expectCallableOnce());
-        $this->waitFor($consumer);
 
         // producer sends a single message
-        $producer->publish($channel, 'hello world')->then($this->expectCallableOnce());
-        $this->waitFor($producer);
+        $producer->publish($channel, 'hello world')->then($this->expectCallableOnce(1));
 
         // expect "message" event to take no longer than 0.1s
         Block\await($deferred->promise(), $this->loop, 0.1);
@@ -132,9 +128,10 @@ class FunctionalTest extends TestCase
         $client->on('error', $this->expectCallableOnce());
         $client->on('close', $this->expectCallableOnce());
 
-        $client->get('willBeRejectedDueToClosing')->then(null, $this->expectCallableOnce());
+        $promise = $client->get('willBeRejectedDueToClosing');
 
-        $this->waitFor($client);
+        $this->setExpectedException('Exception');
+        Block\await($promise, $this->loop);
     }
 
     public function testInvalidServerRepliesWithDuplicateMessages()
@@ -144,9 +141,9 @@ class FunctionalTest extends TestCase
         $client->on('error', $this->expectCallableOnce());
         $client->on('close', $this->expectCallableOnce());
 
-        $client->set('a', 0)->then($this->expectCallableOnce('OK'));
+        $promise = $client->set('a', 0)->then($this->expectCallableOnce('OK'));
 
-        $this->waitFor($client);
+        Block\await($promise, $this->loop);
     }
 
     /**
@@ -174,14 +171,5 @@ class FunctionalTest extends TestCase
         $port = 1337;
         $cmd = 'echo -e "' . str_replace("\r\n", '\r\n', $response) . '" | nc -lC ' . $port;
 
-    }
-
-    protected function waitFor(StreamingClient $client)
-    {
-        $this->assertTrue($client->isBusy());
-
-        while ($client->isBusy()) {
-            $this->loop->tick();
-        }
     }
 }

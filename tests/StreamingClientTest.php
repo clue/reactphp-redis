@@ -85,7 +85,6 @@ class StreamingClientTest extends TestCase
         $promise = $this->client->monitor();
 
         $this->expectPromiseReject($promise);
-        $this->assertFalse($this->client->isBusy());
     }
 
 
@@ -103,28 +102,21 @@ class StreamingClientTest extends TestCase
     public function testClosingClientRejectsAllRemainingRequests()
     {
         $promise = $this->client->ping();
-        $this->assertTrue($this->client->isBusy());
-
         $this->client->close();
 
         $this->expectPromiseReject($promise);
-        $this->assertFalse($this->client->isBusy());
     }
 
     public function testClosedClientRejectsAllNewRequests()
     {
         $this->client->close();
-
         $promise = $this->client->ping();
 
         $this->expectPromiseReject($promise);
-        $this->assertFalse($this->client->isBusy());
     }
 
     public function testEndingNonBusyClosesClient()
     {
-        $this->assertFalse($this->client->isBusy());
-
         $this->client->on('close', $this->expectCallableOnce());
         $this->client->end();
     }

@@ -143,21 +143,16 @@ class StreamingClient extends EventEmitter implements Client
             $request->resolve($message->getValueNative());
         }
 
-        if ($this->ending && !$this->isBusy()) {
+        if ($this->ending && !$this->requests) {
             $this->close();
         }
-    }
-
-    public function isBusy()
-    {
-        return !!$this->requests;
     }
 
     public function end()
     {
         $this->ending = true;
 
-        if (!$this->isBusy()) {
+        if (!$this->requests) {
             $this->close();
         }
     }

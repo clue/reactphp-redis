@@ -34,13 +34,6 @@ interface Client extends EventEmitterInterface
     public function __call($name, $args);
 
     /**
-     * Checks if the client is busy, i.e. still has any requests pending
-     *
-     * @return boolean
-     */
-    public function isBusy();
-
-    /**
      * end connection once all pending requests have been replied to
      *
      * @uses self::close() once all replies have been received
