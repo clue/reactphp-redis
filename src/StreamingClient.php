@@ -14,7 +14,6 @@ use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
-use Clue\Redis\Protocol\Model\StatusReply;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -31,7 +30,6 @@ class StreamingClient extends EventEmitter implements Client
 
     private $subscribed = 0;
     private $psubscribed = 0;
-    private $monitoring = false;
 
     public function __construct(DuplexStreamInterface $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
     {
@@ -89,17 +87,14 @@ class StreamingClient extends EventEmitter implements Client
             $request->reject(new RuntimeException('Connection closed'));
         } elseif (count($args) !== 1 && in_array($name, $pubsubs)) {
             $request->reject(new InvalidArgumentException('PubSub commands limited to single argument'));
+        } elseif ($name === 'monitor') {
+            $request->reject(new \BadMethodCallException('MONITOR command explicitly not supported'));
         } else {
             $this->stream->write($this->serializer->getRequestMessage($name, $args));
             $this->requests []= $request;
         }
 
-        if ($name === 'monitor') {
-            $monitoring =& $this->monitoring;
-            $promise->then(function () use (&$monitoring) {
-                $monitoring = true;
-            });
-        } elseif (in_array($name, $pubsubs)) {
+        if (in_array($name, $pubsubs)) {
             $that = $this;
             $subscribed =& $this->subscribed;
             $psubscribed =& $this->psubscribed;
@@ -124,11 +119,6 @@ class StreamingClient extends EventEmitter implements Client
 
     public function handleMessage(ModelInterface $message)
     {
-        if ($this->monitoring && $this->isMonitorMessage($message)) {
-            $this->emit('monitor', array($message));
-            return;
-        }
-
         if (($this->subscribed !== 0 || $this->psubscribed !== 0) && $message instanceof MultiBulkReply) {
             $array = $message->getValueNative();
             $first = array_shift($array);
@@ -191,11 +181,5 @@ class StreamingClient extends EventEmitter implements Client
             /* @var $request Request */
             $request->reject(new RuntimeException('Connection closing'));
         }
-    }
-
-    private function isMonitorMessage(ModelInterface $message)
-    {
-        // Check status '1409172115.207170 [0 127.0.0.1:58567] "ping"' contains otherwise uncommon '] "'
-        return ($message instanceof StatusReply && strpos($message->getValueNative(), '] "') !== false);
     }
 }

@@ -18,8 +18,6 @@ use React\Promise\PromiseInterface;
  * @event pmessage($pattern, $channel, $message)
  * @event psubscribe($channel, $numberOfChannels)
  * @event punsubscribe($channel, $numberOfChannels)
- *
- * @event monitor(ModelInterface $statusModel)
  */
 interface Client extends EventEmitterInterface
 {

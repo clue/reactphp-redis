@@ -13,7 +13,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
   process their responses as soon as results come in.
   The Promise-based design provides a *sane* interface to working with async responses.
 * **Event-driven core** -
-  Register your event handler callbacks to react to incoming events, such as an incoming PubSub message or a MONITOR event.
+  Register your event handler callbacks to react to incoming events, such as an incoming PubSub message event.
 * **Lightweight, SOLID design** -
   Provides a thin abstraction that is [*just good enough*](http://en.wikipedia.org/wiki/Principle_of_good_enough)
   and does not get in your way.
@@ -235,11 +235,6 @@ $client->on('unsubscribe', function ($channel, $total) {
 });
 $client->on('punsubscribe', function ($pattern, $total) {
     // unsubscribed from matching given $pattern
-});
-
-// monitor events:
-$client->on('monitor', function (StatusReply $message) {
-    // somebody executed a command
 });
 ```
 

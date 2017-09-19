@@ -7,7 +7,6 @@ use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\React\Redis\Client;
-use Clue\Redis\Protocol\Model\StatusReply;
 
 class StreamingClientTest extends TestCase
 {
@@ -81,52 +80,14 @@ class StreamingClientTest extends TestCase
         $promise->then($this->expectCallableOnce('PONG'));
     }
 
-    /**
-     * @expectedException UnderflowException
-     */
-    public function testInvalidMonitor()
+    public function testMonitorCommandIsNotSupported()
     {
-        $this->client->handleMessage(new StatusReply('+1409171800.312243 [0 127.0.0.1:58542] "ping"'));
-    }
-
-    public function testMonitor()
-    {
-        $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('monitor'));
-
         $promise = $this->client->monitor();
 
-        $this->client->handleMessage(new StatusReply('OK'));
-
-        $this->expectPromiseResolve($promise);
-        $promise->then($this->expectCallableOnce('OK'));
+        $this->expectPromiseReject($promise);
+        $this->assertFalse($this->client->isBusy());
     }
 
-    public function testMonitorEventFromOtherConnection()
-    {
-        // enter MONITOR mode
-        $client = $this->client;
-        $client->monitor();
-        $client->handleMessage(new StatusReply('OK'));
-
-        // expect a single "monitor" event when a matching status reply comes in
-        $client->on('monitor', $this->expectCallableOnce());
-        $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
-    }
-
-    public function testMonitorEventFromPingMessage()
-    {
-        // enter MONITOR mode
-        $client = $this->client;
-        $client->monitor();
-        $client->handleMessage(new StatusReply('OK'));
-
-        // expect a single "monitor" event when a matching status reply comes in
-        // ignore the status reply for the command executed (ping)
-        $client->on('monitor', $this->expectCallableOnce());
-        $client->ping();
-        $client->handleMessage(new StatusReply('1409171800.312243 [0 127.0.0.1:58542] "ping"'));
-        $client->handleMessage(new StatusReply('PONG'));
-    }
 
     public function testErrorReply()
     {

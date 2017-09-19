@@ -94,18 +94,6 @@ class FunctionalTest extends TestCase
         $this->waitFor($client);
     }
 
-    public function testMonitorPing()
-    {
-        $client = $this->client;
-
-        $client->on('monitor', $this->expectCallableOnce());
-
-        $client->monitor()->then($this->expectCallableOnce('OK'));
-        $client->ping()->then($this->expectCallableOnce('PONG'));
-
-        $this->waitFor($client);
-    }
-
     public function testPubSub()
     {
         $consumer = $this->client;
