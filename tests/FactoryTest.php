@@ -21,12 +21,6 @@ class FactoryTest extends TestCase
         $this->factory = new Factory($this->loop);
     }
 
-    public function testWillConnectToLocalIpWithDefaultPortIfTargetIsNotGiven()
-    {
-        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn(Promise\reject(new \RuntimeException()));
-        $this->factory->createClient();
-    }
-
     public function testWillConnectWithDefaultPort()
     {
         $this->connector->expects($this->once())->method('connect')->with('redis.example.com:6379')->willReturn(Promise\reject(new \RuntimeException()));
@@ -36,16 +30,7 @@ class FactoryTest extends TestCase
     public function testWillConnectToLocalIpWhenTargetIsLocalhost()
     {
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:1337')->willReturn(Promise\reject(new \RuntimeException()));
-        $this->factory->createClient('tcp://localhost:1337');
-    }
-
-    public function testWillUpcastLegacyConnectorAndConnect()
-    {
-        $this->connector = $this->getMockBuilder('React\SocketClient\ConnectorInterface')->getMock();
-        $this->factory = new Factory($this->loop, $this->connector);
-
-        $this->connector->expects($this->once())->method('connect')->with('example.com:1337')->willReturn(Promise\reject(new \RuntimeException()));
-        $this->factory->createClient('tcp://example.com:1337');
+        $this->factory->createClient('localhost:1337');
     }
 
     public function testWillResolveIfConnectorResolves()
@@ -54,7 +39,7 @@ class FactoryTest extends TestCase
         $stream->expects($this->never())->method('write');
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
-        $promise = $this->factory->createClient();
+        $promise = $this->factory->createClient('localhost');
 
         $this->expectPromiseResolve($promise);
     }
@@ -122,19 +107,10 @@ class FactoryTest extends TestCase
         $this->factory->createClient('rediss://hello:world@example.com');
     }
 
-    public function testWillWriteAuthCommandIfTcpUriContainsUserInfo()
-    {
-        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$11\r\nhello:world\r\n");
-
-        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
-        $this->factory->createClient('tcp://hello:world@127.0.0.1');
-    }
-
     public function testWillRejectIfConnectorRejects()
     {
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
-        $promise = $this->factory->createClient('tcp://127.0.0.1:2');
+        $promise = $this->factory->createClient('redis://127.0.0.1:2');
 
         $this->expectPromiseReject($promise);
     }

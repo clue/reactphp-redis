@@ -9,7 +9,7 @@ require __DIR__ . '/../vendor/autoload.php';
 $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
-$factory->createClient()->then(function (Client $client) {
+$factory->createClient('localhost')->then(function (Client $client) {
     $client->monitor()->then(function ($result) {
         echo 'Now monitoring all commands' . PHP_EOL;
     });
