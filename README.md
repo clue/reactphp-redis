@@ -210,9 +210,6 @@ Incoming events and errors will be forwarded to registered event handler callbac
 
 ```php
 // global events:
-$client->on('data', function (MessageInterface $message) {
-    // process an incoming message (raw message object)
-});
 $client->on('close', function () {
     // the connection to Redis just closed
 });

@@ -56,21 +56,8 @@ class StreamingClientTest extends TestCase
         $this->stream->emit('data', array('message'));
     }
 
-    public function testReceiveMessageEmitsEvent()
-    {
-        $this->client->on('data', $this->expectCallableOnce());
-
-        $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->returnValue(array(new IntegerReply(2))));
-        $this->stream->emit('data', array('message'));
-    }
-
     public function testReceiveThrowMessageEmitsErrorEvent()
     {
-        $this->client->on('data', $this->expectCallableOnce());
-        $this->client->on('data', function() {
-            throw new UnderflowException();
-        });
-
         $this->client->on('error', $this->expectCallableOnce());
 
         $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->returnValue(array(new IntegerReply(2))));
