@@ -5,6 +5,7 @@ use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
 use React\Promise\Deferred;
 use React\Stream\Stream;
+use React\Stream\DuplexResourceStream;
 
 class FunctionalTest extends TestCase
 {
@@ -161,7 +162,7 @@ class FunctionalTest extends TestCase
         fwrite($fp, $response);
         fseek($fp, 0);
 
-        $stream = new Stream($fp, $this->loop);
+        $stream = class_exists('React\Stream\DuplexResourceStream') ? new DuplexResourceStream($fp, $this->loop) : new Stream($fp, $this->loop);
 
         return new StreamingClient($stream);
     }

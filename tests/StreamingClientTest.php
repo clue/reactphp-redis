@@ -7,6 +7,7 @@ use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\React\Redis\Client;
+use React\Stream\ThroughStream;
 
 class StreamingClientTest extends TestCase
 {
@@ -17,7 +18,7 @@ class StreamingClientTest extends TestCase
 
     public function setUp()
     {
-        $this->stream = $this->getMockBuilder('React\Stream\Stream')->disableOriginalConstructor()->setMethods(array('write', 'close', 'resume', 'pause'))->getMock();
+        $this->stream = $this->getMockBuilder('React\Stream\DuplexStreamInterface')->getMock();
         $this->parser = $this->getMockBuilder('Clue\Redis\Protocol\Parser\ParserInterface')->getMock();
         $this->serializer = $this->getMockBuilder('Clue\Redis\Protocol\Serializer\SerializerInterface')->getMock();
 
@@ -34,13 +35,16 @@ class StreamingClientTest extends TestCase
 
     public function testClosingClientEmitsEvent()
     {
-        //$this->client->on('close', $this->expectCallableOnce());
+        $this->client->on('close', $this->expectCallableOnce());
 
         $this->client->close();
     }
 
     public function testClosingStreamClosesClient()
     {
+        $this->stream = new ThroughStream();
+        $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
+
         $this->client->on('close', $this->expectCallableOnce());
 
         $this->stream->emit('close');
@@ -48,8 +52,11 @@ class StreamingClientTest extends TestCase
 
     public function testReceiveParseErrorEmitsErrorEvent()
     {
+        $this->stream = new ThroughStream();
+        $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
+
         $this->client->on('error', $this->expectCallableOnce());
-        //$this->client->on('close', $this->expectCallableOnce());
+        $this->client->on('close', $this->expectCallableOnce());
 
         $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->throwException(new ParserException()));
         $this->stream->emit('data', array('message'));
@@ -57,6 +64,9 @@ class StreamingClientTest extends TestCase
 
     public function testReceiveThrowMessageEmitsErrorEvent()
     {
+        $this->stream = new ThroughStream();
+        $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
+
         $this->client->on('error', $this->expectCallableOnce());
 
         $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->returnValue(array(new IntegerReply(2))));
