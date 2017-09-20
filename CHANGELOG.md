@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.0.0 (2017-09-20)
+
+A major compatibility release to update this package to support all latest
+ReactPHP components!
+
+This update involves a minor BC break due to dropped support for legacy
+versions. We've tried hard to avoid BC breaks where possible and minimize impact
+otherwise. We expect that most consumers of this package will actually not be
+affected by any BC breaks, see below for more details.
+
+*   BC break: Remove all deprecated APIs, default to `redis://` URI scheme
+    and drop legacy SocketClient in favor of new Socket component.
+    (#61 by @clue)
+
+    >   All of this affects the `Factory` only, which is mostly considered
+        "advanced usage". If you're affected by this BC break, then it's
+        recomme ded to first update to the intermediary v1.2.0 release, which
+        allows you to use the `redis://` URI scheme and a standard
+        `ConnectorInterface` and then update to this version without causing a
+        BC break.
+
+*   BC break: Remove uneeded `data` event and support for advanced `MONITOR`
+    command for performance and consistency reasons and
+    remove underdocumented `isBusy()` method.
+    (#62, #63 and #64 by @clue)
+
+*   Feature: Forward compatibility with upcoming Socket v1.0 and v0.8 and EventLoop v1.0 and Evenement v3
+    (#65 by @clue)
+
 ## 1.2.0 (2017-09-19)
 
 *   Feature: Support `redis[s]://` URI scheme and deprecate legacy URIs
