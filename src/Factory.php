@@ -107,10 +107,6 @@ class Factory
             $parts['port'] = 6379;
         }
 
-        if ($parts['host'] === 'localhost') {
-            $parts['host'] = '127.0.0.1';
-        }
-
         if (isset($parts['pass'])) {
             $parts['auth'] = rawurldecode($parts['pass']);
         }

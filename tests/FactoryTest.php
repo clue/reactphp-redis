@@ -27,9 +27,9 @@ class FactoryTest extends TestCase
         $this->factory->createClient('redis.example.com');
     }
 
-    public function testWillConnectToLocalIpWhenTargetIsLocalhost()
+    public function testWillConnectToLocalhost()
     {
-        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:1337')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->connector->expects($this->once())->method('connect')->with('localhost:1337')->willReturn(Promise\reject(new \RuntimeException()));
         $this->factory->createClient('localhost:1337');
     }
 
