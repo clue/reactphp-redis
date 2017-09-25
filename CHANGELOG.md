@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.1.0 (2017-09-25)
+
+*   Feature: Update Socket dependency to support hosts file on all platforms
+    (#66 by @clue)
+
+    This means that connecting to hosts such as `localhost` (and for example
+    those used for Docker containers) will now work as expected across all
+    platforms with no changes required:
+
+    ```php
+    $factory->createClient('localhost');
+    ```
+
 ## 2.0.0 (2017-09-20)
 
 A major compatibility release to update this package to support all latest
