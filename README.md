@@ -152,6 +152,15 @@ You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/red
 $factory->createClient('rediss://redis.example.com:6340');
 ```
 
+If you want to connect to redis using a unix socket you can use the [FixedUriConnector](https://github.com/reactphp/socket#fixeduriconnector) to direct the connection to the unix socket.
+The host and port in the specified client URL are ignored but you can still configure authentication and database with it.
+
+```php
+$connector = new FixedUriConnector('unix:///var/run/redis/redis.sock', new UnixConnector($loop));
+$factory = new Factory($loop, $connector);
+$factory->createClient('redis://localhost/2');
+```
+
 ### Client
 
 The `Client` is responsible for exchanging messages with Redis
