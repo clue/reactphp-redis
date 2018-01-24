@@ -52,7 +52,7 @@ class Factory
 
         $protocol = $this->protocol;
 
-        $promise = $this->connector->connect($parts['host'] . ':' . $parts['port'])->then(function (ConnectionInterface $stream) use ($protocol) {
+        $promise = $this->connector->connect($parts['authority'])->then(function (ConnectionInterface $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 
@@ -89,11 +89,18 @@ class Factory
 
     /**
      * @param string $target
-     * @return array with keys host, port, auth and db
+     * @return array with keys authority, auth and db
      * @throws InvalidArgumentException
      */
     private function parseUrl($target)
     {
+        $ret = array();
+        // support `redis+unix://` scheme for Unix domain socket (UDS) paths
+        if (preg_match('/^redis\+unix:\/\/([^:]*:[^@]*@)?(.+?)(\?.*)?$/', $target, $match)) {
+            $ret['authority'] = 'unix://' . $match[2];
+            $target = 'redis://' . (isset($match[1]) ? $match[1] : '') . 'localhost' . (isset($match[3]) ? $match[3] : '');
+        }
+
         if (strpos($target, '://') === false) {
             $target = 'redis://' . $target;
         }
@@ -103,21 +110,20 @@ class Factory
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
-        if (!isset($parts['port'])) {
-            $parts['port'] = 6379;
-        }
-
         if (isset($parts['pass'])) {
-            $parts['auth'] = rawurldecode($parts['pass']);
+            $ret['auth'] = rawurldecode($parts['pass']);
         }
 
         if (isset($parts['path']) && $parts['path'] !== '') {
             // skip first slash
-            $parts['db'] = substr($parts['path'], 1);
+            $ret['db'] = substr($parts['path'], 1);
         }
 
-        if ($parts['scheme'] === 'rediss') {
-            $parts['host'] = 'tls://' . $parts['host'];
+        if (!isset($ret['authority'])) {
+            $ret['authority'] =
+                ($parts['scheme'] === 'rediss' ? 'tls://' : '') .
+                $parts['host'] . ':' .
+                (isset($parts['port']) ? $parts['port'] : 6379);
         }
 
         if (isset($parts['query'])) {
@@ -125,16 +131,14 @@ class Factory
             parse_str($parts['query'], $args);
 
             if (isset($args['password'])) {
-                $parts['auth'] = $args['password'];
+                $ret['auth'] = $args['password'];
             }
 
             if (isset($args['db'])) {
-                $parts['db'] = $args['db'];
+                $ret['db'] = $args['db'];
             }
         }
 
-        unset($parts['scheme'], $parts['user'], $parts['pass'], $parts['path']);
-
-        return $parts;
+        return $ret;
     }
 }

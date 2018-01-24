@@ -152,6 +152,20 @@ You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/red
 $factory->createClient('rediss://redis.example.com:6340');
 ```
 
+You can use the `redis+unix://` URI scheme if your Redis instance is listening
+on a Unix domain socket (UDS) path:
+
+```php
+$factory->createClient('redis+unix:///tmp/redis.sock');
+
+// the URI MAY contain `password` and `db` query parameters as seen above
+$factory->createClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
+
+// the URI MAY contain authentication details as userinfo as seen above
+// should be used with care, also note that database can not be passed as path
+$factory->createClient('redis+unix://:secret@/tmp/redis.sock');
+```
+
 ### Client
 
 The `Client` is responsible for exchanging messages with Redis
