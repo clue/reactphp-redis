@@ -9,7 +9,7 @@ This library provides you a simple API to work with your Redis database from wit
 It enables you to set and query its data or use its PubSub topics to react to incoming events.
 
 * **Async execution of Commands** -
-  Send any number commands to  Redis in parallel (automatic pipeline) and
+  Send any number of commands to Redis in parallel (automatic pipeline) and
   process their responses as soon as results come in.
   The Promise-based design provides a *sane* interface to working with async responses.
 * **Event-driven core** -
@@ -268,7 +268,7 @@ The recommended way to install this library is [through Composer](https://getcom
 This will install the latest supported version:
 
 ```bash
-$ composer require clue/redis-react:^2.1
+$ composer require clue/redis-react:^2.2
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.

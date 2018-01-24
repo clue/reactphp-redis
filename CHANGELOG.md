@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.0 (2018-01-24)
+
+*   Feature: Support communication over Unix domain sockets (UDS)
+    (#70 by @clue)
+
+    ```php
+    // new: now supports redis over Unix domain sockets (UDS)
+    $factory->createClient('redis+unix:///tmp/redis.sock');
+    ```
+
 ## 2.1.0 (2017-09-25)
 
 *   Feature: Update Socket dependency to support hosts file on all platforms
@@ -29,7 +39,7 @@ affected by any BC breaks, see below for more details.
 
     >   All of this affects the `Factory` only, which is mostly considered
         "advanced usage". If you're affected by this BC break, then it's
-        recomme ded to first update to the intermediary v1.2.0 release, which
+        recommended to first update to the intermediary v1.2.0 release, which
         allows you to use the `redis://` URI scheme and a standard
         `ConnectorInterface` and then update to this version without causing a
         BC break.
