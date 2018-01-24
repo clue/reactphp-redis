@@ -107,6 +107,33 @@ class FactoryTest extends TestCase
         $this->factory->createClient('rediss://hello:world@example.com');
     }
 
+    public function testWillWriteAuthCommandIfRedisUnixUriContainsPasswordQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis+unix:///tmp/redis.sock?password=world');
+    }
+
+    public function testWillWriteAuthCommandIfRedisUnixUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis+unix://hello:world@/tmp/redis.sock');
+    }
+
+    public function testWillWriteSelectCommandIfRedisUnixUriContainsDbQueryParameter()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis+unix:///tmp/redis.sock?db=demo');
+    }
+
     public function testWillRejectIfConnectorRejects()
     {
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
