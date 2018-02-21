@@ -99,7 +99,7 @@ class StreamingClient extends EventEmitter implements Client
             $subscribed =& $this->subscribed;
             $psubscribed =& $this->psubscribed;
 
-            $promise->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
+            return $promise->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
                 $first = array_shift($array);
 
                 // (p)(un)subscribe messages are to be forwarded
