@@ -106,7 +106,7 @@ class Factory
         }
 
         $parts = parse_url($target);
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss'))) {
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'tcp', 'rediss'))) {
             throw new InvalidArgumentException('Given URL can not be parsed');
         }
 
