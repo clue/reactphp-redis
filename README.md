@@ -27,6 +27,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * [Usage](#usage)
   * [Factory](#factory)
     * [createClient()](#createclient)
+    * [createLazyClient()](#createlazyclient)
   * [Client](#client)
     * [Commands](#commands)
     * [Promises](#promises)
@@ -165,6 +166,12 @@ $factory->createClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
 // should be used with care, also note that database can not be passed as path
 $factory->createClient('redis+unix://:secret@/tmp/redis.sock');
 ```
+
+#### createLazyClient()
+
+The `createLazyClient($redisUri)` method can be used to create a new [`Client`](#client) which lazily 
+creates and connects to the configured redis server on the first command. Internally it will use `createClient()` 
+when the first command comes in, queues all commands while connecting, and pass on all commands directly when connected.
 
 ### Client
 
