@@ -6,7 +6,7 @@ use Clue\React\Redis\Factory;
 use React\Promise;
 use React\Promise\Deferred;
 
-class FactoryTest extends TestCase
+class FactoryStreamingClientTest extends TestCase
 {
     private $loop;
     private $connector;

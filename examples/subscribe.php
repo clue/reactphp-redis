@@ -10,14 +10,14 @@ $factory = new Factory($loop);
 
 $channel = isset($argv[1]) ? $argv[1] : 'channel';
 
-$factory->createClient('localhost')->then(function (Client $client) use ($channel) {
-    $client->subscribe($channel)->then(function () {
-        echo 'Now subscribed to channel ' . PHP_EOL;
-    });
+/** @var Client $client */
+$client = $factory->createLazyClient('localhost');
+$client->subscribe($channel)->then(function () {
+    echo 'Now subscribed to channel ' . PHP_EOL;
+});
 
-    $client->on('message', function ($channel, $message) {
-        echo 'Message on ' . $channel . ': ' . $message . PHP_EOL;
-    });
+$client->on('message', function ($channel, $message) {
+    echo 'Message on ' . $channel . ': ' . $message . PHP_EOL;
 });
 
 $loop->run();

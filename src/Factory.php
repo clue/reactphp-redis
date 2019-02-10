@@ -38,6 +38,11 @@ class Factory
         $this->protocol = $protocol;
     }
 
+    public function createLazyClient($target)
+    {
+        return new LazyStreamingClient($target, $this);
+    }
+
     /**
      * create redis client connected to address of given redis instance
      *
