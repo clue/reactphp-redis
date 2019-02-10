@@ -167,8 +167,13 @@ class LazyStreamingClientTest extends TestCase
 
     public function testReceivingUnexpectedMessageThrowsException()
     {
-        $this->setExpectedException('UnderflowException');
-        $this->client->handleMessage(new BulkReply('PONG'))->done();
+        $that = $this;
+        $this->client->handleMessage(new BulkReply('PONG'))->then(function($value) use ($that) {
+            $that->assertNull($value);
+            $that->fail('promise resolved');
+        }, function($value) use ($that) {
+            $that->assertInstanceOf('UnderflowException');
+        });
     }
 
     public function testPubsubSubscribe()
