@@ -73,6 +73,9 @@ class StreamingClientTest extends TestCase
         $this->stream->emit('data', array('message'));
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testDefaultCtor()
     {
         $client = new StreamingClient($this->stream);
@@ -160,7 +163,11 @@ class StreamingClientTest extends TestCase
 
     public function testReceivingUnexpectedMessageThrowsException()
     {
-        $this->setExpectedException('UnderflowException');
+        if (method_exists($this, 'expectException')) {
+            $this->expectException('UnderflowException');
+        } else {
+            $this->setExpectedException('UnderflowException');
+        }
         $this->client->handleMessage(new BulkReply('PONG'));
     }
 

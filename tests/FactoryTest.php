@@ -16,6 +16,9 @@ class FactoryTest extends TestCase
         $this->factory = new Factory($this->loop, $this->connector);
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
     public function testCtor()
     {
         $this->factory = new Factory($this->loop);

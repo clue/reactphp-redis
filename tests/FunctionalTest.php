@@ -67,7 +67,11 @@ class FunctionalTest extends TestCase
     {
         $promise = $this->client->doesnotexist(1, 2, 3);
 
-        $this->setExpectedException('Exception');
+        if (method_exists($this, 'expectException')) {
+            $this->expectException('Exception');
+        } else {
+            $this->setExpectedException('Exception');
+        }
         Block\await($promise, $this->loop);
     }
 
@@ -131,7 +135,11 @@ class FunctionalTest extends TestCase
 
         $promise = $client->get('willBeRejectedDueToClosing');
 
-        $this->setExpectedException('Exception');
+        if (method_exists($this, 'expectException')) {
+            $this->expectException('Exception');
+        } else {
+            $this->setExpectedException('Exception');
+        }
         Block\await($promise, $this->loop);
     }
 
