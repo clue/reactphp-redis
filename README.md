@@ -100,7 +100,9 @@ $factory = new Factory($loop, $connector);
 
 #### createClient()
 
-The `createClient($redisUri)` method can be used to create a new [`Client`](#client).
+The `createClient($redisUri): PromiseInterface<Client,Exception>` method can be used to
+create a new [`Client`](#client).
+
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
@@ -113,6 +115,24 @@ $factory->createClient('redis://localhost:6379')->then(
         // an error occurred while trying to connect (or authenticate) client
     }
 );
+```
+
+The method returns a [Promise](https://github.com/reactphp/promise) that
+will resolve with a [`Client`](#client)
+instance on success or will reject with an `Exception` if the URL is
+invalid or the connection or authentication fails.
+
+The returned Promise is implemented in such a way that it can be
+cancelled when it is still pending. Cancelling a pending promise will
+reject its value with an Exception and will cancel the underlying TCP/IP
+connection attempt and/or Redis authentication.
+
+```php
+$promise = $factory->createConnection($redisUri);
+
+$loop->addTimer(3.0, function () use ($promise) {
+    $promise->cancel();
+});
 ```
 
 The `$redisUri` can be given in the

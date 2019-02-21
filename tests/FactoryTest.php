@@ -4,6 +4,7 @@ namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\Factory;
 use React\Promise;
+use React\Promise\Deferred;
 
 class FactoryTest extends TestCase
 {
@@ -152,5 +153,37 @@ class FactoryTest extends TestCase
         $promise = $this->factory->createClient('http://invalid target');
 
         $this->expectPromiseReject($promise);
+    }
+
+    public function testCancelWillRejectPromise()
+    {
+        $promise = new \React\Promise\Promise(function () { });
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($promise);
+
+        $promise = $this->factory->createClient('redis://127.0.0.1:2');
+        $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+    }
+
+    public function testCancelWillCancelConnectorWhenConnectionIsPending()
+    {
+        $deferred = new Deferred($this->expectCallableOnce());
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
+
+        $promise = $this->factory->createClient('redis://127.0.0.1:2');
+        $promise->cancel();
+    }
+
+    public function testCancelWillCloseConnectionWhenConnectionWaitsForSelect()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write');
+        $stream->expects($this->once())->method('close');
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+
+        $promise = $this->factory->createClient('redis://127.0.0.1:2/123');
+        $promise->cancel();
     }
 }
