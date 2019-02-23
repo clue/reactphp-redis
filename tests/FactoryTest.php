@@ -1,5 +1,7 @@
 <?php
 
+namespace Clue\Tests\React\Redis;
+
 use Clue\React\Redis\Factory;
 use React\Promise;
 

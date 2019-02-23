@@ -1,26 +1,28 @@
 <?php
 
-use PHPUnit\Framework\TestCase as BaseTestCase;
+namespace Clue\Tests\React\Redis;
 
-(include_once __DIR__ . '/../vendor/autoload.php') OR die(PHP_EOL . 'ERROR: composer autoloader not found, run "composer install" or see README for instructions' . PHP_EOL);
+use PHPUnit\Framework\TestCase as BaseTestCase;
 
 class TestCase extends BaseTestCase
 {
     protected function expectCallableOnce()
     {
         $mock = $this->createCallableMock();
+        $mock
+            ->expects($this->once())
+            ->method('__invoke');
 
+        return $mock;
+    }
 
-        if (func_num_args() > 0) {
-            $mock
-                ->expects($this->once())
-                ->method('__invoke')
-                ->with($this->equalTo(func_get_arg(0)));
-        } else {
-            $mock
-                ->expects($this->once())
-                ->method('__invoke');
-        }
+    protected function expectCallableOnceWith($argument)
+    {
+        $mock = $this->createCallableMock();
+        $mock
+            ->expects($this->once())
+            ->method('__invoke')
+            ->with($argument);
 
         return $mock;
     }
@@ -35,23 +37,9 @@ class TestCase extends BaseTestCase
         return $mock;
     }
 
-    protected function expectCallableOnceParameter($type)
-    {
-        $mock = $this->createCallableMock();
-        $mock
-            ->expects($this->once())
-            ->method('__invoke')
-            ->with($this->isInstanceOf($type));
-
-        return $mock;
-    }
-
-    /**
-     * @link https://github.com/reactphp/react/blob/master/tests/React/Tests/Socket/TestCase.php (taken from reactphp/react)
-     */
     protected function createCallableMock()
     {
-        return $this->getMockBuilder('CallableStub')->getMock();
+        return $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
     }
 
     protected function expectPromiseResolve($promise)
@@ -83,11 +71,3 @@ class TestCase extends BaseTestCase
         return $promise;
     }
 }
-
-class CallableStub
-{
-    public function __invoke()
-    {
-    }
-}
-

@@ -1,5 +1,7 @@
 <?php
 
+namespace Clue\Tests\React\Redis;
+
 use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Model\IntegerReply;
@@ -90,7 +92,7 @@ class StreamingClientTest extends TestCase
         $this->client->handleMessage(new BulkReply('PONG'));
 
         $this->expectPromiseResolve($promise);
-        $promise->then($this->expectCallableOnce('PONG'));
+        $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
     public function testMonitorCommandIsNotSupported()
@@ -109,7 +111,7 @@ class StreamingClientTest extends TestCase
         $this->client->handleMessage($err);
 
         $this->expectPromiseReject($promise);
-        $promise->then(null, $this->expectCallableOnce($err));
+        $promise->then(null, $this->expectCallableOnceWith($err));
     }
 
     public function testClosingClientRejectsAllRemainingRequests()
@@ -149,7 +151,7 @@ class StreamingClientTest extends TestCase
         $this->assertEquals(0, $closed);
 
         $this->client->handleMessage(new BulkReply('PONG'));
-        $promise->then($this->expectCallableOnce('PONG'));
+        $promise->then($this->expectCallableOnceWith('PONG'));
         $this->assertEquals(1, $closed);
     }
 
