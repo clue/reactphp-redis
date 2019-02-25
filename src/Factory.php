@@ -2,10 +2,10 @@
 
 namespace Clue\React\Redis;
 
-use Clue\React\Redis\StreamingClient;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\LoopInterface;
 use React\Promise;
+use React\Promise\Deferred;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
@@ -50,9 +50,20 @@ class Factory
             return Promise\reject($e);
         }
 
-        $protocol = $this->protocol;
+        $connecting = $this->connector->connect($parts['authority']);
+        $deferred = new Deferred(function ($_, $reject) use ($connecting) {
+            // connection cancelled, start with rejecting attempt, then clean up
+            $reject(new \RuntimeException('Connection to database server cancelled'));
 
-        $promise = $this->connector->connect($parts['authority'])->then(function (ConnectionInterface $stream) use ($protocol) {
+            // either close successful connection or cancel pending connection attempt
+            $connecting->then(function (ConnectionInterface $connection) {
+                $connection->close();
+            });
+            $connecting->cancel();
+        });
+
+        $protocol = $this->protocol;
+        $promise = $connecting->then(function (ConnectionInterface $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
         });
 
@@ -84,7 +95,9 @@ class Factory
             });
         }
 
-        return $promise;
+        $promise->then(array($deferred, 'resolve'), array($deferred, 'reject'));
+
+        return $deferred->promise();
     }
 
     /**
