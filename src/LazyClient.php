@@ -3,35 +3,20 @@
 namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
-use Clue\Redis\Protocol\Parser\ParserInterface;
-use Clue\Redis\Protocol\Parser\ParserException;
-use Clue\Redis\Protocol\Serializer\SerializerInterface;
-use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use React\Promise\FulfilledPromise;
-use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use React\Stream\Util;
-use UnderflowException;
-use RuntimeException;
-use InvalidArgumentException;
-use React\Promise\Deferred;
-use Clue\Redis\Protocol\Model\ErrorReply;
-use Clue\Redis\Protocol\Model\ModelInterface;
-use Clue\Redis\Protocol\Model\MultiBulkReply;
-use React\Stream\DuplexStreamInterface;
 
 /**
  * @internal
  */
-class LazyStreamingClient extends EventEmitter implements Client
+class LazyClient extends EventEmitter implements Client
 {
     private $target;
     /** @var Factory */
     private $factory;
     private $ending = false;
     private $closed = false;
-    public $promise = null;
-    public $client = null;
+    private $promise;
 
     /**
      * @param $target
@@ -50,21 +35,13 @@ class LazyStreamingClient extends EventEmitter implements Client
             return $this->promise;
         }
 
-        if ($this->client instanceof Client) {
-            return new FulfilledPromise($this->client());
-        }
-
         $self = $this;
         return $this->promise = $this->factory->createClient($this->target)->then(function (Client $client) use ($self) {
-            $self->client = $client;
-            $self->promise = null;
-
             Util::forwardEvents(
-                $self->client,
+                $client,
                 $self,
                 array(
                     'error',
-                    'close',
                     'message',
                     'subscribe',
                     'unsubscribe',
@@ -73,6 +50,8 @@ class LazyStreamingClient extends EventEmitter implements Client
                     'punsubscribe',
                 )
             );
+
+            $client->on('close', array($self, 'close'));
 
             return $client;
         }, function (\Exception $e) use ($self) {
@@ -83,14 +62,14 @@ class LazyStreamingClient extends EventEmitter implements Client
             $self->emit('error', array($e));
             $self->close();
 
-            return $e;
+            throw $e;
         });
     }
 
     public function __call($name, $args)
     {
-        if ($this->client instanceof Client) {
-            return \call_user_func_array(array($this->client, $name), $args);
+        if ($this->closed) {
+            return \React\Promise\reject(new \RuntimeException('Connection closed'));
         }
 
         return $this->client()->then(function (Client $client) use ($name, $args) {
@@ -100,23 +79,37 @@ class LazyStreamingClient extends EventEmitter implements Client
 
     public function end()
     {
-        if ($this->client instanceof Client) {
-            return $this->client->end();
+        if ($this->promise === null) {
+            $this->close();
+        }
+
+        if ($this->closed) {
+            return;
         }
 
         return $this->client()->then(function (Client $client) {
-            return $client->end();
+            $client->end();
         });
     }
 
     public function close()
     {
-        if ($this->client instanceof Client) {
-            return $this->client->close();
+        if ($this->closed) {
+            return;
         }
 
-        return $this->client()->then(function (Client $client) {
-            return $client->close();
-        });
+        $this->closed = true;
+
+        // either close active connection or cancel pending connection attempt
+        if ($this->promise !== null) {
+            $this->promise->then(function (Client $client) {
+                $client->close();
+            });
+            $this->promise->cancel();
+            $this->promise = null;
+        }
+
+        $this->emit('close');
+        $this->removeAllListeners();
     }
 }

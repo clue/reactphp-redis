@@ -11,10 +11,7 @@ $factory = new Factory($loop);
 
 echo '# connecting to redis...' . PHP_EOL;
 
-/** @var Client $client */
-$client = $factory->createLazyClient('localhost');
-
-try {
+$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
     $loop->addReadStream(STDIN, function () use ($client, $loop) {
@@ -51,10 +48,10 @@ try {
 
         $loop->removeReadStream(STDIN);
     });
-} catch (Exception $error) {
+}, function (Exception $error) {
     echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
     exit(1);
-};
+});
 
 
 $loop->run();

@@ -47,22 +47,21 @@ local Redis server and send some requests:
 $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
-$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
-    $client->set('greeting', 'Hello world');
-    $client->append('greeting', '!');
-    
-    $client->get('greeting')->then(function ($greeting) {
-        // Hello world!
-        echo $greeting . PHP_EOL;
-    });
-    
-    $client->incr('invocation')->then(function ($n) {
-        echo 'This is invocation #' . $n . PHP_EOL;
-    });
-    
-    // end connection once all pending requests have been resolved
-    $client->end();
+$client = $factory->createLazyClient('localhost');
+$client->set('greeting', 'Hello world');
+$client->append('greeting', '!');
+
+$client->get('greeting')->then(function ($greeting) {
+    // Hello world!
+    echo $greeting . PHP_EOL;
 });
+
+$client->incr('invocation')->then(function ($n) {
+    echo 'This is invocation #' . $n . PHP_EOL;
+});
+
+// end connection once all pending requests have been resolved
+$client->end();
 
 $loop->run();
 ```
@@ -101,7 +100,7 @@ $factory = new Factory($loop, $connector);
 
 #### createClient()
 
-The `createClient($redisUri): PromiseInterface<Client,Exception>` method can be used to
+The `createClient(string $redisUri): PromiseInterface<Client,Exception>` method can be used to
 create a new [`Client`](#client).
 
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis
@@ -198,9 +197,103 @@ $factory->createClient('localhost?timeout=0.5');
 
 #### createLazyClient()
 
-The `createLazyClient($redisUri)` method can be used to create a new [`Client`](#client) which lazily 
-creates and connects to the configured redis server on the first command. Internally it will use `createClient()` 
-when the first command comes in, queues all commands while connecting, and pass on all commands directly when connected.
+The `createLazyClient(string $redisUri): Client` method can be used to
+create a new [`Client`](#client).
+
+It helps with establishing a plain TCP/IP or secure TLS connection to Redis
+and optionally authenticating (AUTH) and selecting the right database (SELECT).
+
+```php
+$client = $factory->createLazyClient('redis://localhost:6379');
+
+$client->incr('hello');
+$client->end();
+```
+
+This method immediately returns a "virtual" connection implementing the
+[`Client`](#client) that can be used to interface with your Redis database.
+Internally, it lazily creates the underlying database connection (which may
+take some time) only once the first request is invoked on this instance and
+will queue all outstanding requests until the underlying connection is ready.
+
+From a consumer side this means that you can start sending commands to the
+database right away while the actual connection may still be outstanding.
+It will ensure that all commands will be executed in the order they are
+enqueued once the connection is ready. If the database connection fails,
+it will emit an `error` event, reject all outstanding commands and `close`
+the connection as described in the `Client`. In other words, it behaves just
+like a real connection and frees you from having to deal with its async
+resolution.
+
+Note that creating the underlying connection will be deferred until the
+first request is invoked. Accordingly, any eventual connection issues
+will be detected once this instance is first used. Similarly, calling
+`end()` on this instance before invoking any requests will succeed
+immediately and will not wait for an actual underlying connection.
+
+Depending on your particular use case, you may prefer this method or the
+underlying `createClient()` which resolves with a promise. For many
+simple use cases it may be easier to create a lazy connection.
+
+The `$redisUri` can be given in the
+[standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
+`[redis[s]://][:auth@]host[:port][/db]`.
+You can omit the URI scheme and port if you're connecting to the default port 6379:
+
+```php
+// both are equivalent due to defaults being applied
+$factory->createLazyClient('localhost');
+$factory->createLazyClient('redis://localhost:6379');
+```
+
+Redis supports password-based authentication (`AUTH` command). Note that Redis'
+authentication mechanism does not employ a username, so you can pass the
+password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
+
+```php
+// all forms are equivalent
+$factory->createLazyClient('redis://:h%40llo@localhost');
+$factory->createLazyClient('redis://ignored:h%40llo@localhost');
+$factory->createLazyClient('redis://localhost?password=h%40llo');
+```
+
+You can optionally include a path that will be used to select (SELECT command) the right database:
+
+```php
+// both forms are equivalent
+$factory->createLazyClient('redis://localhost/2');
+$factory->createLazyClient('redis://localhost?db=2');
+```
+
+You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
+`rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
+
+```php
+$factory->createLazyClient('rediss://redis.example.com:6340');
+```
+
+You can use the `redis+unix://` URI scheme if your Redis instance is listening
+on a Unix domain socket (UDS) path:
+
+```php
+$factory->createLazyClient('redis+unix:///tmp/redis.sock');
+
+// the URI MAY contain `password` and `db` query parameters as seen above
+$factory->createLazyClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
+
+// the URI MAY contain authentication details as userinfo as seen above
+// should be used with care, also note that database can not be passed as path
+$factory->createLazyClient('redis+unix://:secret@/tmp/redis.sock');
+```
+
+This method respects PHP's `default_socket_timeout` setting (default 60s)
+as a timeout for establishing the underlying connection and waiting for
+successful authentication. You can explicitly pass a custom timeout value
+in seconds (or use a negative number to not apply a timeout) like this:
+
+```php
+$factory->createLazyClient('localhost?timeout=0.5');
+```
 
 ### Client
 

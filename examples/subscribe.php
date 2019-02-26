@@ -1,6 +1,5 @@
 <?php
 
-use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -10,7 +9,6 @@ $factory = new Factory($loop);
 
 $channel = isset($argv[1]) ? $argv[1] : 'channel';
 
-/** @var Client $client */
 $client = $factory->createLazyClient('localhost');
 $client->subscribe($channel)->then(function () {
     echo 'Now subscribed to channel ' . PHP_EOL;

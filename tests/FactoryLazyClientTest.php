@@ -5,7 +5,7 @@ namespace Clue\Tests\React\Redis;
 use Clue\React\Redis\Factory;
 use React\Promise;
 
-class FactoryLazyStreamingClientTest extends TestCase
+class FactoryLazyClientTest extends TestCase
 {
     private $loop;
     private $connector;
