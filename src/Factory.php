@@ -4,8 +4,8 @@ namespace Clue\React\Redis;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\LoopInterface;
-use React\Promise;
 use React\Promise\Deferred;
+use React\Promise\Timer\TimeoutException;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
@@ -13,6 +13,7 @@ use InvalidArgumentException;
 
 class Factory
 {
+    private $loop;
     private $connector;
     private $protocol;
 
@@ -32,6 +33,7 @@ class Factory
             $protocol = new ProtocolFactory();
         }
 
+        $this->loop = $loop;
         $this->connector = $connector;
         $this->protocol = $protocol;
     }
@@ -47,7 +49,7 @@ class Factory
         try {
             $parts = $this->parseUrl($target);
         } catch (InvalidArgumentException $e) {
-            return Promise\reject($e);
+            return \React\Promise\reject($e);
         }
 
         $connecting = $this->connector->connect($parts['authority']);
@@ -97,7 +99,20 @@ class Factory
 
         $promise->then(array($deferred, 'resolve'), array($deferred, 'reject'));
 
-        return $deferred->promise();
+        // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
+        $timeout = (float) isset($parts['timeout']) ? $parts['timeout'] : ini_get("default_socket_timeout");
+        if ($timeout < 0) {
+            return $deferred->promise();
+        }
+
+        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
+            if ($e instanceof TimeoutException) {
+                throw new \RuntimeException(
+                    'Connection to database server timed out after ' . $e->getTimeout() . ' seconds'
+                );
+            }
+            throw $e;
+        });
     }
 
     /**
@@ -149,6 +164,10 @@ class Factory
 
             if (isset($args['db'])) {
                 $ret['db'] = $args['db'];
+            }
+
+            if (isset($args['timeout'])) {
+                $ret['timeout'] = $args['timeout'];
             }
         }
 

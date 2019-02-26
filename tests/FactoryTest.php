@@ -186,4 +186,53 @@ class FactoryTest extends TestCase
         $promise = $this->factory->createClient('redis://127.0.0.1:2/123');
         $promise->cancel();
     }
+
+    public function testCreateClientWithTimeoutParameterWillStartTimerAndRejectOnExplicitTimeout()
+    {
+        $timeout = null;
+        $this->loop->expects($this->once())->method('addTimer')->with(0, $this->callback(function ($cb) use (&$timeout) {
+            $timeout = $cb;
+            return true;
+        }));
+
+        $deferred = new Deferred();
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
+
+        $promise = $this->factory->createClient('redis://127.0.0.1:2?timeout=0');
+
+        $this->assertNotNull($timeout);
+        $timeout();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('Exception'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                })
+            )
+        ));
+    }
+
+    public function testCreateClientWithNegativeTimeoutParameterWillNotStartTimer()
+    {
+        $this->loop->expects($this->never())->method('addTimer');
+
+        $deferred = new Deferred();
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
+
+        $this->factory->createClient('redis://127.0.0.1:2?timeout=-1');
+    }
+
+    public function testCreateClientWithoutTimeoutParameterWillStartTimerWithDefaultTimeoutFromIni()
+    {
+        $this->loop->expects($this->once())->method('addTimer')->with(1.5, $this->anything());
+
+        $deferred = new Deferred();
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
+
+        $old = ini_get('default_socket_timeout');
+        ini_set('default_socket_timeout', '1.5');
+        $this->factory->createClient('redis://127.0.0.1:2');
+        ini_set('default_socket_timeout', $old);
+    }
 }
