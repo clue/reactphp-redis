@@ -272,4 +272,34 @@ class LazyClientTest extends TestCase
         $this->client->on('message', $this->expectCallableOnce());
         $client->emit('message', array('foo', 'bar'));
     }
+
+    public function testEmitsUnsubscribeAndPunsubscribeEventsWhenUnderlyingClientClosesWhileUsingPubSubChannel()
+    {
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve());
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $this->client->subscribe('foo');
+        $client->emit('subscribe', array('foo', 1));
+
+        $this->client->subscribe('bar');
+        $client->emit('subscribe', array('bar', 2));
+
+        $this->client->unsubscribe('bar');
+        $client->emit('unsubscribe', array('bar', 1));
+
+        $this->client->psubscribe('foo*');
+        $client->emit('psubscribe', array('foo*', 1));
+
+        $this->client->psubscribe('bar*');
+        $client->emit('psubscribe', array('bar*', 2));
+
+        $this->client->punsubscribe('bar*');
+        $client->emit('punsubscribe', array('bar*', 1));
+
+        $this->client->on('unsubscribe', $this->expectCallableOnce());
+        $this->client->on('punsubscribe', $this->expectCallableOnce());
+        $client->emit('close');
+    }
 }

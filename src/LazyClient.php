@@ -35,8 +35,34 @@ class LazyClient extends EventEmitter implements Client
         $pending =& $this->promise;
         return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending) {
             // connection completed => remember only until closed
-            $client->on('close', function () use (&$pending) {
+            $subscribed = array();
+            $psubscribed = array();
+            $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed) {
                 $pending = null;
+
+                // foward unsubscribe/punsubscribe events when underlying connection closes
+                $n = count($subscribed);
+                foreach ($subscribed as $channel => $_) {
+                    $self->emit('unsubscribe', array($channel, --$n));
+                }
+                $n = count($psubscribed);
+                foreach ($psubscribed as $pattern => $_) {
+                    $self->emit('punsubscribe', array($pattern, --$n));
+                }
+            });
+
+            // keep track of all channels and patterns this connection is subscribed to
+            $client->on('subscribe', function ($channel) use (&$subscribed) {
+                $subscribed[$channel] = true;
+            });
+            $client->on('psubscribe', function ($pattern) use (&$psubscribed) {
+                $psubscribed[$pattern] = true;
+            });
+            $client->on('unsubscribe', function ($channel) use (&$subscribed) {
+                unset($subscribed[$channel]);
+            });
+            $client->on('punsubscribe', function ($pattern) use (&$psubscribed) {
+                unset($psubscribed[$pattern]);
             });
 
             Util::forwardEvents(

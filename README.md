@@ -233,6 +233,13 @@ outstanding commands and will return to the initial "idle" state. This
 means that you can keep sending additional commands at a later time which
 will again try to open the underlying connection.
 
+If the underlying database connection drops while using PubSub channels
+(see `SUBSCRIBE` and `PSUBSCRIBE` commands), it will automatically send the
+appropriate `unsubscribe` and `punsubscribe` events for all currently active
+channel and pattern subscriptions. This allows you to react to these
+events and restore your subscriptions by creating a new underlying
+connection with the above commands.
+
 Note that creating the underlying connection will be deferred until the
 first request is invoked. Accordingly, any eventual connection issues
 will be detected once this instance is first used. You can use the
