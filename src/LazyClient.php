@@ -3,7 +3,6 @@
 namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
-use React\Promise\PromiseInterface;
 use React\Stream\Util;
 
 /**
@@ -14,7 +13,6 @@ class LazyClient extends EventEmitter implements Client
     private $target;
     /** @var Factory */
     private $factory;
-    private $ending = false;
     private $closed = false;
     private $promise;
 
@@ -25,23 +23,26 @@ class LazyClient extends EventEmitter implements Client
     {
         $this->target = $target;
         $this->factory = $factory;
-
-        $this->on('close', array($this, 'removeAllListeners'));
     }
 
     private function client()
     {
-        if ($this->promise instanceof PromiseInterface) {
+        if ($this->promise !== null) {
             return $this->promise;
         }
 
         $self = $this;
-        return $this->promise = $this->factory->createClient($this->target)->then(function (Client $client) use ($self) {
+        $pending =& $this->promise;
+        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending) {
+            // connection completed => remember only until closed
+            $client->on('close', function () use (&$pending) {
+                $pending = null;
+            });
+
             Util::forwardEvents(
                 $client,
                 $self,
                 array(
-                    'error',
                     'message',
                     'subscribe',
                     'unsubscribe',
@@ -51,16 +52,10 @@ class LazyClient extends EventEmitter implements Client
                 )
             );
 
-            $client->on('close', array($self, 'close'));
-
             return $client;
-        }, function (\Exception $e) use ($self) {
-            // connection failed => emit error if connection is not already closed
-            if ($self->closed) {
-                return;
-            }
-            $self->emit('error', array($e));
-            $self->close();
+        }, function (\Exception $e) use (&$pending) {
+            // connection failed => discard connection attempt
+            $pending = null;
 
             throw $e;
         });
@@ -87,7 +82,11 @@ class LazyClient extends EventEmitter implements Client
             return;
         }
 
-        return $this->client()->then(function (Client $client) {
+        $that = $this;
+        return $this->client()->then(function (Client $client) use ($that) {
+            $client->on('close', function () use ($that) {
+                $that->close();
+            });
             $client->end();
         });
     }
