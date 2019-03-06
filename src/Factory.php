@@ -123,7 +123,7 @@ class Factory
      */
     public function createLazyClient($target)
     {
-        return new LazyClient($target, $this);
+        return new LazyClient($target, $this, $this->loop);
     }
 
     /**

@@ -18,19 +18,23 @@ use React\Promise\Deferred;
 class LazyClientTest extends TestCase
 {
     private $factory;
+    private $loop;
     private $client;
 
     public function setUp()
     {
         $this->factory = $this->getMockBuilder('Clue\React\Redis\Factory')->disableOriginalConstructor()->getMock();
+        $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $this->client = new LazyClient('localhost', $this->factory);
+        $this->client = new LazyClient('localhost', $this->factory, $this->loop);
     }
 
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise()
     {
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
+
+        $this->loop->expects($this->never())->method('addTimer');
 
         $promise = $this->client->ping();
 
@@ -46,7 +50,7 @@ class LazyClientTest extends TestCase
         $this->client->ping();
     }
 
-    public function testPingWillResolveWhenUnderlyingClientResolvesPing()
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer()
     {
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
@@ -54,13 +58,51 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
+        $this->loop->expects($this->once())->method('addTimer')->with(60.0, $this->anything());
+
         $promise = $this->client->ping();
         $deferred->resolve($client);
 
         $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
-    public function testPingWillRejectWhenUnderlyingClientRejectsPing()
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam()
+    {
+        $this->client = new LazyClient('localhost?idle=10', $this->factory, $this->loop);
+
+        $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
+        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+
+        $deferred = new Deferred();
+        $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
+
+        $this->loop->expects($this->once())->method('addTimer')->with(10.0, $this->anything());
+
+        $promise = $this->client->ping();
+        $deferred->resolve($client);
+
+        $promise->then($this->expectCallableOnceWith('PONG'));
+    }
+
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative()
+    {
+        $this->client = new LazyClient('localhost?idle=-1', $this->factory, $this->loop);
+
+        $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
+        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+
+        $deferred = new Deferred();
+        $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
+
+        $this->loop->expects($this->never())->method('addTimer');
+
+        $promise = $this->client->ping();
+        $deferred->resolve($client);
+
+        $promise->then($this->expectCallableOnceWith('PONG'));
+    }
+
+    public function testPingWillRejectWhenUnderlyingClientRejectsPingAndStartIdleTimer()
     {
         $error = new \RuntimeException();
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
@@ -68,6 +110,8 @@ class LazyClientTest extends TestCase
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
+
+        $this->loop->expects($this->once())->method('addTimer');
 
         $promise = $this->client->ping();
         $deferred->resolve($client);
@@ -133,6 +177,67 @@ class LazyClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnce());
     }
 
+    public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
+            $deferred->promise(),
+            new Promise(function () { })
+        );
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $this->loop->expects($this->never())->method('addTimer');
+
+        $this->client->ping();
+        $this->client->ping();
+        $deferred->resolve();
+    }
+
+    public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
+            $deferred->promise(),
+            new Promise(function () { })
+        );
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $this->client->ping();
+        $deferred->resolve();
+        $this->client->ping();
+    }
+
+    public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
+    {
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('close')->willReturn(\React\Promise\resolve());
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $timeout = null;
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $this->loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
+            $timeout = $cb;
+            return true;
+        }))->willReturn($timer);
+
+        $this->client->on('close', $this->expectCallableNever());
+
+        $this->client->ping();
+
+        $this->assertNotNull($timeout);
+        $timeout();
+    }
+
     public function testCloseWillEmitCloseEventWithoutCreatingUnderlyingClient()
     {
         $this->factory->expects($this->never())->method('createClient');
@@ -187,6 +292,24 @@ class LazyClientTest extends TestCase
         $this->client->close();
     }
 
+    public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('close');
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $this->client->ping();
+        $deferred->resolve();
+        $this->client->close();
+    }
+
     public function testEndWillCloseClientIfUnderlyingConnectionIsNotPending()
     {
         $this->client->on('close', $this->expectCallableOnce());
@@ -210,7 +333,6 @@ class LazyClientTest extends TestCase
     public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose()
     {
         $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'end'))->getMock();
-        //$client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
 
@@ -255,6 +377,26 @@ class LazyClientTest extends TestCase
         $deferred->resolve($client);
 
         $this->client->on('close', $this->expectCallableNever());
+        $client->emit('close');
+    }
+
+    public function testEmitsNoCloseEventButWillCancelIdleTimerWhenUnderlyingConnectionEmitsCloseAfterPingIsAlreadyResolved()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $this->client->on('close', $this->expectCallableNever());
+
+        $this->client->ping();
+        $deferred->resolve();
+
         $client->emit('close');
     }
 

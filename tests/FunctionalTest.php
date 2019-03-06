@@ -51,6 +51,30 @@ class FunctionalTest extends TestCase
         $this->assertEquals('PONG', $ret);
     }
 
+    /**
+     * @doesNotPerformAssertions
+     */
+    public function testPingLazyWillNotBlockLoopWhenIdleTimeIsSmall()
+    {
+        $client = $this->factory->createLazyClient($this->uri . '?idle=0');
+
+        $client->ping();
+
+        $this->loop->run();
+    }
+
+    /**
+     * @doesNotPerformAssertions
+     */
+    public function testLazyClientWithoutCommandsWillNotBlockLoop()
+    {
+        $client = $this->factory->createLazyClient($this->uri);
+
+        $this->loop->run();
+
+        unset($client);
+    }
+
     public function testMgetIsNotInterpretedAsSubMessage()
     {
         $client = $this->createClient($this->uri);

@@ -4,6 +4,7 @@ namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
 use React\Stream\Util;
+use React\EventLoop\LoopInterface;
 
 /**
  * @internal
@@ -16,13 +17,25 @@ class LazyClient extends EventEmitter implements Client
     private $closed = false;
     private $promise;
 
+    private $loop;
+    private $idlePeriod = 60.0;
+    private $idleTimer;
+    private $pending = 0;
+
     /**
      * @param $target
      */
-    public function __construct($target, Factory $factory)
+    public function __construct($target, Factory $factory, LoopInterface $loop)
     {
+        $args = array();
+        \parse_str(\parse_url($target, \PHP_URL_QUERY), $args);
+        if (isset($args['idle'])) {
+            $this->idlePeriod = (float)$args['idle'];
+        }
+
         $this->target = $target;
         $this->factory = $factory;
+        $this->loop = $loop;
     }
 
     private function client()
@@ -33,11 +46,13 @@ class LazyClient extends EventEmitter implements Client
 
         $self = $this;
         $pending =& $this->promise;
-        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending) {
+        $idleTimer=& $this->idleTimer;
+        $loop = $this->loop;
+        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, $loop) {
             // connection completed => remember only until closed
             $subscribed = array();
             $psubscribed = array();
-            $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed) {
+            $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
                 $pending = null;
 
                 // foward unsubscribe/punsubscribe events when underlying connection closes
@@ -48,6 +63,11 @@ class LazyClient extends EventEmitter implements Client
                 $n = count($psubscribed);
                 foreach ($psubscribed as $pattern => $_) {
                     $self->emit('punsubscribe', array($pattern, --$n));
+                }
+
+                if ($idleTimer !== null) {
+                    $loop->cancelTimer($idleTimer);
+                    $idleTimer = null;
                 }
             });
 
@@ -93,8 +113,19 @@ class LazyClient extends EventEmitter implements Client
             return \React\Promise\reject(new \RuntimeException('Connection closed'));
         }
 
-        return $this->client()->then(function (Client $client) use ($name, $args) {
-            return \call_user_func_array(array($client, $name), $args);
+        $that = $this;
+        return $this->client()->then(function (Client $client) use ($name, $args, $that) {
+            $that->awake();
+            return \call_user_func_array(array($client, $name), $args)->then(
+                function ($result) use ($that) {
+                    $that->idle();
+                    return $result;
+                },
+                function ($error) use ($that) {
+                    $that->idle();
+                    throw $error;
+                }
+            );
         });
     }
 
@@ -134,7 +165,45 @@ class LazyClient extends EventEmitter implements Client
             $this->promise = null;
         }
 
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
+        }
+
         $this->emit('close');
         $this->removeAllListeners();
+    }
+
+    /**
+     * @internal
+     */
+    public function awake()
+    {
+        ++$this->pending;
+
+        if ($this->idleTimer !== null) {
+            $this->loop->cancelTimer($this->idleTimer);
+            $this->idleTimer = null;
+        }
+    }
+
+    /**
+     * @internal
+     */
+    public function idle()
+    {
+        --$this->pending;
+
+        if ($this->pending < 1 && $this->idlePeriod >= 0) {
+            $idleTimer =& $this->idleTimer;
+            $promise =& $this->promise;
+            $idleTimer = $this->loop->addTimer($this->idlePeriod, function () use (&$idleTimer, &$promise) {
+                $promise->then(function (Client $client) {
+                    $client->close();
+                });
+                    $promise = null;
+                    $idleTimer = null;
+            });
+        }
     }
 }
