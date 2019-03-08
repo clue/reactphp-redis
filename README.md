@@ -27,6 +27,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * [Usage](#usage)
   * [Factory](#factory)
     * [createClient()](#createclient)
+    * [createLazyClient()](#createlazyclient)
   * [Client](#client)
     * [Commands](#commands)
     * [Promises](#promises)
@@ -46,22 +47,21 @@ local Redis server and send some requests:
 $loop = React\EventLoop\Factory::create();
 $factory = new Factory($loop);
 
-$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
-    $client->set('greeting', 'Hello world');
-    $client->append('greeting', '!');
-    
-    $client->get('greeting')->then(function ($greeting) {
-        // Hello world!
-        echo $greeting . PHP_EOL;
-    });
-    
-    $client->incr('invocation')->then(function ($n) {
-        echo 'This is invocation #' . $n . PHP_EOL;
-    });
-    
-    // end connection once all pending requests have been resolved
-    $client->end();
+$client = $factory->createLazyClient('localhost');
+$client->set('greeting', 'Hello world');
+$client->append('greeting', '!');
+
+$client->get('greeting')->then(function ($greeting) {
+    // Hello world!
+    echo $greeting . PHP_EOL;
 });
+
+$client->incr('invocation')->then(function ($n) {
+    echo 'This is invocation #' . $n . PHP_EOL;
+});
+
+// end connection once all pending requests have been resolved
+$client->end();
 
 $loop->run();
 ```
@@ -100,7 +100,7 @@ $factory = new Factory($loop, $connector);
 
 #### createClient()
 
-The `createClient($redisUri): PromiseInterface<Client,Exception>` method can be used to
+The `createClient(string $redisUri): PromiseInterface<Client,Exception>` method can be used to
 create a new [`Client`](#client).
 
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis
@@ -193,6 +193,139 @@ authentication. You can explicitly pass a custom timeout value in seconds
 
 ```php
 $factory->createClient('localhost?timeout=0.5');
+```
+
+#### createLazyClient()
+
+The `createLazyClient(string $redisUri): Client` method can be used to
+create a new [`Client`](#client).
+
+It helps with establishing a plain TCP/IP or secure TLS connection to Redis
+and optionally authenticating (AUTH) and selecting the right database (SELECT).
+
+```php
+$client = $factory->createLazyClient('redis://localhost:6379');
+
+$client->incr('hello');
+$client->end();
+```
+
+This method immediately returns a "virtual" connection implementing the
+[`Client`](#client) that can be used to interface with your Redis database.
+Internally, it lazily creates the underlying database connection only on
+demand once the first request is invoked on this instance and will queue
+all outstanding requests until the underlying connection is ready.
+Additionally, it will only keep this underlying connection in an "idle" state
+for 60s by default and will automatically close the underlying connection when
+it is no longer needed.
+
+From a consumer side this means that you can start sending commands to the
+database right away while the underlying connection may still be
+outstanding. Because creating this underlying connection may take some
+time, it will enqueue all oustanding commands and will ensure that all
+commands will be executed in correct order once the connection is ready.
+In other words, this "virtual" connection behaves just like a "real"
+connection as described in the `Client` interface and frees you from having
+to deal with its async resolution.
+
+If the underlying database connection fails, it will reject all
+outstanding commands and will return to the initial "idle" state. This
+means that you can keep sending additional commands at a later time which
+will again try to open a new underlying connection. Note that this may
+require special care if you're using transactions (`MULTI`/`EXEC`) that are kept
+open for longer than the idle period.
+
+While using PubSub channels (see `SUBSCRIBE` and `PSUBSCRIBE` commands), this client
+will never reach an "idle" state and will keep pending forever (or until the
+underlying database connection is lost). Additionally, if the underlying
+database connection drops, it will automatically send the appropriate `unsubscribe`
+and `punsubscribe` events for all currently active channel and pattern subscriptions.
+This allows you to react to these events and restore your subscriptions by
+creating a new underlying connection repeating the above commands again.
+
+Note that creating the underlying connection will be deferred until the
+first request is invoked. Accordingly, any eventual connection issues
+will be detected once this instance is first used. You can use the
+`end()` method to ensure that the "virtual" connection will be soft-closed
+and no further commands can be enqueued. Similarly, calling `end()` on
+this instance when not currently connected will succeed immediately and
+will not have to wait for an actual underlying connection.
+
+Depending on your particular use case, you may prefer this method or the
+underlying `createClient()` which resolves with a promise. For many
+simple use cases it may be easier to create a lazy connection.
+
+The `$redisUri` can be given in the
+[standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
+`[redis[s]://][:auth@]host[:port][/db]`.
+You can omit the URI scheme and port if you're connecting to the default port 6379:
+
+```php
+// both are equivalent due to defaults being applied
+$factory->createLazyClient('localhost');
+$factory->createLazyClient('redis://localhost:6379');
+```
+
+Redis supports password-based authentication (`AUTH` command). Note that Redis'
+authentication mechanism does not employ a username, so you can pass the
+password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
+
+```php
+// all forms are equivalent
+$factory->createLazyClient('redis://:h%40llo@localhost');
+$factory->createLazyClient('redis://ignored:h%40llo@localhost');
+$factory->createLazyClient('redis://localhost?password=h%40llo');
+```
+
+You can optionally include a path that will be used to select (SELECT command) the right database:
+
+```php
+// both forms are equivalent
+$factory->createLazyClient('redis://localhost/2');
+$factory->createLazyClient('redis://localhost?db=2');
+```
+
+You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
+`rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
+
+```php
+$factory->createLazyClient('rediss://redis.example.com:6340');
+```
+
+You can use the `redis+unix://` URI scheme if your Redis instance is listening
+on a Unix domain socket (UDS) path:
+
+```php
+$factory->createLazyClient('redis+unix:///tmp/redis.sock');
+
+// the URI MAY contain `password` and `db` query parameters as seen above
+$factory->createLazyClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
+
+// the URI MAY contain authentication details as userinfo as seen above
+// should be used with care, also note that database can not be passed as path
+$factory->createLazyClient('redis+unix://:secret@/tmp/redis.sock');
+```
+
+This method respects PHP's `default_socket_timeout` setting (default 60s)
+as a timeout for establishing the underlying connection and waiting for
+successful authentication. You can explicitly pass a custom timeout value
+in seconds (or use a negative number to not apply a timeout) like this:
+
+```php
+$factory->createLazyClient('localhost?timeout=0.5');
+```
+
+By default, this method will keep "idle" connection open for 60s and will
+then end the underlying connection. The next request after an "idle"
+connection ended will automatically create a new underlying connection.
+This ensure you always get a "fresh" connection and as such should not be
+confused with a "keepalive" or "heartbeat" mechanism, as this will not
+actively try to probe the connection. You can explicitly pass a custom
+idle timeout value in seconds (or use a negative number to not apply a
+timeout) like this:
+
+```php
+$factory->createLazyClient('localhost?idle=0.1');
 ```
 
 ### Client

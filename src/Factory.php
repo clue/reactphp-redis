@@ -39,10 +39,10 @@ class Factory
     }
 
     /**
-     * create redis client connected to address of given redis instance
+     * Create Redis client connected to address of given redis instance
      *
      * @param string $target Redis server URI to connect to
-     * @return \React\Promise\PromiseInterface resolves with Client or rejects with \Exception
+     * @return \React\Promise\PromiseInterface<Client> resolves with Client or rejects with \Exception
      */
     public function createClient($target)
     {
@@ -113,6 +113,17 @@ class Factory
             }
             throw $e;
         });
+    }
+
+    /**
+     * Create Redis client connected to address of given redis instance
+     *
+     * @param string $target
+     * @return Client
+     */
+    public function createLazyClient($target)
+    {
+        return new LazyClient($target, $this, $this->loop);
     }
 
     /**
