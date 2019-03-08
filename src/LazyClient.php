@@ -22,6 +22,9 @@ class LazyClient extends EventEmitter implements Client
     private $idleTimer;
     private $pending = 0;
 
+    private $subscribed = array();
+    private $psubscribed = array();
+
     /**
      * @param $target
      */
@@ -47,11 +50,11 @@ class LazyClient extends EventEmitter implements Client
         $self = $this;
         $pending =& $this->promise;
         $idleTimer=& $this->idleTimer;
+        $subscribed =& $this->subscribed;
+        $psubscribed =& $this->psubscribed;
         $loop = $this->loop;
-        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, $loop) {
+        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
             // connection completed => remember only until closed
-            $subscribed = array();
-            $psubscribed = array();
             $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
                 $pending = null;
 
@@ -64,6 +67,8 @@ class LazyClient extends EventEmitter implements Client
                 foreach ($psubscribed as $pattern => $_) {
                     $self->emit('punsubscribe', array($pattern, --$n));
                 }
+                $subscribed = array();
+                $psubscribed = array();
 
                 if ($idleTimer !== null) {
                     $loop->cancelTimer($idleTimer);
@@ -194,15 +199,15 @@ class LazyClient extends EventEmitter implements Client
     {
         --$this->pending;
 
-        if ($this->pending < 1 && $this->idlePeriod >= 0) {
+        if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed) {
             $idleTimer =& $this->idleTimer;
             $promise =& $this->promise;
             $idleTimer = $this->loop->addTimer($this->idlePeriod, function () use (&$idleTimer, &$promise) {
                 $promise->then(function (Client $client) {
                     $client->close();
                 });
-                    $promise = null;
-                    $idleTimer = null;
+                $promise = null;
+                $idleTimer = null;
             });
         }
     }

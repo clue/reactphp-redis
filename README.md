@@ -235,12 +235,13 @@ will again try to open a new underlying connection. Note that this may
 require special care if you're using transactions (`MULTI`/`EXEC`) that are kept
 open for longer than the idle period.
 
-If the underlying database connection drops while using PubSub channels
-(see `SUBSCRIBE` and `PSUBSCRIBE` commands), it will automatically send the
-appropriate `unsubscribe` and `punsubscribe` events for all currently active
-channel and pattern subscriptions. This allows you to react to these
-events and restore your subscriptions by creating a new underlying
-connection with the above commands.
+While using PubSub channels (see `SUBSCRIBE` and `PSUBSCRIBE` commands), this client
+will never reach an "idle" state and will keep pending forever (or until the
+underlying database connection is lost). Additionally, if the underlying
+database connection drops, it will automatically send the appropriate `unsubscribe`
+and `punsubscribe` events for all currently active channel and pattern subscriptions.
+This allows you to react to these events and restore your subscriptions by
+creating a new underlying connection repeating the above commands again.
 
 Note that creating the underlying connection will be deferred until the
 first request is invoked. Accordingly, any eventual connection issues

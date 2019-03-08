@@ -444,4 +444,43 @@ class LazyClientTest extends TestCase
         $this->client->on('punsubscribe', $this->expectCallableOnce());
         $client->emit('close');
     }
+
+    public function testSubscribeWillResolveWhenUnderlyingClientResolvesSubscribeAndNotStartIdleTimerWithIdleDueToSubscription()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->once())->method('__call')->with('subscribe')->willReturn($deferred->promise());
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $this->loop->expects($this->never())->method('addTimer');
+
+        $promise = $this->client->subscribe('foo');
+        $client->emit('subscribe', array('foo', 1));
+        $deferred->resolve(array('subscribe', 'foo', 1));
+
+        $promise->then($this->expectCallableOnceWith(array('subscribe', 'foo', 1)));
+    }
+
+    public function testUnsubscribeAfterSubscribeWillResolveWhenUnderlyingClientResolvesUnsubscribeAndStartIdleTimerWhenSubscriptionStopped()
+    {
+        $deferredSubscribe = new Deferred();
+        $deferredUnsubscribe = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls($deferredSubscribe->promise(), $deferredUnsubscribe->promise());
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $this->loop->expects($this->once())->method('addTimer');
+
+        $promise = $this->client->subscribe('foo');
+        $client->emit('subscribe', array('foo', 1));
+        $deferredSubscribe->resolve(array('subscribe', 'foo', 1));
+        $promise->then($this->expectCallableOnceWith(array('subscribe', 'foo', 1)));
+
+        $promise = $this->client->unsubscribe('foo');
+        $client->emit('unsubscribe', array('foo', 0));
+        $deferredUnsubscribe->resolve(array('unsubscribe', 'foo', 0));
+        $promise->then($this->expectCallableOnceWith(array('unsubscribe', 'foo', 0)));
+    }
 }
