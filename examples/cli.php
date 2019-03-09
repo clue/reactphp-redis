@@ -50,8 +50,10 @@ $factory->createClient('localhost')->then(function (Client $client) use ($loop) 
     });
 }, function (Exception $error) {
     echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
+    if ($error->getPrevious()) {
+        echo $error->getPrevious()->getMessage() . PHP_EOL;
+    }
     exit(1);
 });
-
 
 $loop->run();

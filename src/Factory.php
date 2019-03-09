@@ -55,7 +55,7 @@ class Factory
         $connecting = $this->connector->connect($parts['authority']);
         $deferred = new Deferred(function ($_, $reject) use ($connecting) {
             // connection cancelled, start with rejecting attempt, then clean up
-            $reject(new \RuntimeException('Connection to database server cancelled'));
+            $reject(new \RuntimeException('Connection to Redis server cancelled'));
 
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (ConnectionInterface $connection) {
@@ -67,6 +67,12 @@ class Factory
         $protocol = $this->protocol;
         $promise = $connecting->then(function (ConnectionInterface $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
+        }, function (\Exception $e) {
+            throw new \RuntimeException(
+                'Connection to Redis server failed because underlying transport connection failed',
+                0,
+                $e
+            );
         });
 
         if (isset($parts['auth'])) {
@@ -77,7 +83,12 @@ class Factory
                     },
                     function ($error) use ($client) {
                         $client->close();
-                        throw $error;
+
+                        throw new \RuntimeException(
+                            'Connection to Redis server failed because AUTH command failed',
+                            0,
+                            $error
+                        );
                     }
                 );
             });
@@ -91,7 +102,12 @@ class Factory
                     },
                     function ($error) use ($client) {
                         $client->close();
-                        throw $error;
+
+                        throw new \RuntimeException(
+                            'Connection to Redis server failed because SELECT command failed',
+                            0,
+                            $error
+                        );
                     }
                 );
             });
@@ -108,7 +124,7 @@ class Factory
         return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
-                    'Connection to database server timed out after ' . $e->getTimeout() . ' seconds'
+                    'Connection to Redis server timed out after ' . $e->getTimeout() . ' seconds'
                 );
             }
             throw $e;

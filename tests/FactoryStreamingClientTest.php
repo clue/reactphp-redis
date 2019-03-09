@@ -131,6 +131,43 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix://hello:world@/tmp/redis.sock');
     }
 
+    public function testWillResolveWhenAuthCommandReceivesOkResponseIfRedisUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://:world@localhost');
+
+        $stream->emit('data', array("+OK\r\n"));
+
+        $promise->then($this->expectCallableOnceWith($this->isInstanceOf('Clue\React\Redis\Client')));
+    }
+
+    public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo()
+    {
+        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write', 'close'))->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('close');
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://:world@localhost');
+
+        $stream->emit('data', array("-ERR invalid password\r\n"));
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to Redis server failed because AUTH command failed';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getPrevious()->getMessage() === 'ERR invalid password';
+                })
+            )
+        ));
+    }
+
     public function testWillWriteSelectCommandIfRedisUnixUriContainsDbQueryParameter()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
@@ -140,19 +177,63 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix:///tmp/redis.sock?db=demo');
     }
 
+    public function testWillResolveWhenSelectCommandReceivesOkResponseIfRedisUriContainsPath()
+    {
+        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://localhost/123');
+
+        $stream->emit('data', array("+OK\r\n"));
+
+        $promise->then($this->expectCallableOnceWith($this->isInstanceOf('Clue\React\Redis\Client')));
+    }
+
+    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath()
+    {
+        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write', 'close'))->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
+        $stream->expects($this->once())->method('close');
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://localhost/123');
+
+        $stream->emit('data', array("-ERR DB index is out of range\r\n"));
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to Redis server failed because SELECT command failed';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getPrevious()->getMessage() === 'ERR DB index is out of range';
+                })
+            )
+        ));
+    }
+
     public function testWillRejectIfConnectorRejects()
     {
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
         $promise = $this->factory->createClient('redis://127.0.0.1:2');
 
-        $this->expectPromiseReject($promise);
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to Redis server failed because underlying transport connection failed';
+                })
+            )
+        ));
     }
 
     public function testWillRejectIfTargetIsInvalid()
     {
         $promise = $this->factory->createClient('http://invalid target');
 
-        $this->expectPromiseReject($promise);
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('InvalidArgumentException')));
     }
 
     public function testCancelWillRejectPromise()
@@ -173,6 +254,15 @@ class FactoryStreamingClientTest extends TestCase
 
         $promise = $this->factory->createClient('redis://127.0.0.1:2');
         $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to Redis server cancelled';
+                })
+            )
+        ));
     }
 
     public function testCancelWillCloseConnectionWhenConnectionWaitsForSelect()
@@ -185,6 +275,15 @@ class FactoryStreamingClientTest extends TestCase
 
         $promise = $this->factory->createClient('redis://127.0.0.1:2/123');
         $promise->cancel();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to Redis server cancelled';
+                })
+            )
+        ));
     }
 
     public function testCreateClientWithTimeoutParameterWillStartTimerAndRejectOnExplicitTimeout()
@@ -205,9 +304,9 @@ class FactoryStreamingClientTest extends TestCase
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
-                $this->isInstanceOf('Exception'),
+                $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to database server timed out after 0 seconds';
+                    return $e->getMessage() === 'Connection to Redis server timed out after 0 seconds';
                 })
             )
         ));

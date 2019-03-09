@@ -12,7 +12,13 @@ $message = isset($argv[2]) ? $argv[2] : 'message';
 
 $client = $factory->createLazyClient('localhost');
 $client->publish($channel, $message)->then(function ($received) {
-    echo 'successfully published. Received by ' . $received . PHP_EOL;
+    echo 'Successfully published. Received by ' . $received . PHP_EOL;
+}, function (Exception $e) {
+    echo 'Unable to publish: ' . $e->getMessage() . PHP_EOL;
+    if ($e->getPrevious()) {
+        echo $e->getPrevious()->getMessage() . PHP_EOL;
+    }
+    exit(1);
 });
 
 $client->end();
