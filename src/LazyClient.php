@@ -166,8 +166,10 @@ class LazyClient extends EventEmitter implements Client
             $this->promise->then(function (Client $client) {
                 $client->close();
             });
-            $this->promise->cancel();
-            $this->promise = null;
+            if ($this->promise !== null) {
+                $this->promise->cancel();
+                $this->promise = null;
+            }
         }
 
         if ($this->idleTimer !== null) {

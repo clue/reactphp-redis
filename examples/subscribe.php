@@ -12,7 +12,8 @@ $channel = isset($argv[1]) ? $argv[1] : 'channel';
 $client = $factory->createLazyClient('localhost');
 $client->subscribe($channel)->then(function () {
     echo 'Now subscribed to channel ' . PHP_EOL;
-}, function (Exception $e) {
+}, function (Exception $e) use ($client) {
+    $client->close();
     echo 'Unable to subscribe: ' . $e->getMessage() . PHP_EOL;
 });
 

@@ -310,6 +310,29 @@ class LazyClientTest extends TestCase
         $this->client->close();
     }
 
+    public function testCloseAfterPingRejectsWillEmitClose()
+    {
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
+            $client->emit('close');
+        });
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $timer = $this->getMockBuilder('React\EventLoop\TimerInterface')->getMock();
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $ref = $this->client;
+        $ref->ping()->then(null, function () use ($ref, $client) {
+            $ref->close();
+        });
+        $ref->on('close', $this->expectCallableOnce());
+        $deferred->reject(new \RuntimeException());
+    }
+
     public function testEndWillCloseClientIfUnderlyingConnectionIsNotPending()
     {
         $this->client->on('close', $this->expectCallableOnce());
