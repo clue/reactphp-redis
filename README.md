@@ -31,9 +31,11 @@ It enables you to set and query its data or use its PubSub topics to react to in
   * [Client](#client)
     * [Commands](#commands)
     * [Promises](#promises)
-    * [on()](#on)
+    * [PubSub](#pubsub)
     * [close()](#close)
     * [end()](#end)
+    * [error event](#error-event)
+    * [close event](#close-event)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -333,6 +335,9 @@ $factory->createLazyClient('localhost?idle=0.1');
 The `Client` is responsible for exchanging messages with Redis
 and keeps track of pending commands.
 
+Besides defining a few methods, this interface also implements the
+`EventEmitterInterface` which allows you to react to certain events as documented below.
+
 #### Commands
 
 All [Redis commands](http://redis.io/commands) are automatically available as public methods like this:
@@ -379,27 +384,94 @@ $client->get('hello')->then(function ($response) {
 });
 ```
 
-#### on()
+#### PubSub
 
-The `on($eventName, $eventHandler)` method can be used to register a new event handler.
-Incoming events and errors will be forwarded to registered event handler callbacks:
+This library is commonly used to efficiently transport messages using Redis'
+[Pub/Sub](https://redis.io/topics/pubsub) (Publish/Subscribe) channels. For
+instance, this can be used to distribute single messages to a larger number
+of subscribers (think horizontal scaling for chat-like applications) or as an
+efficient message transport in distributed systems (microservice architecture).
+
+The [`PUBLISH` command](https://redis.io/commands/publish) can be used to
+send a message to all clients currently subscribed to a given channel:
 
 ```php
-// global events:
-$client->on('close', function () {
-    // the connection to Redis just closed
-});
-$client->on('error', function (Exception $e) {
-    // and error has just been detected, the connection will terminate...
-});
+$channel = 'user';
+$message = json_encode(array('id' => 10));
+$client->publish($channel, $message);
+```
 
-// pubsub events:
+The [`SUBSCRIBE` command](https://redis.io/commands/subscribe) can be used to
+subscribe to a channel and then receive incoming PubSub `message` events:
+
+```php
+$channel = 'user';
+$client->subscribe($channel);
+
 $client->on('message', function ($channel, $payload) {
     // pubsub message received on given $channel
+    var_dump($channel, json_decode($payload));
 });
+```
+
+Likewise, you can use the same client connection to subscribe to multiple
+channels by simply executing this command multiple times:
+
+```php
+$client->subscribe('user.register');
+$client->subscribe('user.join');
+$client->subscribe('user.leave');
+```
+
+Similarly, the [`PSUBSCRIBE` command](https://redis.io/commands/psubscribe) can
+be used to subscribe to all channels matching a given pattern and then receive
+all incoming PubSub messages with the `pmessage` event:
+
+
+```php
+$pattern = 'user.*';
+$client->psubscribe($pattern);
+
 $client->on('pmessage', function ($pattern, $channel, $payload) {
     // pubsub message received matching given $pattern
+    var_dump($channel, json_decode($payload));
 });
+```
+
+Once you're in a subscribed state, Redis no longer allows executing any other
+commands on the same client connection. This is commonly worked around by simply
+creating a second client connection and dedicating one client connection solely
+for PubSub subscriptions and the other for all other commands.
+
+The [`UNSUBSCRIBE` command](https://redis.io/commands/unsubscribe) and
+[`PUNSUBSCRIBE` command](https://redis.io/commands/punsubscribe) can be used to
+unsubscribe from active subscriptions if you're no longer interested in
+receiving any further events for the given channel and pattern subscriptions
+respectively:
+
+```php
+$client->subscribe('user');
+
+$loop->addTimer(60.0, function () use ($client) {
+    $client->unsubscribe('user');
+});
+```
+
+Likewise, once you've unsubscribed the last channel and pattern, the client
+connection is no longer in a subscribed state and you can issue any other
+command over this client connection again.
+
+Each of the above methods follows normal request-response semantics and return
+a [`Promise`](#promises) to await successful subscriptions. Note that while
+Redis allows a variable number of arguments for each of these commands, this
+library is currently limited to single arguments for each of these methods in
+order to match exactly one response to each command request. As an alternative,
+the methods can simply be invoked multiple times with one argument each.
+
+Additionally, can listen for the following PubSub events to get notifications
+about subscribed/unsubscribed channels and patterns:
+
+```php
 $client->on('subscribe', function ($channel, $total) {
     // subscribed to given $channel
 });
@@ -414,13 +486,48 @@ $client->on('punsubscribe', function ($pattern, $total) {
 });
 ```
 
+When using the [`createLazyClient()`](#createlazyclient) method, the `unsubscribe`
+and `punsubscribe` events will be invoked automatically when the underlying
+connection is lost. This gives you control over re-subscribing to the channels
+and patterns as appropriate.
+
 #### close()
 
-The `close()` method can be used to force-close the Redis connection and reject all pending commands.
+The `close():void` method can be used to
+force-close the Redis connection and reject all pending commands.
 
 #### end()
 
-The `end()` method can be used to soft-close the Redis connection once all pending commands are completed.
+The `end():void` method can be used to
+soft-close the Redis connection once all pending commands are completed.
+
+#### error event
+
+The `error` event will be emitted once a fatal error occurs, such as
+when the client connection is lost or is invalid.
+The event receives a single `Exception` argument for the error instance.
+
+```php
+$client->on('error', function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
+});
+```
+
+This event will only be triggered for fatal errors and will be followed
+by closing the client connection. It is not to be confused with "soft"
+errors caused by invalid commands.
+
+#### close event
+
+The `close` event will be emitted once the client connection closes (terminates).
+
+```php
+$client->on('close', function () {
+    echo 'Connection closed' . PHP_EOL;
+});
+```
+
+See also the [`close()`](#close) method.
 
 ## Install
 
