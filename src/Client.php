@@ -29,13 +29,14 @@ interface Client extends EventEmitterInterface
      *
      * @param string   $name
      * @param string[] $args
-     * @return PromiseInterface Promise<mixed, Exception>
+     * @return PromiseInterface Promise<mixed,Exception>
      */
     public function __call($name, $args);
 
     /**
      * end connection once all pending requests have been replied to
      *
+     * @return void
      * @uses self::close() once all replies have been received
      * @see self::close() for closing the connection immediately
      */
@@ -46,6 +47,7 @@ interface Client extends EventEmitterInterface
      *
      * This will emit the "close" event.
      *
+     * @return void
      * @see self::end() for closing the connection once the client is idle
      */
     public function close();
