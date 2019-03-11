@@ -1,8 +1,8 @@
 # clue/reactphp-redis [![Build Status](https://travis-ci.org/clue/reactphp-redis.svg?branch=master)](https://travis-ci.org/clue/reactphp-redis)
 
-Async [Redis](http://redis.io/) client implementation, built on top of [ReactPHP](http://reactphp.org/).
+Async [Redis](https://redis.io/) client implementation, built on top of [ReactPHP](https://reactphp.org/).
 
-[Redis](http://redis.io/) is an open source, advanced, in-memory key-value database.
+[Redis](https://redis.io/) is an open source, advanced, in-memory key-value database.
 It offers a set of simple, atomic operations in order to work with its primitive data types.
 Its lightweight design and fast operation makes it an ideal candidate for modern application stacks.
 This library provides you a simple API to work with your Redis database from within PHP.
@@ -15,11 +15,11 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * **Event-driven core** -
   Register your event handler callbacks to react to incoming events, such as an incoming PubSub message event.
 * **Lightweight, SOLID design** -
-  Provides a thin abstraction that is [*just good enough*](http://en.wikipedia.org/wiki/Principle_of_good_enough)
+  Provides a thin abstraction that is [*just good enough*](https://en.wikipedia.org/wiki/Principle_of_good_enough)
   and does not get in your way.
   Future or custom commands and events require no changes to be supported.
 * **Good test coverage** -
-  Comes with an automated tests suite and is regularly tested against versions as old as Redis v2.6+
+  Comes with an automated tests suite and is regularly tested against versions as old as Redis v2.6 and newer.
 
 **Table of Contents**
 
@@ -130,7 +130,7 @@ reject its value with an Exception and will cancel the underlying TCP/IP
 connection attempt and/or Redis authentication.
 
 ```php
-$promise = $factory->createConnection($redisUri);
+$promise = $factory->createClient($redisUri);
 
 $loop->addTimer(3.0, function () use ($promise) {
     $promise->cancel();
@@ -340,7 +340,7 @@ Besides defining a few methods, this interface also implements the
 
 #### Commands
 
-All [Redis commands](http://redis.io/commands) are automatically available as public methods like this:
+All [Redis commands](https://redis.io/commands) are automatically available as public methods like this:
 
 ```php
 $client->get($key);
@@ -361,8 +361,8 @@ $client->select($database);
 // many more…
 ```
 
-Listing all available commands is out of scope here, please refer to the [Redis command reference](http://redis.io/commands).
-All [Redis commands](http://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
+Listing all available commands is out of scope here, please refer to the [Redis command reference](https://redis.io/commands).
+All [Redis commands](https://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
 
 Each of these commands supports async operation and either *resolves* with
 its *results* or *rejects* with an `Exception`.
@@ -534,10 +534,11 @@ See also the [`close()`](#close) method.
 The recommended way to install this library is [through Composer](https://getcomposer.org).
 [New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
+This project follows [SemVer](https://semver.org/).
 This will install the latest supported version:
 
 ```bash
-$ composer require clue/redis-react:^2.2
+$ composer require clue/redis-react:^2.3
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -574,4 +575,7 @@ $ REDIS_URI=localhost:6379 php vendor/bin/phpunit
 
 ## License
 
-MIT
+This project is released under the permissive [MIT license](LICENSE).
+
+> Did you know that I offer custom development services and issuing invoices for
+  sponsorships of releases and for contributions? Contact me (@clue) for details.

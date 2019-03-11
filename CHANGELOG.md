@@ -1,5 +1,61 @@
 # Changelog
 
+## 2.3.0 (2019-03-11)
+
+*   Feature: Add new `createLazyClient()` method to connect only on demand and
+    implement "idle" timeout to close underlying connection when unused.
+    (#87 and #88 by @clue and #82 by @WyriHaximus)
+
+    ```php
+    $client = $factory->createLazyClient('redis://localhost:6379');
+
+    $client->incr('hello');
+    $client->end();
+    ```
+
+*   Feature: Support cancellation of pending connection attempts.
+    (#85 by @clue)
+
+    ```php
+    $promise = $factory->createClient($redisUri);
+
+    $loop->addTimer(3.0, function () use ($promise) {
+        $promise->cancel();
+    });
+    ```
+
+*   Feature: Support connection timeouts.
+    (#86 by @clue)
+
+    ```php
+    $factory->createClient('localhost?timeout=0.5');
+    ```
+
+*   Feature: Improve Exception messages for connection issues.
+    (#89 by @clue)
+
+    ```php
+    $factory->createClient('redis://localhost:6379')->then(
+        function (Client $client) {
+            // client connected (and authenticated)
+        },
+        function (Exception $e) {
+            // an error occurred while trying to connect (or authenticate) client
+            echo $e->getMessage() . PHP_EOL;
+            if ($e->getPrevious()) {
+                echo $e->getPrevious()->getMessage() . PHP_EOL;
+            }
+        }
+    );
+    ```
+
+*   Improve test suite structure and add forward compatibility with PHPUnit 7 and PHPUnit 6
+    and test against PHP 7.1, 7.2, and 7.3 on TravisCI.
+    (#83 by @WyriHaximus and #84 by @clue)
+
+*   Improve documentation and update project homepage.
+    (#81 and #90 by @clue)
+
 ## 2.2.0 (2018-01-24)
 
 *   Feature: Support communication over Unix domain sockets (UDS)
