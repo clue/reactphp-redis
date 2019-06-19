@@ -2,7 +2,12 @@
 
 namespace Clue\React\Redis;
 
+use Clue\Redis\Protocol\Model\MultiBulkReply;
+use Clue\Redis\Protocol\Parser\ResponseParser;
 use Evenement\EventEmitter;
+use React\Promise\Deferred;
+use React\Socket\ConnectionInterface;
+use React\Socket\TcpConnector;
 use React\Stream\Util;
 use React\EventLoop\LoopInterface;
 
@@ -12,6 +17,7 @@ use React\EventLoop\LoopInterface;
 class LazyClient extends EventEmitter implements Client
 {
     private $target;
+    private $master_name;
     /** @var Factory */
     private $factory;
     private $closed = false;
@@ -28,7 +34,7 @@ class LazyClient extends EventEmitter implements Client
     /**
      * @param $target
      */
-    public function __construct($target, Factory $factory, LoopInterface $loop)
+    public function __construct($target, Factory $factory, LoopInterface $loop, $master_name = null)
     {
         $args = array();
         \parse_str(\parse_url($target, \PHP_URL_QUERY), $args);
@@ -39,6 +45,7 @@ class LazyClient extends EventEmitter implements Client
         $this->target = $target;
         $this->factory = $factory;
         $this->loop = $loop;
+        $this->master_name = $master_name;
     }
 
     private function client()
@@ -52,64 +59,98 @@ class LazyClient extends EventEmitter implements Client
         $idleTimer=& $this->idleTimer;
         $subscribed =& $this->subscribed;
         $psubscribed =& $this->psubscribed;
+        $factory =& $this->factory;
         $loop = $this->loop;
-        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
-            // connection completed => remember only until closed
-            $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
+
+        return $this->handleSentinelConnection()->then(function($target) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop, $factory) {
+            return $pending = $factory->createClient($target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
+                // connection completed => remember only until closed
+                $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
+                    $pending = null;
+
+                    // foward unsubscribe/punsubscribe events when underlying connection closes
+                    $n = count($subscribed);
+                    foreach ($subscribed as $channel => $_) {
+                        $self->emit('unsubscribe', array($channel, --$n));
+                    }
+                    $n = count($psubscribed);
+                    foreach ($psubscribed as $pattern => $_) {
+                        $self->emit('punsubscribe', array($pattern, --$n));
+                    }
+                    $subscribed = array();
+                    $psubscribed = array();
+
+                    if ($idleTimer !== null) {
+                        $loop->cancelTimer($idleTimer);
+                        $idleTimer = null;
+                    }
+                });
+
+                // keep track of all channels and patterns this connection is subscribed to
+                $client->on('subscribe', function ($channel) use (&$subscribed) {
+                    $subscribed[$channel] = true;
+                });
+                $client->on('psubscribe', function ($pattern) use (&$psubscribed) {
+                    $psubscribed[$pattern] = true;
+                });
+                $client->on('unsubscribe', function ($channel) use (&$subscribed) {
+                    unset($subscribed[$channel]);
+                });
+                $client->on('punsubscribe', function ($pattern) use (&$psubscribed) {
+                    unset($psubscribed[$pattern]);
+                });
+
+                Util::forwardEvents(
+                    $client,
+                    $self,
+                    array(
+                        'message',
+                        'subscribe',
+                        'unsubscribe',
+                        'pmessage',
+                        'psubscribe',
+                        'punsubscribe',
+                    )
+                );
+
+                return $client;
+            }, function (\Exception $e) use (&$pending) {
+                // connection failed => discard connection attempt
                 $pending = null;
 
-                // foward unsubscribe/punsubscribe events when underlying connection closes
-                $n = count($subscribed);
-                foreach ($subscribed as $channel => $_) {
-                    $self->emit('unsubscribe', array($channel, --$n));
-                }
-                $n = count($psubscribed);
-                foreach ($psubscribed as $pattern => $_) {
-                    $self->emit('punsubscribe', array($pattern, --$n));
-                }
-                $subscribed = array();
-                $psubscribed = array();
-
-                if ($idleTimer !== null) {
-                    $loop->cancelTimer($idleTimer);
-                    $idleTimer = null;
-                }
+                throw $e;
             });
-
-            // keep track of all channels and patterns this connection is subscribed to
-            $client->on('subscribe', function ($channel) use (&$subscribed) {
-                $subscribed[$channel] = true;
-            });
-            $client->on('psubscribe', function ($pattern) use (&$psubscribed) {
-                $psubscribed[$pattern] = true;
-            });
-            $client->on('unsubscribe', function ($channel) use (&$subscribed) {
-                unset($subscribed[$channel]);
-            });
-            $client->on('punsubscribe', function ($pattern) use (&$psubscribed) {
-                unset($psubscribed[$pattern]);
-            });
-
-            Util::forwardEvents(
-                $client,
-                $self,
-                array(
-                    'message',
-                    'subscribe',
-                    'unsubscribe',
-                    'pmessage',
-                    'psubscribe',
-                    'punsubscribe',
-                )
-            );
-
-            return $client;
-        }, function (\Exception $e) use (&$pending) {
-            // connection failed => discard connection attempt
-            $pending = null;
-
-            throw $e;
         });
+    }
+
+    private function handleSentinelConnection()
+    {
+        $master_name =& $this->master_name;
+
+        $defer = new Deferred();
+        if (null !== $master_name) {
+            $connector = new TcpConnector($this->loop);
+
+            $connector->connect($this->target)
+                ->then(function (ConnectionInterface $connection) use ($defer, $master_name) {
+                    $connection->on('data', function($chunk) use ($defer) {
+                        $parser = new ResponseParser();
+                        /** @var MultiBulkReply $reply */
+                        $reply = $parser->pushIncoming($chunk);
+                        /** @var array<int, int|float|string|bool> $data */
+                        $data = current($reply)->getValueNative();
+
+                        $defer->resolve("$data[0]:$data[1]");
+                    });
+
+                    $connection->write("SENTINEL get-master-addr-by-name {$master_name} \r\n");
+                })
+            ;
+        } else {
+            $defer->resolve($this->target);
+        }
+
+        return $defer->promise();
     }
 
     public function __call($name, $args)

@@ -135,11 +135,12 @@ class Factory
      * Create Redis client connected to address of given redis instance
      *
      * @param string $target
+     * @param string $master_name allow to connect to a redis sentinel
      * @return Client
      */
-    public function createLazyClient($target)
+    public function createLazyClient($target, $master_name = null)
     {
-        return new LazyClient($target, $this, $this->loop);
+        return new LazyClient($target, $this, $this->loop, $master_name);
     }
 
     /**
