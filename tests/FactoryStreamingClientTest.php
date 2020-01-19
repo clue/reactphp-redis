@@ -324,13 +324,13 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWithoutTimeoutParameterWillStartTimerWithDefaultTimeoutFromIni()
     {
-        $this->loop->expects($this->once())->method('addTimer')->with(1.5, $this->anything());
+        $this->loop->expects($this->once())->method('addTimer')->with(42, $this->anything());
 
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
 
         $old = ini_get('default_socket_timeout');
-        ini_set('default_socket_timeout', '1.5');
+        ini_set('default_socket_timeout', '42');
         $this->factory->createClient('redis://127.0.0.1:2');
         ini_set('default_socket_timeout', $old);
     }

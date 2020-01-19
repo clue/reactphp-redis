@@ -116,7 +116,7 @@ class Factory
         $promise->then(array($deferred, 'resolve'), array($deferred, 'reject'));
 
         // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
-        $timeout = (float) isset($parts['timeout']) ? $parts['timeout'] : ini_get("default_socket_timeout");
+        $timeout = isset($parts['timeout']) ? $parts['timeout'] : (int) ini_get("default_socket_timeout");
         if ($timeout < 0) {
             return $deferred->promise();
         }
@@ -194,7 +194,7 @@ class Factory
             }
 
             if (isset($args['timeout'])) {
-                $ret['timeout'] = $args['timeout'];
+                $ret['timeout'] = (float) $args['timeout'];
             }
         }
 
