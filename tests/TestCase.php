@@ -9,9 +9,7 @@ class TestCase extends BaseTestCase
     protected function expectCallableOnce()
     {
         $mock = $this->createCallableMock();
-        $mock
-            ->expects($this->once())
-            ->method('__invoke');
+        $mock->expects($this->once())->method('__invoke');
 
         return $mock;
     }
@@ -19,10 +17,7 @@ class TestCase extends BaseTestCase
     protected function expectCallableOnceWith($argument)
     {
         $mock = $this->createCallableMock();
-        $mock
-            ->expects($this->once())
-            ->method('__invoke')
-            ->with($argument);
+        $mock->expects($this->once())->method('__invoke')->with($argument);
 
         return $mock;
     }
@@ -30,16 +25,20 @@ class TestCase extends BaseTestCase
     protected function expectCallableNever()
     {
         $mock = $this->createCallableMock();
-        $mock
-            ->expects($this->never())
-            ->method('__invoke');
+        $mock->expects($this->never())->method('__invoke');
 
         return $mock;
     }
 
     protected function createCallableMock()
     {
-        return $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
+            // PHPUnit 9+
+            return $this->getMockBuilder('stdClass')->addMethods(array('__invoke'))->getMock();
+        } else {
+            // legacy PHPUnit 4 - PHPUnit 8
+            return $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+        }
     }
 
     protected function expectPromiseResolve($promise)

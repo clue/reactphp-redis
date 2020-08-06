@@ -21,7 +21,10 @@ class LazyClientTest extends TestCase
     private $loop;
     private $client;
 
-    public function setUp()
+    /**
+     * @before
+     */
+    public function setUpClient()
     {
         $this->factory = $this->getMockBuilder('Clue\React\Redis\Factory')->disableOriginalConstructor()->getMock();
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
