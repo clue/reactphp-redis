@@ -16,7 +16,10 @@ class FunctionalTest extends TestCase
     private $factory;
     private $uri;
 
-    public function setUp()
+    /**
+     * @before
+     */
+    public function setUpFactory()
     {
         $this->uri = getenv('REDIS_URI');
         if ($this->uri === false) {

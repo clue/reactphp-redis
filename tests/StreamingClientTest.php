@@ -18,7 +18,10 @@ class StreamingClientTest extends TestCase
     private $serializer;
     private $client;
 
-    public function setUp()
+    /**
+     * @before
+     */
+    public function setUpClient()
     {
         $this->stream = $this->getMockBuilder('React\Stream\DuplexStreamInterface')->getMock();
         $this->parser = $this->getMockBuilder('Clue\Redis\Protocol\Parser\ParserInterface')->getMock();

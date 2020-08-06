@@ -11,7 +11,10 @@ class FactoryLazyClientTest extends TestCase
     private $connector;
     private $factory;
 
-    public function setUp()
+    /**
+     * @before
+     */
+    public function setUpFactory()
     {
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
         $this->connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
