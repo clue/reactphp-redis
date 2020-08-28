@@ -136,7 +136,7 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillResolveWhenAuthCommandReceivesOkResponseIfRedisUriContainsUserInfo()
     {
-        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write'));
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
@@ -149,7 +149,7 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo()
     {
-        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write', 'close'))->getMock();
+        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write', 'close'));
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
         $stream->expects($this->once())->method('close');
 
@@ -182,7 +182,7 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillResolveWhenSelectCommandReceivesOkResponseIfRedisUriContainsPath()
     {
-        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write'))->getMock();
+        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write'));
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
@@ -195,7 +195,7 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath()
     {
-        $stream = $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods(array('write', 'close'))->getMock();
+        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write', 'close'));
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
         $stream->expects($this->once())->method('close');
 
@@ -336,5 +336,16 @@ class FactoryStreamingClientTest extends TestCase
         ini_set('default_socket_timeout', '42');
         $this->factory->createClient('redis://127.0.0.1:2');
         ini_set('default_socket_timeout', $old);
+    }
+
+    public function createCallableMockWithOriginalConstructorDisabled($array)
+    {
+        if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
+            // PHPUnit 9+
+            return $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->onlyMethods($array)->getMock();
+        } else {
+            // legacy PHPUnit 4 - PHPUnit 8
+            return $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods($array)->getMock();
+        }
     }
 }

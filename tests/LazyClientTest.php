@@ -156,7 +156,7 @@ class LazyClientTest extends TestCase
 
     public function testPingAfterPreviousUnderlyingClientAlreadyClosedWillCreateNewUnderlyingConnection()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $this->factory->expects($this->exactly(2))->method('createClient')->willReturnOnConsecutiveCalls(
@@ -183,7 +183,7 @@ class LazyClientTest extends TestCase
     public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
@@ -201,7 +201,7 @@ class LazyClientTest extends TestCase
     public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
@@ -220,7 +220,7 @@ class LazyClientTest extends TestCase
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call', 'close'));
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
         $client->expects($this->once())->method('close')->willReturn(\React\Promise\resolve());
 
@@ -298,7 +298,7 @@ class LazyClientTest extends TestCase
     public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call', 'close'));
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close');
 
@@ -316,7 +316,7 @@ class LazyClientTest extends TestCase
     public function testCloseAfterPingRejectsWillEmitClose()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'close'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call', 'close'));
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
             $client->emit('close');
@@ -358,7 +358,7 @@ class LazyClientTest extends TestCase
 
     public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call', 'end'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call', 'end'));
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
 
@@ -378,7 +378,7 @@ class LazyClientTest extends TestCase
     {
         $error = new \RuntimeException();
 
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
 
         $deferred = new Deferred();
@@ -393,7 +393,7 @@ class LazyClientTest extends TestCase
 
     public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
 
         $deferred = new Deferred();
@@ -409,7 +409,7 @@ class LazyClientTest extends TestCase
     public function testEmitsNoCloseEventButWillCancelIdleTimerWhenUnderlyingConnectionEmitsCloseAfterPingIsAlreadyResolved()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -428,7 +428,7 @@ class LazyClientTest extends TestCase
 
     public function testEmitsMessageEventWhenUnderlyingClientEmitsMessageForPubSubChannel()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
 
         $deferred = new Deferred();
@@ -443,7 +443,7 @@ class LazyClientTest extends TestCase
 
     public function testEmitsUnsubscribeAndPunsubscribeEventsWhenUnderlyingClientClosesWhileUsingPubSubChannel()
     {
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve());
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -474,7 +474,7 @@ class LazyClientTest extends TestCase
     public function testSubscribeWillResolveWhenUnderlyingClientResolvesSubscribeAndNotStartIdleTimerWithIdleDueToSubscription()
     {
         $deferred = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->once())->method('__call')->with('subscribe')->willReturn($deferred->promise());
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -492,7 +492,7 @@ class LazyClientTest extends TestCase
     {
         $deferredSubscribe = new Deferred();
         $deferredUnsubscribe = new Deferred();
-        $client = $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods(array('__call'))->getMock();
+        $client = $this->createCallableMockWithOriginalConstructorDisabled(array('__call'));
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls($deferredSubscribe->promise(), $deferredUnsubscribe->promise());
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -508,5 +508,16 @@ class LazyClientTest extends TestCase
         $client->emit('unsubscribe', array('foo', 0));
         $deferredUnsubscribe->resolve(array('unsubscribe', 'foo', 0));
         $promise->then($this->expectCallableOnceWith(array('unsubscribe', 'foo', 0)));
+    }
+
+    public function createCallableMockWithOriginalConstructorDisabled($array)
+    {
+        if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
+            // PHPUnit 9+
+            return $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->onlyMethods($array)->getMock();
+        } else {
+            // legacy PHPUnit 4 - PHPUnit 8
+            return $this->getMockBuilder('Clue\React\Redis\StreamingClient')->disableOriginalConstructor()->setMethods($array)->getMock();
+        }
     }
 }

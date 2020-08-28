@@ -149,10 +149,11 @@ class FunctionalTest extends TestCase
         $deferred = new Deferred();
         $consumer->on('message', $this->expectCallableOnce());
         $consumer->on('message', array($deferred, 'resolve'));
-        $consumer->subscribe($channel)->then($this->expectCallableOnce());
-
-        // producer sends a single message
-        $producer->publish($channel, 'hello world')->then($this->expectCallableOnceWith(1));
+        $once = $this->expectCallableOnceWith(1);
+        $consumer->subscribe($channel)->then(function() use ($producer, $channel, $once){
+            // producer sends a single message
+            $producer->publish($channel, 'hello world')->then($once);
+        })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
         Block\await($deferred->promise(), $this->loop, 0.1);
