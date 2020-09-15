@@ -573,6 +573,33 @@ class LazyClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith(array('unsubscribe', 'foo', 0)));
     }
 
+    public function testBlpopWillRejectWhenUnderlyingClientClosesWhileWaitingForResponse()
+    {
+        $closeHandler = null;
+        $deferred = new Deferred();
+        $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
+        $client->expects($this->once())->method('__call')->with('blpop')->willReturn($deferred->promise());
+        $client->expects($this->any())->method('on')->withConsecutive(
+            array('close', $this->callback(function ($arg) use (&$closeHandler) {
+                $closeHandler = $arg;
+                return true;
+            }))
+        );
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $this->loop->expects($this->never())->method('addTimer');
+
+        $promise = $this->client->blpop('list');
+
+        $this->assertTrue(is_callable($closeHandler));
+        $closeHandler();
+
+        $deferred->reject($e = new \RuntimeException());
+
+        $promise->then(null, $this->expectCallableOnceWith($e));
+    }
+
     public function createCallableMockWithOriginalConstructorDisabled($array)
     {
         if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
