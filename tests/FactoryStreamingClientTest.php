@@ -136,27 +136,45 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillResolveWhenAuthCommandReceivesOkResponseIfRedisUriContainsUserInfo()
     {
-        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write'));
+        $dataHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->callback(function ($arg) use (&$dataHandler) {
+                $dataHandler = $arg;
+                return true;
+            })),
+            array('close', $this->anything())
+        );
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
         $promise = $this->factory->createClient('redis://:world@localhost');
 
-        $stream->emit('data', array("+OK\r\n"));
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("+OK\r\n");
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('Clue\React\Redis\Client')));
     }
 
     public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo()
     {
-        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write', 'close'));
+        $dataHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
         $stream->expects($this->once())->method('close');
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->callback(function ($arg) use (&$dataHandler) {
+                $dataHandler = $arg;
+                return true;
+            })),
+            array('close', $this->anything())
+        );
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
         $promise = $this->factory->createClient('redis://:world@localhost');
 
-        $stream->emit('data', array("-ERR invalid password\r\n"));
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("-ERR invalid password\r\n");
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -182,27 +200,45 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillResolveWhenSelectCommandReceivesOkResponseIfRedisUriContainsPath()
     {
-        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write'));
+        $dataHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->callback(function ($arg) use (&$dataHandler) {
+                $dataHandler = $arg;
+                return true;
+            })),
+            array('close', $this->anything())
+        );
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
         $promise = $this->factory->createClient('redis://localhost/123');
 
-        $stream->emit('data', array("+OK\r\n"));
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("+OK\r\n");
 
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf('Clue\React\Redis\Client')));
     }
 
     public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath()
     {
-        $stream = $this->createCallableMockWithOriginalConstructorDisabled(array('write', 'close'));
+        $dataHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
         $stream->expects($this->once())->method('close');
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->callback(function ($arg) use (&$dataHandler) {
+                $dataHandler = $arg;
+                return true;
+            })),
+            array('close', $this->anything())
+        );
 
         $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
         $promise = $this->factory->createClient('redis://localhost/123');
 
-        $stream->emit('data', array("-ERR DB index is out of range\r\n"));
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("-ERR DB index is out of range\r\n");
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -336,16 +372,5 @@ class FactoryStreamingClientTest extends TestCase
         ini_set('default_socket_timeout', '42');
         $this->factory->createClient('redis://127.0.0.1:2');
         ini_set('default_socket_timeout', $old);
-    }
-
-    public function createCallableMockWithOriginalConstructorDisabled($array)
-    {
-        if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
-            // PHPUnit 9+
-            return $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->onlyMethods($array)->getMock();
-        } else {
-            // legacy PHPUnit 4 - PHPUnit 8
-            return $this->getMockBuilder('React\Socket\Connection')->disableOriginalConstructor()->setMethods($array)->getMock();
-        }
     }
 }
