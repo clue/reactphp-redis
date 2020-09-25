@@ -201,7 +201,7 @@ class LazyClient extends EventEmitter implements Client
     {
         --$this->pending;
 
-        if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed) {
+        if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
             $idleTimer =& $this->idleTimer;
             $promise =& $this->promise;
             $idleTimer = $this->loop->addTimer($this->idlePeriod, function () use (&$idleTimer, &$promise) {
