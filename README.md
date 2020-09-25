@@ -23,6 +23,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
 
 **Table of Contents**
 
+* [Support us](#support-us)
 * [Quickstart example](#quickstart-example)
 * [Usage](#usage)
   * [Factory](#factory)
@@ -39,6 +40,16 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
+
+## Support us
+
+We invest a lot of time developing, maintaining and updating our awesome
+open-source projects. You can help us sustain this high-quality of our work by
+[becoming a sponsor on GitHub](https://github.com/sponsors/clue). Sponsors get
+numerous benefits in return, see our [sponsoring page](https://github.com/sponsors/clue)
+for details.
+
+Let's take these projects to the next level together! 🚀
 
 ## Quickstart example
 
@@ -538,7 +549,7 @@ This project follows [SemVer](https://semver.org/).
 This will install the latest supported version:
 
 ```bash
-$ composer require clue/redis-react:^2.3
+$ composer require clue/redis-react:^2.4
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.

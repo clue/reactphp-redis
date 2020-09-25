@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.4.0 (2020-09-25)
+
+*   Fix: Fix dangling timer when lazy connection closes with pending commands.
+    (#105 by @clue)
+
+*   Improve test suite and add `.gitattributes` to exclude dev files from exports.
+    Prepare PHP 8 support, update to PHPUnit 9 and simplify test matrix.
+    (#96 and #97 by @clue and #99, #101 and #104 by @SimonFrings)
+
 ## 2.3.0 (2019-03-11)
 
 *   Feature: Add new `createLazyClient()` method to connect only on demand and
