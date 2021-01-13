@@ -8,16 +8,15 @@ use React\Promise\PromiseInterface;
 /**
  * Simple interface for executing redis commands
  *
- * @event error(Exception $error)
- * @event close()
+ * @method error(Exception $error)
  *
- * @event message($channel, $message)
- * @event subscribe($channel, $numberOfChannels)
- * @event unsubscribe($channel, $numberOfChannels)
+ * @method publish($channel, $message)
+ * @method subscribe($channel)
+ * @method unsubscribe($channel)
  *
- * @event pmessage($pattern, $channel, $message)
- * @event psubscribe($channel, $numberOfChannels)
- * @event punsubscribe($channel, $numberOfChannels)
+ * @method pmessage($pattern, $channel, $message)
+ * @method psubscribe($channel)
+ * @method punsubscribe($channel)
  */
 interface Client extends EventEmitterInterface
 {
