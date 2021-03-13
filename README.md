@@ -62,6 +62,10 @@ Once [installed](#install), you can use the following code to connect to your
 local Redis server and send some requests:
 
 ```php
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
 $factory = new Clue\React\Redis\Factory();
 $redis = $factory->createLazyClient('localhost:6379');
 
@@ -506,7 +510,7 @@ in seconds (or use a negative number to not apply a timeout) like this:
 $factory->createLazyClient('localhost?timeout=0.5');
 ```
 
-By default, this method will keep "idle" connection open for 60s and will
+By default, this method will keep "idle" connections open for 60s and will
 then end the underlying connection. The next request after an "idle"
 connection ended will automatically create a new underlying connection.
 This ensure you always get a "fresh" connection and as such should not be
@@ -599,7 +603,7 @@ See also the [`close()`](#close) method.
 
 ## Install
 
-The recommended way to install this library is [through Composer](https://getcomposer.org).
+The recommended way to install this library is [through Composer](https://getcomposer.org/).
 [New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
 This project follows [SemVer](https://semver.org/).
@@ -619,7 +623,7 @@ It's *highly recommended to use PHP 7+* for this project.
 ## Tests
 
 To run the test suite, you first need to clone this repo and then install all
-dependencies [through Composer](https://getcomposer.org):
+dependencies [through Composer](https://getcomposer.org/):
 
 ```bash
 $ composer install
@@ -628,7 +632,7 @@ $ composer install
 To run the test suite, go to the project root and run:
 
 ```bash
-$ php vendor/bin/phpunit
+$ vendor/bin/phpunit
 ```
 
 The test suite contains both unit tests and functional integration tests.
@@ -645,7 +649,7 @@ To now run the functional tests, you need to supply *your* login
 details in an environment variable like this:
 
 ```bash
-$ REDIS_URI=localhost:6379 php vendor/bin/phpunit
+$ REDIS_URI=localhost:6379 vendor/bin/phpunit
 ```
 
 ## License
