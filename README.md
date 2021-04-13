@@ -118,7 +118,7 @@ $factory = new Clue\React\Redis\Factory(null, $connector);
 
 #### createClient()
 
-The `createClient(string $redisUri): PromiseInterface<Client,Exception>` method can be used to
+The `createClient(string $uri): PromiseInterface<Client,Exception>` method can be used to
 create a new [`Client`](#client).
 
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis
@@ -215,7 +215,7 @@ $factory->createClient('localhost?timeout=0.5');
 
 #### createLazyClient()
 
-The `createLazyClient(string $redisUri): Client` method can be used to
+The `createLazyClient(string $uri): Client` method can be used to
 create a new [`Client`](#client).
 
 It helps with establishing a plain TCP/IP or secure TLS connection to Redis

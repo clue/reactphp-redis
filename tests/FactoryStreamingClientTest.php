@@ -136,6 +136,15 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix:///tmp/redis.sock?password=world');
     }
 
+    public function testWillNotWriteAnyCommandIfRedisUnixUriContainsNoPasswordOrDb()
+    {
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->never())->method('write');
+
+        $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(Promise\resolve($stream));
+        $this->factory->createClient('redis+unix:///tmp/redis.sock');
+    }
+
     public function testWillWriteAuthCommandIfRedisUnixUriContainsUserInfo()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();

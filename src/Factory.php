@@ -10,7 +10,6 @@ use React\Promise\Timer\TimeoutException;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
-use InvalidArgumentException;
 
 class Factory
 {
@@ -38,18 +37,39 @@ class Factory
     /**
      * Create Redis client connected to address of given redis instance
      *
-     * @param string $target Redis server URI to connect to
-     * @return \React\Promise\PromiseInterface<Client> resolves with Client or rejects with \Exception
+     * @param string $uri Redis server URI to connect to
+     * @return \React\Promise\PromiseInterface<Client,\Exception> Promise that will
+     *     be fulfilled with `Client` on success or rejects with `\Exception` on error.
      */
-    public function createClient($target)
+    public function createClient($uri)
     {
-        try {
-            $parts = $this->parseUrl($target);
-        } catch (InvalidArgumentException $e) {
-            return \React\Promise\reject($e);
+        // support `redis+unix://` scheme for Unix domain socket (UDS) paths
+        if (preg_match('/^(redis\+unix:\/\/(?:[^:]*:[^@]*@)?)(.+?)?$/', $uri, $match)) {
+            $parts = parse_url($match[1] . 'localhost/' . $match[2]);
+        } else {
+            if (strpos($uri, '://') === false) {
+                $uri = 'redis://' . $uri;
+            }
+
+            $parts = parse_url($uri);
         }
 
-        $connecting = $this->connector->connect($parts['authority']);
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss', 'redis+unix'))) {
+            return \React\Promise\reject(new \InvalidArgumentException('Given URL can not be parsed'));
+        }
+
+        $args = array();
+        parse_str(isset($parts['query']) ? $parts['query'] : '', $args);
+
+        $authority = $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 6379);
+        if ($parts['scheme'] === 'rediss') {
+            $authority = 'tls://' . $authority;
+        } elseif ($parts['scheme'] === 'redis+unix') {
+            $authority = 'unix://' . substr($parts['path'], 1);
+            unset($parts['path']);
+        }
+        $connecting = $this->connector->connect($authority);
+
         $deferred = new Deferred(function ($_, $reject) use ($connecting) {
             // connection cancelled, start with rejecting attempt, then clean up
             $reject(new \RuntimeException('Connection to Redis server cancelled'));
@@ -72,9 +92,12 @@ class Factory
             );
         });
 
-        if (isset($parts['auth'])) {
-            $promise = $promise->then(function (StreamingClient $client) use ($parts) {
-                return $client->auth($parts['auth'])->then(
+        // use `?password=secret` query or `user:secret@host` password form URL
+        $pass = isset($args['password']) ? $args['password'] : (isset($parts['pass']) ? rawurldecode($parts['pass']) : null);
+        if (isset($args['password']) || isset($parts['pass'])) {
+            $pass = isset($args['password']) ? $args['password'] : rawurldecode($parts['pass']);
+            $promise = $promise->then(function (StreamingClient $client) use ($pass) {
+                return $client->auth($pass)->then(
                     function () use ($client) {
                         return $client;
                     },
@@ -91,9 +114,11 @@ class Factory
             });
         }
 
-        if (isset($parts['db'])) {
-            $promise = $promise->then(function (StreamingClient $client) use ($parts) {
-                return $client->select($parts['db'])->then(
+        // use `?db=1` query or `/1` path (skip first slash)
+        if (isset($args['db']) || (isset($parts['path']) && $parts['path'] !== '/')) {
+            $db = isset($args['db']) ? $args['db'] : substr($parts['path'], 1);
+            $promise = $promise->then(function (StreamingClient $client) use ($db) {
+                return $client->select($db)->then(
                     function () use ($client) {
                         return $client;
                     },
@@ -113,7 +138,7 @@ class Factory
         $promise->then(array($deferred, 'resolve'), array($deferred, 'reject'));
 
         // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
-        $timeout = isset($parts['timeout']) ? $parts['timeout'] : (int) ini_get("default_socket_timeout");
+        $timeout = isset($args['timeout']) ? (float) $args['timeout'] : (int) ini_get("default_socket_timeout");
         if ($timeout < 0) {
             return $deferred->promise();
         }
@@ -137,64 +162,5 @@ class Factory
     public function createLazyClient($target)
     {
         return new LazyClient($target, $this, $this->loop);
-    }
-
-    /**
-     * @param string $target
-     * @return array with keys authority, auth and db
-     * @throws InvalidArgumentException
-     */
-    private function parseUrl($target)
-    {
-        $ret = array();
-        // support `redis+unix://` scheme for Unix domain socket (UDS) paths
-        if (preg_match('/^redis\+unix:\/\/([^:]*:[^@]*@)?(.+?)(\?.*)?$/', $target, $match)) {
-            $ret['authority'] = 'unix://' . $match[2];
-            $target = 'redis://' . (isset($match[1]) ? $match[1] : '') . 'localhost' . (isset($match[3]) ? $match[3] : '');
-        }
-
-        if (strpos($target, '://') === false) {
-            $target = 'redis://' . $target;
-        }
-
-        $parts = parse_url($target);
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss'))) {
-            throw new InvalidArgumentException('Given URL can not be parsed');
-        }
-
-        if (isset($parts['pass'])) {
-            $ret['auth'] = rawurldecode($parts['pass']);
-        }
-
-        if (isset($parts['path']) && $parts['path'] !== '') {
-            // skip first slash
-            $ret['db'] = substr($parts['path'], 1);
-        }
-
-        if (!isset($ret['authority'])) {
-            $ret['authority'] =
-                ($parts['scheme'] === 'rediss' ? 'tls://' : '') .
-                $parts['host'] . ':' .
-                (isset($parts['port']) ? $parts['port'] : 6379);
-        }
-
-        if (isset($parts['query'])) {
-            $args = array();
-            parse_str($parts['query'], $args);
-
-            if (isset($args['password'])) {
-                $ret['auth'] = $args['password'];
-            }
-
-            if (isset($args['db'])) {
-                $ret['db'] = $args['db'];
-            }
-
-            if (isset($args['timeout'])) {
-                $ret['timeout'] = (float) $args['timeout'];
-            }
-        }
-
-        return $ret;
     }
 }
