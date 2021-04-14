@@ -11,6 +11,7 @@ use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\React\Redis\Client;
 use React\EventLoop\Factory;
+use React\EventLoop\Loop;
 use React\Stream\ThroughStream;
 use React\Promise\Promise;
 use React\Promise\Deferred;
@@ -28,8 +29,17 @@ class LazyClientTest extends TestCase
     {
         $this->factory = $this->getMockBuilder('Clue\React\Redis\Factory')->disableOriginalConstructor()->getMock();
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        Loop::set($this->loop);
 
-        $this->client = new LazyClient('localhost', $this->factory, $this->loop);
+        $this->client = new LazyClient('localhost', $this->factory);
+    }
+
+    /**
+     * @after
+     */
+    public function resetLoop()
+    {
+        Loop::reset();
     }
 
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise()

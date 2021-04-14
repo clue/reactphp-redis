@@ -1,11 +1,11 @@
 <?php
 
 use Clue\React\Redis\Factory;
+use React\EventLoop\Loop;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $client = $factory->createLazyClient('localhost');
 $client->incr('test');
@@ -22,4 +22,4 @@ $client->get('test')->then(function ($result) {
 
 $client->end();
 
-$loop->run();
+Loop::get()->run();

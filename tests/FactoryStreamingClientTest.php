@@ -3,6 +3,7 @@
 namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\Factory;
+use React\EventLoop\Loop;
 use React\Promise;
 use React\Promise\Deferred;
 
@@ -18,8 +19,17 @@ class FactoryStreamingClientTest extends TestCase
     public function setUpFactory()
     {
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        Loop::set($this->loop);
         $this->connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
-        $this->factory = new Factory($this->loop, $this->connector);
+        $this->factory = new Factory($this->connector);
+    }
+
+    /**
+     * @after
+     */
+    public function resetLoop()
+    {
+        Loop::reset();
     }
 
     /**
@@ -27,7 +37,7 @@ class FactoryStreamingClientTest extends TestCase
      */
     public function testCtor()
     {
-        $this->factory = new Factory($this->loop);
+        $this->factory = new Factory();
     }
 
     public function testWillConnectWithDefaultPort()

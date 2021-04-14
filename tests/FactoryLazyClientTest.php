@@ -3,6 +3,7 @@
 namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\Factory;
+use React\EventLoop\Loop;
 use React\Promise;
 
 class FactoryLazyClientTest extends TestCase
@@ -17,8 +18,18 @@ class FactoryLazyClientTest extends TestCase
     public function setUpFactory()
     {
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
+        Loop::set($this->loop);
         $this->connector = $this->getMockBuilder('React\Socket\ConnectorInterface')->getMock();
-        $this->factory = new Factory($this->loop, $this->connector);
+        $this->factory = new Factory($this->connector);
+    }
+
+
+    /**
+     * @after
+     */
+    public function resetLoop()
+    {
+        Loop::reset();
     }
 
     public function testWillConnectWithDefaultPort()

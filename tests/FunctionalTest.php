@@ -6,13 +6,13 @@ use Clue\React\Block;
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
+use React\EventLoop\Loop;
 use React\EventLoop\StreamSelectLoop;
 use React\Promise\Deferred;
 use React\Stream\DuplexResourceStream;
 
 class FunctionalTest extends TestCase
 {
-    private $loop;
     private $factory;
     private $uri;
 
@@ -26,8 +26,17 @@ class FunctionalTest extends TestCase
             $this->markTestSkipped('No REDIS_URI environment variable given');
         }
 
-        $this->loop = new StreamSelectLoop();
-        $this->factory = new Factory($this->loop);
+        Loop::set(new StreamSelectLoop());
+        $this->factory = new Factory();
+    }
+
+
+    /**
+     * @after
+     */
+    public function resetLoop()
+    {
+        Loop::reset();
     }
 
     public function testPing()
@@ -37,7 +46,7 @@ class FunctionalTest extends TestCase
         $promise = $client->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
 
-        $ret = Block\await($promise, $this->loop);
+        $ret = Block\await($promise, Loop::get());
 
         $this->assertEquals('PONG', $ret);
     }
@@ -49,7 +58,7 @@ class FunctionalTest extends TestCase
         $promise = $client->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
 
-        $ret = Block\await($promise, $this->loop);
+        $ret = Block\await($promise, Loop::get());
 
         $this->assertEquals('PONG', $ret);
     }
@@ -63,7 +72,7 @@ class FunctionalTest extends TestCase
 
         $client->ping();
 
-        $this->loop->run();
+        Loop::get()->run();
     }
 
     /**
@@ -73,7 +82,7 @@ class FunctionalTest extends TestCase
     {
         $client = $this->factory->createLazyClient($this->uri);
 
-        $this->loop->run();
+        Loop::get()->run();
 
         unset($client);
     }
@@ -87,7 +96,7 @@ class FunctionalTest extends TestCase
         $promise = $client->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $client->on('message', $this->expectCallableNever());
 
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testPipeline()
@@ -99,7 +108,7 @@ class FunctionalTest extends TestCase
         $client->incr('a')->then($this->expectCallableOnceWith(3));
         $promise = $client->get('a')->then($this->expectCallableOnceWith('3'));
 
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testInvalidCommand()
@@ -112,7 +121,7 @@ class FunctionalTest extends TestCase
         } else {
             $this->setExpectedException('Exception');
         }
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testMultiExecEmpty()
@@ -121,7 +130,7 @@ class FunctionalTest extends TestCase
         $client->multi()->then($this->expectCallableOnceWith('OK'));
         $promise = $client->exec()->then($this->expectCallableOnceWith(array()));
 
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testMultiExecQueuedExecHasValues()
@@ -135,7 +144,7 @@ class FunctionalTest extends TestCase
         $client->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
         $promise = $client->exec()->then($this->expectCallableOnceWith(array('OK', 1, 12, 20)));
 
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testPubSub()
@@ -156,7 +165,7 @@ class FunctionalTest extends TestCase
         })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
-        Block\await($deferred->promise(), $this->loop, 0.1);
+        Block\await($deferred->promise(), Loop::get(), 0.1);
     }
 
     public function testClose()
@@ -195,7 +204,7 @@ class FunctionalTest extends TestCase
         } else {
             $this->setExpectedException('Exception');
         }
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     public function testInvalidServerRepliesWithDuplicateMessages()
@@ -207,7 +216,7 @@ class FunctionalTest extends TestCase
 
         $promise = $client->set('a', 0)->then($this->expectCallableOnceWith('OK'));
 
-        Block\await($promise, $this->loop);
+        Block\await($promise, Loop::get());
     }
 
     /**
@@ -216,7 +225,7 @@ class FunctionalTest extends TestCase
      */
     protected function createClient($uri)
     {
-        return Block\await($this->factory->createClient($uri), $this->loop);
+        return Block\await($this->factory->createClient($uri), Loop::get());
     }
 
     protected function createClientResponse($response)
@@ -225,7 +234,7 @@ class FunctionalTest extends TestCase
         fwrite($fp, $response);
         fseek($fp, 0);
 
-        $stream = new DuplexResourceStream($fp, $this->loop);
+        $stream = new DuplexResourceStream($fp, Loop::get());
 
         return new StreamingClient($stream);
     }

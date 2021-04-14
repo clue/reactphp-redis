@@ -14,7 +14,7 @@
         "php": ">=5.3",
         "clue/redis-protocol": "0.3.*",
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
-        "react/event-loop": "^1.0 || ^0.5",
+        "react/event-loop": "dev-global-event-loop-accessor-part-four as 1.2.0",
         "react/promise": "^2.0 || ^1.1",
         "react/promise-timer": "^1.5",
         "react/socket": "^1.1"
@@ -28,5 +28,11 @@
     },
     "autoload-dev": {
         "psr-4": { "Clue\\Tests\\React\\Redis\\": "tests/" }
-    }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/wyrihaximus-labs/event-loop"
+        }
+    ]
 }

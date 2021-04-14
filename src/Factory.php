@@ -3,6 +3,7 @@
 namespace Clue\React\Redis;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Timer\TimeoutException;
@@ -13,27 +14,24 @@ use InvalidArgumentException;
 
 class Factory
 {
-    private $loop;
     private $connector;
     private $protocol;
 
     /**
-     * @param LoopInterface $loop
      * @param ConnectorInterface|null $connector [optional] Connector to use.
      *     Should be `null` in order to use default Connector.
      * @param ProtocolFactory|null $protocol
      */
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
+    public function __construct(ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         if ($connector === null) {
-            $connector = new Connector($loop);
+            $connector = new Connector(Loop::get());
         }
 
         if ($protocol === null) {
             $protocol = new ProtocolFactory();
         }
 
-        $this->loop = $loop;
         $this->connector = $connector;
         $this->protocol = $protocol;
     }
@@ -121,7 +119,7 @@ class Factory
             return $deferred->promise();
         }
 
-        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
+        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, Loop::get())->then(null, function ($e) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
                     'Connection to Redis server timed out after ' . $e->getTimeout() . ' seconds'
@@ -139,7 +137,7 @@ class Factory
      */
     public function createLazyClient($target)
     {
-        return new LazyClient($target, $this, $this->loop);
+        return new LazyClient($target, $this);
     }
 
     /**
