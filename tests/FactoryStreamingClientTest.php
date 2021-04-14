@@ -199,10 +199,10 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server failed because AUTH command failed';
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to redis://:***@localhost failed during AUTH command: ERR invalid password';
                 }),
-                $this->callback(function (\Exception $e) {
+                $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'ERR invalid password';
                 })
             )
@@ -263,10 +263,10 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server failed because SELECT command failed';
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to redis://localhost/123 failed during SELECT command: ERR DB index is out of range';
                 }),
-                $this->callback(function (\Exception $e) {
+                $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'ERR DB index is out of range';
                 })
             )
@@ -275,14 +275,17 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testWillRejectIfConnectorRejects()
     {
-        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException('Foo', 42)));
         $promise = $this->factory->createClient('redis://127.0.0.1:2');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server failed because underlying transport connection failed';
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2 failed: Foo';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getPrevious()->getMessage() === 'Foo';
                 })
             )
         ));
@@ -292,7 +295,14 @@ class FactoryStreamingClientTest extends TestCase
     {
         $promise = $this->factory->createClient('http://invalid target');
 
-        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('InvalidArgumentException')));
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('InvalidArgumentException'),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getMessage() === 'Invalid Redis URI given';
+                })
+            )
+        ));
     }
 
     public function testCancelWillRejectPromise()
@@ -306,19 +316,90 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
     }
 
-    public function testCancelWillCancelConnectorWhenConnectionIsPending()
+    public function provideUris()
+    {
+        return array(
+            array(
+                'localhost',
+                'redis://localhost'
+            ),
+            array(
+                'redis://localhost',
+                'redis://localhost'
+            ),
+            array(
+                'redis://localhost:6379',
+                'redis://localhost:6379'
+            ),
+            array(
+                'redis://localhost/0',
+                'redis://localhost/0'
+            ),
+            array(
+                'redis://user@localhost',
+                'redis://user@localhost'
+            ),
+            array(
+                'redis://:secret@localhost',
+                'redis://:***@localhost'
+            ),
+            array(
+                'redis://user:secret@localhost',
+                'redis://user:***@localhost'
+            ),
+            array(
+                'redis://:@localhost',
+                'redis://:***@localhost'
+            ),
+            array(
+                'redis://localhost?password=secret',
+                'redis://localhost?password=***'
+            ),
+            array(
+                'redis://localhost/0?password=secret',
+                'redis://localhost/0?password=***'
+            ),
+            array(
+                'redis://localhost?password=',
+                'redis://localhost?password=***'
+            ),
+            array(
+                'redis://localhost?foo=1&password=secret&bar=2',
+                'redis://localhost?foo=1&password=***&bar=2'
+            ),
+            array(
+                'rediss://localhost',
+                'rediss://localhost'
+            ),
+            array(
+                'redis+unix://:secret@/tmp/redis.sock',
+                'redis+unix://:***@/tmp/redis.sock'
+            ),
+            array(
+                'redis+unix:///tmp/redis.sock?password=secret',
+                'redis+unix:///tmp/redis.sock?password=***'
+            )
+        );
+    }
+
+    /**
+     * @dataProvider provideUris
+     * @param string $uri
+     * @param string $safe
+     */
+    public function testCancelWillRejectWithUriInMessageAndCancelConnectorWhenConnectionIsPending($uri, $safe)
     {
         $deferred = new Deferred($this->expectCallableOnce());
-        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
+        $this->connector->expects($this->once())->method('connect')->willReturn($deferred->promise());
 
-        $promise = $this->factory->createClient('redis://127.0.0.1:2');
+        $promise = $this->factory->createClient($uri);
         $promise->cancel();
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server cancelled';
+                $this->callback(function (\RuntimeException $e) use ($safe) {
+                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled';
                 })
             )
         ));
@@ -338,8 +419,8 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
-                $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server cancelled';
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2/123 cancelled';
                 })
             )
         ));
@@ -365,7 +446,7 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to Redis server timed out after 0 seconds';
+                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2?timeout=0 timed out after 0 seconds';
                 })
             )
         ));

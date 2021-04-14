@@ -61,8 +61,8 @@ local Redis server and send some requests:
 
 ```php
 $factory = new Clue\React\Redis\Factory();
+$client = $factory->createLazyClient('localhost:6379');
 
-$client = $factory->createLazyClient('localhost');
 $client->set('greeting', 'Hello world');
 $client->append('greeting', '!');
 
@@ -125,7 +125,7 @@ It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
-$factory->createClient('redis://localhost:6379')->then(
+$factory->createClient('localhost:6379')->then(
     function (Client $client) {
         // client connected (and authenticated)
     },
@@ -146,7 +146,7 @@ reject its value with an Exception and will cancel the underlying TCP/IP
 connection attempt and/or Redis authentication.
 
 ```php
-$promise = $factory->createClient($redisUri);
+$promise = $factory->createClient($uri);
 
 Loop::addTimer(3.0, function () use ($promise) {
     $promise->cancel();
@@ -222,7 +222,7 @@ It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
-$client = $factory->createLazyClient('redis://localhost:6379');
+$client = $factory->createLazyClient('localhost:6379');
 
 $client->incr('hello');
 $client->end();

@@ -54,8 +54,9 @@ class Factory
             $parts = parse_url($uri);
         }
 
+        $uri = preg_replace(array('/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'), '$1***$2', $uri);
         if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss', 'redis+unix'))) {
-            return \React\Promise\reject(new \InvalidArgumentException('Given URL can not be parsed'));
+            return \React\Promise\reject(new \InvalidArgumentException('Invalid Redis URI given'));
         }
 
         $args = array();
@@ -70,9 +71,9 @@ class Factory
         }
         $connecting = $this->connector->connect($authority);
 
-        $deferred = new Deferred(function ($_, $reject) use ($connecting) {
+        $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
             // connection cancelled, start with rejecting attempt, then clean up
-            $reject(new \RuntimeException('Connection to Redis server cancelled'));
+            $reject(new \RuntimeException('Connection to ' . $uri . ' cancelled'));
 
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (ConnectionInterface $connection) {
@@ -84,9 +85,9 @@ class Factory
         $protocol = $this->protocol;
         $promise = $connecting->then(function (ConnectionInterface $stream) use ($protocol) {
             return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
-        }, function (\Exception $e) {
+        }, function (\Exception $e) use ($uri) {
             throw new \RuntimeException(
-                'Connection to Redis server failed because underlying transport connection failed',
+                'Connection to ' . $uri . ' failed: ' . $e->getMessage(),
                 0,
                 $e
             );
@@ -96,18 +97,18 @@ class Factory
         $pass = isset($args['password']) ? $args['password'] : (isset($parts['pass']) ? rawurldecode($parts['pass']) : null);
         if (isset($args['password']) || isset($parts['pass'])) {
             $pass = isset($args['password']) ? $args['password'] : rawurldecode($parts['pass']);
-            $promise = $promise->then(function (StreamingClient $client) use ($pass) {
+            $promise = $promise->then(function (StreamingClient $client) use ($pass, $uri) {
                 return $client->auth($pass)->then(
                     function () use ($client) {
                         return $client;
                     },
-                    function ($error) use ($client) {
+                    function (\Exception $e) use ($client, $uri) {
                         $client->close();
 
                         throw new \RuntimeException(
-                            'Connection to Redis server failed because AUTH command failed',
+                            'Connection to ' . $uri . ' failed during AUTH command: ' . $e->getMessage(),
                             0,
-                            $error
+                            $e
                         );
                     }
                 );
@@ -117,18 +118,18 @@ class Factory
         // use `?db=1` query or `/1` path (skip first slash)
         if (isset($args['db']) || (isset($parts['path']) && $parts['path'] !== '/')) {
             $db = isset($args['db']) ? $args['db'] : substr($parts['path'], 1);
-            $promise = $promise->then(function (StreamingClient $client) use ($db) {
+            $promise = $promise->then(function (StreamingClient $client) use ($db, $uri) {
                 return $client->select($db)->then(
                     function () use ($client) {
                         return $client;
                     },
-                    function ($error) use ($client) {
+                    function (\Exception $e) use ($client, $uri) {
                         $client->close();
 
                         throw new \RuntimeException(
-                            'Connection to Redis server failed because SELECT command failed',
+                            'Connection to ' . $uri . ' failed during SELECT command: ' . $e->getMessage(),
                             0,
-                            $error
+                            $e
                         );
                     }
                 );
@@ -143,10 +144,10 @@ class Factory
             return $deferred->promise();
         }
 
-        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) {
+        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
-                    'Connection to Redis server timed out after ' . $e->getTimeout() . ' seconds'
+                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds'
                 );
             }
             throw $e;
