@@ -56,7 +56,10 @@ class Factory
 
         $uri = preg_replace(array('/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'), '$1***$2', $uri);
         if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss', 'redis+unix'))) {
-            return \React\Promise\reject(new \InvalidArgumentException('Invalid Redis URI given'));
+            return \React\Promise\reject(new \InvalidArgumentException(
+                'Invalid Redis URI given (EINVAL)',
+                defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
+            ));
         }
 
         $args = array();
@@ -73,7 +76,10 @@ class Factory
 
         $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
             // connection cancelled, start with rejecting attempt, then clean up
-            $reject(new \RuntimeException('Connection to ' . $uri . ' cancelled'));
+            $reject(new \RuntimeException(
+                'Connection to ' . $uri . ' cancelled (ECONNABORTED)',
+                defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103
+            ));
 
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (ConnectionInterface $connection) {
@@ -88,7 +94,7 @@ class Factory
         }, function (\Exception $e) use ($uri) {
             throw new \RuntimeException(
                 'Connection to ' . $uri . ' failed: ' . $e->getMessage(),
-                0,
+                $e->getCode(),
                 $e
             );
         });
@@ -106,8 +112,8 @@ class Factory
                         $client->close();
 
                         throw new \RuntimeException(
-                            'Connection to ' . $uri . ' failed during AUTH command: ' . $e->getMessage(),
-                            0,
+                            'Connection to ' . $uri . ' failed during AUTH command: ' . $e->getMessage() . ' (EACCES)',
+                            defined('SOCKET_EACCES') ? SOCKET_EACCES : 13,
                             $e
                         );
                     }
@@ -127,8 +133,8 @@ class Factory
                         $client->close();
 
                         throw new \RuntimeException(
-                            'Connection to ' . $uri . ' failed during SELECT command: ' . $e->getMessage(),
-                            0,
+                            'Connection to ' . $uri . ' failed during SELECT command: ' . $e->getMessage() . ' (ENOENT)',
+                            defined('SOCKET_ENOENT') ? SOCKET_ENOENT : 2,
                             $e
                         );
                     }
@@ -147,7 +153,8 @@ class Factory
         return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
-                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds'
+                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds (ETIMEDOUT)',
+                    defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110
                 );
             }
             throw $e;

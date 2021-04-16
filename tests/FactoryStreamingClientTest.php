@@ -200,7 +200,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) {
-                    return $e->getMessage() === 'Connection to redis://:***@localhost failed during AUTH command: ERR invalid password';
+                    return $e->getMessage() === 'Connection to redis://:***@localhost failed during AUTH command: ERR invalid password (EACCES)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
                 }),
                 $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'ERR invalid password';
@@ -264,7 +267,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) {
-                    return $e->getMessage() === 'Connection to redis://localhost/123 failed during SELECT command: ERR DB index is out of range';
+                    return $e->getMessage() === 'Connection to redis://localhost/123 failed during SELECT command: ERR DB index is out of range (ENOENT)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOENT') ? SOCKET_ENOENT : 2);
                 }),
                 $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'ERR DB index is out of range';
@@ -285,6 +291,9 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getMessage() === 'Connection to redis://127.0.0.1:2 failed: Foo';
                 }),
                 $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === 42;
+                }),
+                $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'Foo';
                 })
             )
@@ -299,7 +308,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('InvalidArgumentException'),
                 $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getMessage() === 'Invalid Redis URI given';
+                    return $e->getMessage() === 'Invalid Redis URI given (EINVAL)';
+                }),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
                 })
             )
         ));
@@ -399,7 +411,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) use ($safe) {
-                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled';
+                    return $e->getMessage() === 'Connection to ' . $safe . ' cancelled (ECONNABORTED)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
                 })
             )
         ));
@@ -420,7 +435,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) {
-                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2/123 cancelled';
+                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2/123 cancelled (ECONNABORTED)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
                 })
             )
         ));
@@ -446,7 +464,10 @@ class FactoryStreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\Exception $e) {
-                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2?timeout=0 timed out after 0 seconds';
+                    return $e->getMessage() === 'Connection to redis://127.0.0.1:2?timeout=0 timed out after 0 seconds (ETIMEDOUT)';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getCode() === (defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110);
                 })
             )
         ));

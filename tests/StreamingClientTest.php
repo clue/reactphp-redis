@@ -2,13 +2,13 @@
 
 namespace Clue\Tests\React\Redis;
 
-use Clue\React\Redis\StreamingClient;
-use Clue\Redis\Protocol\Parser\ParserException;
-use Clue\Redis\Protocol\Model\IntegerReply;
 use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
+use Clue\Redis\Protocol\Model\IntegerReply;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
+use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\React\Redis\Client;
+use Clue\React\Redis\StreamingClient;
 use React\Stream\ThroughStream;
 
 class StreamingClientTest extends TestCase
@@ -28,6 +28,28 @@ class StreamingClientTest extends TestCase
         $this->serializer = $this->getMockBuilder('Clue\Redis\Protocol\Serializer\SerializerInterface')->getMock();
 
         $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
+    }
+
+    public function testConstructWithoutParserAssignsParserAutomatically()
+    {
+        $this->client = new StreamingClient($this->stream, null, $this->serializer);
+
+        $ref = new \ReflectionProperty($this->client, 'parser');
+        $ref->setAccessible(true);
+        $parser = $ref->getValue($this->client);
+
+        $this->assertInstanceOf('Clue\Redis\Protocol\Parser\ParserInterface', $parser);
+    }
+
+    public function testConstructWithoutParserAndSerializerAssignsParserAndSerializerAutomatically()
+    {
+        $this->client = new StreamingClient($this->stream, $this->parser);
+
+        $ref = new \ReflectionProperty($this->client, 'serializer');
+        $ref->setAccessible(true);
+        $serializer = $ref->getValue($this->client);
+
+        $this->assertInstanceOf('Clue\Redis\Protocol\Serializer\SerializerInterface', $serializer);
     }
 
     public function testSending()
@@ -60,21 +82,43 @@ class StreamingClientTest extends TestCase
         $this->stream = new ThroughStream();
         $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
 
-        $this->client->on('error', $this->expectCallableOnce());
+        $this->client->on('error', $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('UnexpectedValueException'),
+                $this->callback(function (\UnexpectedValueException $e) {
+                    return $e->getMessage() === 'Invalid data received: Foo (EBADMSG)';
+                }),
+                $this->callback(function (\UnexpectedValueException $e) {
+                    return $e->getCode() === (defined('SOCKET_EBADMSG') ? SOCKET_EBADMSG : 77);
+                })
+            )
+        ));
         $this->client->on('close', $this->expectCallableOnce());
 
-        $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->throwException(new ParserException()));
+        $this->parser->expects($this->once())->method('pushIncoming')->with('message')->willThrowException(new ParserException('Foo'));
         $this->stream->emit('data', array('message'));
     }
 
-    public function testReceiveThrowMessageEmitsErrorEvent()
+    public function testReceiveUnexpectedReplyEmitsErrorEvent()
     {
         $this->stream = new ThroughStream();
         $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
 
         $this->client->on('error', $this->expectCallableOnce());
+        $this->client->on('error', $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('UnderflowException'),
+                $this->callback(function (\UnderflowException $e) {
+                    return $e->getMessage() === 'Unexpected reply received, no matching request found (ENOMSG)';
+                }),
+                $this->callback(function (\UnderflowException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOMSG') ? SOCKET_ENOMSG : 42);
+                })
+            )
+        ));
 
-        $this->parser->expects($this->once())->method('pushIncoming')->with($this->equalTo('message'))->will($this->returnValue(array(new IntegerReply(2))));
+
+        $this->parser->expects($this->once())->method('pushIncoming')->with('message')->willReturn(array(new IntegerReply(2)));
         $this->stream->emit('data', array('message'));
     }
 
@@ -102,9 +146,18 @@ class StreamingClientTest extends TestCase
     {
         $promise = $this->client->monitor();
 
-        $this->expectPromiseReject($promise);
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('BadMethodCallException'),
+                $this->callback(function (\BadMethodCallException $e) {
+                    return $e->getMessage() === 'MONITOR command explicitly not supported (ENOTSUP)';
+                }),
+                $this->callback(function (\BadMethodCallException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTSUP') ? SOCKET_ENOTSUP : (defined('SOCKET_EOPNOTSUPP') ? SOCKET_EOPNOTSUPP : 95));
+                })
+            )
+        ));
     }
-
 
     public function testErrorReply()
     {
@@ -113,7 +166,6 @@ class StreamingClientTest extends TestCase
         $err = new ErrorReply("ERR unknown command 'invalid'");
         $this->client->handleMessage($err);
 
-        $this->expectPromiseReject($promise);
         $promise->then(null, $this->expectCallableOnceWith($err));
     }
 
@@ -122,7 +174,36 @@ class StreamingClientTest extends TestCase
         $promise = $this->client->ping();
         $this->client->close();
 
-        $this->expectPromiseReject($promise);
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
+    }
+
+    public function testEndingClientRejectsAllNewRequests()
+    {
+        $this->client->ping();
+        $this->client->end();
+        $promise = $this->client->ping();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
     }
 
     public function testClosedClientRejectsAllNewRequests()
@@ -130,7 +211,17 @@ class StreamingClientTest extends TestCase
         $this->client->close();
         $promise = $this->client->ping();
 
-        $this->expectPromiseReject($promise);
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closed (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
     }
 
     public function testEndingNonBusyClosesClient()
@@ -212,10 +303,37 @@ class StreamingClientTest extends TestCase
         $client->handleMessage(new MultiBulkReply(array(new BulkReply('message'), new BulkReply('test'), new BulkReply('payload'))));
     }
 
-    public function testPubsubSubscribeSingleOnly()
+    public function testSubscribeWithMultipleArgumentsRejects()
     {
-        $this->expectPromiseReject($this->client->subscribe('a', 'b'));
-        $this->expectPromiseReject($this->client->unsubscribe('a', 'b'));
-        $this->expectPromiseReject($this->client->unsubscribe());
+        $promise = $this->client->subscribe('a', 'b');
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('InvalidArgumentException'),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getMessage() === 'PubSub commands limited to single argument (EINVAL)';
+                }),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
+                })
+            )
+        ));
+    }
+
+    public function testUnsubscribeWithoutArgumentsRejects()
+    {
+        $promise = $this->client->unsubscribe();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('InvalidArgumentException'),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getMessage() === 'PubSub commands limited to single argument (EINVAL)';
+                }),
+                $this->callback(function (\InvalidArgumentException $e) {
+                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
+                })
+            )
+        ));
     }
 }
