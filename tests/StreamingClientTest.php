@@ -178,10 +178,32 @@ class StreamingClientTest extends TestCase
             $this->logicalAnd(
                 $this->isInstanceOf('RuntimeException'),
                 $this->callback(function (\RuntimeException $e) {
-                    return $e->getMessage() === 'Connection closing (ENOTCONN)';
+                    return $e->getMessage() === 'Connection closing (ECONNABORTED)';
                 }),
                 $this->callback(function (\RuntimeException $e) {
-                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                    return $e->getCode() === (defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103);
+                })
+            )
+        ));
+    }
+
+    public function testClosingStreamRejectsAllRemainingRequests()
+    {
+        $this->stream = new ThroughStream();
+        $this->parser->expects($this->once())->method('pushIncoming')->willReturn(array());
+        $this->client = new StreamingClient($this->stream, $this->parser, $this->serializer);
+
+        $promise = $this->client->ping();
+        $this->stream->close();
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closed by peer (ECONNRESET)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
                 })
             )
         ));

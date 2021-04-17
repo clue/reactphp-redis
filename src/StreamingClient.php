@@ -146,7 +146,7 @@ class StreamingClient extends EventEmitter implements Client
         }
 
         $request = array_shift($this->requests);
-        /* @var $request Deferred */
+        assert($request instanceof Deferred);
 
         if ($message instanceof ErrorReply) {
             $request->reject($message);
@@ -177,18 +177,27 @@ class StreamingClient extends EventEmitter implements Client
         $this->ending = true;
         $this->closed = true;
 
+        $remoteClosed = $this->stream->isReadable() === false && $this->stream->isWritable() === false;
         $this->stream->close();
 
         $this->emit('close');
 
         // reject all remaining requests in the queue
-        while($this->requests) {
+        while ($this->requests) {
             $request = array_shift($this->requests);
-            /* @var $request Deferred */
-            $request->reject(new \RuntimeException(
-                'Connection closing (ENOTCONN)',
-                defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107
-            ));
+            assert($request instanceof Deferred);
+
+            if ($remoteClosed) {
+                $request->reject(new \RuntimeException(
+                    'Connection closed by peer (ECONNRESET)',
+                    defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104
+                ));
+            } else {
+                $request->reject(new \RuntimeException(
+                    'Connection closing (ECONNABORTED)',
+                    defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103
+                ));
+            }
         }
     }
 }

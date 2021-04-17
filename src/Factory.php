@@ -111,9 +111,16 @@ class Factory
                     function (\Exception $e) use ($client, $uri) {
                         $client->close();
 
+                        $const = '';
+                        $errno = $e->getCode();
+                        if ($errno === 0) {
+                            $const = ' (EACCES)';
+                            $errno = $e->getCode() ?: (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
+                        }
+
                         throw new \RuntimeException(
-                            'Connection to ' . $uri . ' failed during AUTH command: ' . $e->getMessage() . ' (EACCES)',
-                            defined('SOCKET_EACCES') ? SOCKET_EACCES : 13,
+                            'Connection to ' . $uri . ' failed during AUTH command: ' . $e->getMessage() . $const,
+                            $errno,
                             $e
                         );
                     }
@@ -132,9 +139,19 @@ class Factory
                     function (\Exception $e) use ($client, $uri) {
                         $client->close();
 
+                        $const = '';
+                        $errno = $e->getCode();
+                        if ($errno === 0 && strpos($e->getMessage(), 'NOAUTH ') === 0) {
+                            $const = ' (EACCES)';
+                            $errno = defined('SOCKET_EACCES') ? SOCKET_EACCES : 13;
+                        } elseif ($errno === 0) {
+                            $const = ' (ENOENT)';
+                            $errno = defined('SOCKET_ENOENT') ? SOCKET_ENOENT : 2;
+                        }
+
                         throw new \RuntimeException(
-                            'Connection to ' . $uri . ' failed during SELECT command: ' . $e->getMessage() . ' (ENOENT)',
-                            defined('SOCKET_ENOENT') ? SOCKET_ENOENT : 2,
+                            'Connection to ' . $uri . ' failed during SELECT command: ' . $e->getMessage() . $const,
+                            $errno,
                             $e
                         );
                     }

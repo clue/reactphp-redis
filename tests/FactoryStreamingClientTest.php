@@ -212,6 +212,44 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
+    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForAuthCommand()
+    {
+        $closeHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('close');
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->anything()),
+            array('close', $this->callback(function ($arg) use (&$closeHandler) {
+                $closeHandler = $arg;
+                return true;
+            }))
+        );
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://:world@localhost');
+
+        $this->assertTrue(is_callable($closeHandler));
+        $stream->expects($this->once())->method('isReadable')->willReturn(false);
+        $stream->expects($this->once())->method('isWritable')->willReturn(false);
+        call_user_func($closeHandler);
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to redis://:***@localhost failed during AUTH command: Connection closed by peer (ECONNRESET)';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getPrevious()->getMessage() === 'Connection closed by peer (ECONNRESET)';
+                })
+            )
+        ));
+    }
+
     public function testWillWriteSelectCommandIfRedisUnixUriContainsDbQueryParameter()
     {
         $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
@@ -274,6 +312,80 @@ class FactoryStreamingClientTest extends TestCase
                 }),
                 $this->callback(function (\RuntimeException $e) {
                     return $e->getPrevious()->getMessage() === 'ERR DB index is out of range';
+                })
+            )
+        ));
+    }
+
+    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesAuthErrorResponseIfRedisUriContainsPath()
+    {
+        $dataHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
+        $stream->expects($this->once())->method('close');
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->callback(function ($arg) use (&$dataHandler) {
+                $dataHandler = $arg;
+                return true;
+            })),
+            array('close', $this->anything())
+        );
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://localhost/123');
+
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("-NOAUTH Authentication required.\r\n");
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to redis://localhost/123 failed during SELECT command: NOAUTH Authentication required. (EACCES)';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getPrevious()->getMessage() === 'NOAUTH Authentication required.';
+                })
+            )
+        ));
+    }
+
+    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForSelectCommand()
+    {
+        $closeHandler = null;
+        $stream = $this->getMockBuilder('React\Socket\ConnectionInterface')->getMock();
+        $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$3\r\n123\r\n");
+        $stream->expects($this->once())->method('close');
+        $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+            array('data', $this->anything()),
+            array('close', $this->callback(function ($arg) use (&$closeHandler) {
+                $closeHandler = $arg;
+                return true;
+            }))
+        );
+
+        $this->connector->expects($this->once())->method('connect')->willReturn(Promise\resolve($stream));
+        $promise = $this->factory->createClient('redis://localhost/123');
+
+        $this->assertTrue(is_callable($closeHandler));
+        $stream->expects($this->once())->method('isReadable')->willReturn(false);
+        $stream->expects($this->once())->method('isWritable')->willReturn(false);
+        call_user_func($closeHandler);
+
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\Exception $e) {
+                    return $e->getMessage() === 'Connection to redis://localhost/123 failed during SELECT command: Connection closed by peer (ECONNRESET)';
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
+                }),
+                $this->callback(function (\Exception $e) {
+                    return $e->getPrevious()->getMessage() === 'Connection closed by peer (ECONNRESET)';
                 })
             )
         ));
