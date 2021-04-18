@@ -29,17 +29,18 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * [Support us](#support-us)
 * [Quickstart example](#quickstart-example)
 * [Usage](#usage)
-  * [Factory](#factory)
-    * [createClient()](#createclient)
-    * [createLazyClient()](#createlazyclient)
-  * [Client](#client)
     * [Commands](#commands)
     * [Promises](#promises)
     * [PubSub](#pubsub)
-    * [close()](#close)
-    * [end()](#end)
-    * [error event](#error-event)
-    * [close event](#close-event)
+* [API](#api)
+    * [Factory](#factory)
+        * [createClient()](#createclient)
+        * [createLazyClient()](#createlazyclient)
+    * [Client](#client)
+        * [end()](#end)
+        * [close()](#close)
+        * [error event](#error-event)
+        * [close event](#close-event)
 * [Install](#install)
 * [Tests](#tests)
 * [License](#license)
@@ -82,6 +83,161 @@ $client->end();
 See also the [examples](examples).
 
 ## Usage
+
+### Commands
+
+All [Redis commands](https://redis.io/commands) are automatically available as public methods like this:
+
+```php
+$client->get($key);
+$client->set($key, $value);
+$client->exists($key);
+$client->expire($key, $seconds);
+$client->mget($key1, $key2, $key3);
+
+$client->multi();
+$client->exec();
+
+$client->publish($channel, $payload);
+$client->subscribe($channel);
+
+$client->ping();
+$client->select($database);
+
+// many more…
+```
+
+Listing all available commands is out of scope here, please refer to the [Redis command reference](https://redis.io/commands).
+All [Redis commands](https://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
+
+Each of these commands supports async operation and either *resolves* with
+its *results* or *rejects* with an `Exception`.
+Please see the following section about [promises](#promises) for more details.
+
+### Promises
+
+Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
+Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
+
+Sending commands uses a [Promise](https://github.com/reactphp/promise)-based interface that makes it easy to react to when a command is *fulfilled*
+(i.e. either successfully resolved or rejected with an error):
+
+```php
+$client->set('hello', 'world');
+$client->get('hello')->then(function ($response) {
+    // response received for GET command
+    echo 'hello ' . $response;
+});
+```
+
+### PubSub
+
+This library is commonly used to efficiently transport messages using Redis'
+[Pub/Sub](https://redis.io/topics/pubsub) (Publish/Subscribe) channels. For
+instance, this can be used to distribute single messages to a larger number
+of subscribers (think horizontal scaling for chat-like applications) or as an
+efficient message transport in distributed systems (microservice architecture).
+
+The [`PUBLISH` command](https://redis.io/commands/publish) can be used to
+send a message to all clients currently subscribed to a given channel:
+
+```php
+$channel = 'user';
+$message = json_encode(array('id' => 10));
+$client->publish($channel, $message);
+```
+
+The [`SUBSCRIBE` command](https://redis.io/commands/subscribe) can be used to
+subscribe to a channel and then receive incoming PubSub `message` events:
+
+```php
+$channel = 'user';
+$client->subscribe($channel);
+
+$client->on('message', function ($channel, $payload) {
+    // pubsub message received on given $channel
+    var_dump($channel, json_decode($payload));
+});
+```
+
+Likewise, you can use the same client connection to subscribe to multiple
+channels by simply executing this command multiple times:
+
+```php
+$client->subscribe('user.register');
+$client->subscribe('user.join');
+$client->subscribe('user.leave');
+```
+
+Similarly, the [`PSUBSCRIBE` command](https://redis.io/commands/psubscribe) can
+be used to subscribe to all channels matching a given pattern and then receive
+all incoming PubSub messages with the `pmessage` event:
+
+
+```php
+$pattern = 'user.*';
+$client->psubscribe($pattern);
+
+$client->on('pmessage', function ($pattern, $channel, $payload) {
+    // pubsub message received matching given $pattern
+    var_dump($channel, json_decode($payload));
+});
+```
+
+Once you're in a subscribed state, Redis no longer allows executing any other
+commands on the same client connection. This is commonly worked around by simply
+creating a second client connection and dedicating one client connection solely
+for PubSub subscriptions and the other for all other commands.
+
+The [`UNSUBSCRIBE` command](https://redis.io/commands/unsubscribe) and
+[`PUNSUBSCRIBE` command](https://redis.io/commands/punsubscribe) can be used to
+unsubscribe from active subscriptions if you're no longer interested in
+receiving any further events for the given channel and pattern subscriptions
+respectively:
+
+```php
+$client->subscribe('user');
+
+Loop::addTimer(60.0, function () use ($client) {
+    $client->unsubscribe('user');
+});
+```
+
+Likewise, once you've unsubscribed the last channel and pattern, the client
+connection is no longer in a subscribed state and you can issue any other
+command over this client connection again.
+
+Each of the above methods follows normal request-response semantics and return
+a [`Promise`](#promises) to await successful subscriptions. Note that while
+Redis allows a variable number of arguments for each of these commands, this
+library is currently limited to single arguments for each of these methods in
+order to match exactly one response to each command request. As an alternative,
+the methods can simply be invoked multiple times with one argument each.
+
+Additionally, can listen for the following PubSub events to get notifications
+about subscribed/unsubscribed channels and patterns:
+
+```php
+$client->on('subscribe', function ($channel, $total) {
+    // subscribed to given $channel
+});
+$client->on('psubscribe', function ($pattern, $total) {
+    // subscribed to matching given $pattern
+});
+$client->on('unsubscribe', function ($channel, $total) {
+    // unsubscribed from given $channel
+});
+$client->on('punsubscribe', function ($pattern, $total) {
+    // unsubscribed from matching given $pattern
+});
+```
+
+When using the [`createLazyClient()`](#createlazyclient) method, the `unsubscribe`
+and `punsubscribe` events will be invoked automatically when the underlying
+connection is lost. This gives you control over re-subscribing to the channels
+and patterns as appropriate.
+
+## API
 
 ### Factory
 
@@ -354,168 +510,15 @@ and keeps track of pending commands.
 Besides defining a few methods, this interface also implements the
 `EventEmitterInterface` which allows you to react to certain events as documented below.
 
-#### Commands
+#### end()
 
-All [Redis commands](https://redis.io/commands) are automatically available as public methods like this:
-
-```php
-$client->get($key);
-$client->set($key, $value);
-$client->exists($key);
-$client->expire($key, $seconds);
-$client->mget($key1, $key2, $key3);
-
-$client->multi();
-$client->exec();
-
-$client->publish($channel, $payload);
-$client->subscribe($channel);
-
-$client->ping();
-$client->select($database);
-
-// many more…
-```
-
-Listing all available commands is out of scope here, please refer to the [Redis command reference](https://redis.io/commands).
-All [Redis commands](https://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
-
-Each of these commands supports async operation and either *resolves* with
-its *results* or *rejects* with an `Exception`.
-Please see the following section about [promises](#promises) for more details.
-
-#### Promises
-
-Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
-Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
-
-Sending commands uses a [Promise](https://github.com/reactphp/promise)-based interface that makes it easy to react to when a command is *fulfilled*
-(i.e. either successfully resolved or rejected with an error):
-
-```php
-$client->set('hello', 'world');
-$client->get('hello')->then(function ($response) {
-    // response received for GET command
-    echo 'hello ' . $response;
-});
-```
-
-#### PubSub
-
-This library is commonly used to efficiently transport messages using Redis'
-[Pub/Sub](https://redis.io/topics/pubsub) (Publish/Subscribe) channels. For
-instance, this can be used to distribute single messages to a larger number
-of subscribers (think horizontal scaling for chat-like applications) or as an
-efficient message transport in distributed systems (microservice architecture).
-
-The [`PUBLISH` command](https://redis.io/commands/publish) can be used to
-send a message to all clients currently subscribed to a given channel:
-
-```php
-$channel = 'user';
-$message = json_encode(array('id' => 10));
-$client->publish($channel, $message);
-```
-
-The [`SUBSCRIBE` command](https://redis.io/commands/subscribe) can be used to
-subscribe to a channel and then receive incoming PubSub `message` events:
-
-```php
-$channel = 'user';
-$client->subscribe($channel);
-
-$client->on('message', function ($channel, $payload) {
-    // pubsub message received on given $channel
-    var_dump($channel, json_decode($payload));
-});
-```
-
-Likewise, you can use the same client connection to subscribe to multiple
-channels by simply executing this command multiple times:
-
-```php
-$client->subscribe('user.register');
-$client->subscribe('user.join');
-$client->subscribe('user.leave');
-```
-
-Similarly, the [`PSUBSCRIBE` command](https://redis.io/commands/psubscribe) can
-be used to subscribe to all channels matching a given pattern and then receive
-all incoming PubSub messages with the `pmessage` event:
-
-
-```php
-$pattern = 'user.*';
-$client->psubscribe($pattern);
-
-$client->on('pmessage', function ($pattern, $channel, $payload) {
-    // pubsub message received matching given $pattern
-    var_dump($channel, json_decode($payload));
-});
-```
-
-Once you're in a subscribed state, Redis no longer allows executing any other
-commands on the same client connection. This is commonly worked around by simply
-creating a second client connection and dedicating one client connection solely
-for PubSub subscriptions and the other for all other commands.
-
-The [`UNSUBSCRIBE` command](https://redis.io/commands/unsubscribe) and
-[`PUNSUBSCRIBE` command](https://redis.io/commands/punsubscribe) can be used to
-unsubscribe from active subscriptions if you're no longer interested in
-receiving any further events for the given channel and pattern subscriptions
-respectively:
-
-```php
-$client->subscribe('user');
-
-Loop::addTimer(60.0, function () use ($client) {
-    $client->unsubscribe('user');
-});
-```
-
-Likewise, once you've unsubscribed the last channel and pattern, the client
-connection is no longer in a subscribed state and you can issue any other
-command over this client connection again.
-
-Each of the above methods follows normal request-response semantics and return
-a [`Promise`](#promises) to await successful subscriptions. Note that while
-Redis allows a variable number of arguments for each of these commands, this
-library is currently limited to single arguments for each of these methods in
-order to match exactly one response to each command request. As an alternative,
-the methods can simply be invoked multiple times with one argument each.
-
-Additionally, can listen for the following PubSub events to get notifications
-about subscribed/unsubscribed channels and patterns:
-
-```php
-$client->on('subscribe', function ($channel, $total) {
-    // subscribed to given $channel
-});
-$client->on('psubscribe', function ($pattern, $total) {
-    // subscribed to matching given $pattern
-});
-$client->on('unsubscribe', function ($channel, $total) {
-    // unsubscribed from given $channel
-});
-$client->on('punsubscribe', function ($pattern, $total) {
-    // unsubscribed from matching given $pattern
-});
-```
-
-When using the [`createLazyClient()`](#createlazyclient) method, the `unsubscribe`
-and `punsubscribe` events will be invoked automatically when the underlying
-connection is lost. This gives you control over re-subscribing to the channels
-and patterns as appropriate.
+The `end():void` method can be used to
+soft-close the Redis connection once all pending commands are completed.
 
 #### close()
 
 The `close():void` method can be used to
 force-close the Redis connection and reject all pending commands.
-
-#### end()
-
-The `end():void` method can be used to
-soft-close the Redis connection once all pending commands are completed.
 
 #### error event
 
