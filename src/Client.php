@@ -22,7 +22,7 @@ use React\Promise\PromiseInterface;
 interface Client extends EventEmitterInterface
 {
     /**
-     * Invoke the given command and return a Promise that will be resolved when the request has been replied to
+     * Invoke the given command and return a Promise that will be fulfilled when the request has been replied to
      *
      * This is a magic method that will be invoked when calling any redis
      * command on this instance.

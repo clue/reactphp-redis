@@ -37,6 +37,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
         * [createClient()](#createclient)
         * [createLazyClient()](#createlazyclient)
     * [Client](#client)
+        * [__call()](#__call)
         * [end()](#end)
         * [close()](#close)
         * [error event](#error-event)
@@ -86,7 +87,8 @@ See also the [examples](examples).
 
 ### Commands
 
-All [Redis commands](https://redis.io/commands) are automatically available as public methods like this:
+Most importantly, this project provides a [`Client`](#client) instance that
+can be used to invoke all [Redis commands](https://redis.io/commands) (such as `GET`, `SET`, etc.).
 
 ```php
 $client->get($key);
@@ -107,26 +109,41 @@ $client->select($database);
 // many more…
 ```
 
-Listing all available commands is out of scope here, please refer to the [Redis command reference](https://redis.io/commands).
-All [Redis commands](https://redis.io/commands) are automatically available as public methods via the magic `__call()` method.
+Each method call matches the respective [Redis command](https://redis.io/commands).
+For example, the `$redis->get()` method will invoke the [`GET` command](https://redis.io/commands/get).
 
-Each of these commands supports async operation and either *resolves* with
-its *results* or *rejects* with an `Exception`.
-Please see the following section about [promises](#promises) for more details.
+All [Redis commands](https://redis.io/commands) are automatically available as
+public methods via the magic [`__call()` method](#__call).
+Listing all available commands is out of scope here, please refer to the
+[Redis command reference](https://redis.io/commands).
+
+Any arguments passed to the method call will be forwarded as command arguments.
+For example, the `$redis->set('name', 'Alice')` call will perform the equivalent of a
+`SET name Alice` command. It's safe to pass integer arguments where applicable (for
+example `$redis->expire($key, 60)`), but internally Redis requires all arguments to
+always be coerced to string values.
+
+Each of these commands supports async operation and returns a [Promise](#promises)
+that eventually *fulfills* with its *results* on success or *rejects* with an
+`Exception` on error. See also the following section about [promises](#promises)
+for more details.
 
 ### Promises
 
-Sending commands is async (non-blocking), so you can actually send multiple commands in parallel.
-Redis will respond to each command request with a response message, pending commands will be pipelined automatically.
+Sending commands is async (non-blocking), so you can actually send multiple
+commands in parallel.
+Redis will respond to each command request with a response message, pending
+commands will be pipelined automatically.
 
-Sending commands uses a [Promise](https://github.com/reactphp/promise)-based interface that makes it easy to react to when a command is *fulfilled*
-(i.e. either successfully resolved or rejected with an error):
+Sending commands uses a [Promise](https://github.com/reactphp/promise)-based
+interface that makes it easy to react to when a command is completed
+(i.e. either successfully fulfilled or rejected with an error):
 
 ```php
-$client->set('hello', 'world');
-$client->get('hello')->then(function ($response) {
-    // response received for GET command
-    echo 'hello ' . $response;
+$redis->get($key)->then(function (string $value) {
+    var_dump($value);
+}, function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
 });
 ```
 
@@ -509,6 +526,38 @@ and keeps track of pending commands.
 
 Besides defining a few methods, this interface also implements the
 `EventEmitterInterface` which allows you to react to certain events as documented below.
+
+#### __call()
+
+The `__call(string $name, string[] $args): PromiseInterface<mixed,Exception>` method can be used to
+invoke the given command.
+
+This is a magic method that will be invoked when calling any Redis command on this instance.
+Each method call matches the respective [Redis command](https://redis.io/commands).
+For example, the `$redis->get()` method will invoke the [`GET` command](https://redis.io/commands/get).
+
+```php
+$redis->get($key)->then(function (string $value) {
+    var_dump($value);
+}, function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
+});
+```
+
+All [Redis commands](https://redis.io/commands) are automatically available as
+public methods via this magic `__call()` method.
+Listing all available commands is out of scope here, please refer to the
+[Redis command reference](https://redis.io/commands).
+
+Any arguments passed to the method call will be forwarded as command arguments.
+For example, the `$redis->set('name', 'Alice')` call will perform the equivalent of a
+`SET name Alice` command. It's safe to pass integer arguments where applicable (for
+example `$redis->expire($key, 60)`), but internally Redis requires all arguments to
+always be coerced to string values.
+
+Each of these commands supports async operation and returns a [Promise](#promises)
+that eventually *fulfills* with its *results* on success or *rejects* with an
+`Exception` on error. See also [promises](#promises) for more details.
 
 #### end()
 
