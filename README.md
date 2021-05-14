@@ -579,7 +579,14 @@ $ php vendor/bin/phpunit
 The test suite contains both unit tests and functional integration tests.
 The functional tests require access to a running Redis server instance
 and will be skipped by default.
-If you want to also run the functional tests, you need to supply *your* login
+
+If you don't have access to a running Redis server, you can also use a temporary `Redis` Docker image:
+
+```bash
+$ docker run --net=host redis
+```
+
+To now run the functional tests, you need to supply *your* login
 details in an environment variable like this:
 
 ```bash
