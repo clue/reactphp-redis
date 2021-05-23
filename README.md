@@ -1,4 +1,6 @@
-# clue/reactphp-redis [![Build Status](https://travis-ci.org/clue/reactphp-redis.svg?branch=master)](https://travis-ci.org/clue/reactphp-redis)
+# clue/reactphp-redis
+
+[![CI status](https://github.com/clue/reactphp-redis/workflows/CI/badge.svg)](https://github.com/clue/reactphp-redis/actions)
 
 Async [Redis](https://redis.io/) client implementation, built on top of [ReactPHP](https://reactphp.org/).
 
@@ -555,7 +557,7 @@ $ composer require clue/redis-react:^2.4
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
 
 This project aims to run on any platform and thus does not require any PHP
-extensions and supports running on legacy PHP 5.3 through current PHP 7+ and
+extensions and supports running on legacy PHP 5.3 through current PHP 8+ and
 HHVM.
 It's *highly recommended to use PHP 7+* for this project.
 
@@ -577,7 +579,14 @@ $ php vendor/bin/phpunit
 The test suite contains both unit tests and functional integration tests.
 The functional tests require access to a running Redis server instance
 and will be skipped by default.
-If you want to also run the functional tests, you need to supply *your* login
+
+If you don't have access to a running Redis server, you can also use a temporary `Redis` Docker image:
+
+```bash
+$ docker run --net=host redis
+```
+
+To now run the functional tests, you need to supply *your* login
 details in an environment variable like this:
 
 ```bash
