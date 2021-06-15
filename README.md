@@ -60,7 +60,7 @@ local Redis server and send some requests:
 
 ```php
 $loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Clue\React\Redis\Factory($loop);
 
 $client = $factory->createLazyClient('localhost');
 $client->set('greeting', 'Hello world');
@@ -92,7 +92,7 @@ It also registers everything with the main [`EventLoop`](https://github.com/reac
 
 ```php
 $loop = \React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new \Clue\React\Redis\Factory($loop);
 ```
 
 If you need custom DNS, proxy or TLS settings, you can explicitly pass a
