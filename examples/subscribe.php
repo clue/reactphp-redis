@@ -1,11 +1,11 @@
 <?php
 
 use Clue\React\Redis\Factory;
+use React\EventLoop\Loop;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $channel = isset($argv[1]) ? $argv[1] : 'channel';
 
@@ -22,17 +22,15 @@ $client->on('message', function ($channel, $message) {
 });
 
 // automatically re-subscribe to channel on connection issues
-$client->on('unsubscribe', function ($channel) use ($client, $loop) {
+$client->on('unsubscribe', function ($channel) use ($client) {
     echo 'Unsubscribed from ' . $channel . PHP_EOL;
 
-    $loop->addPeriodicTimer(2.0, function ($timer) use ($client, $channel, $loop){
-        $client->subscribe($channel)->then(function () use ($timer, $loop) {
+    Loop::addPeriodicTimer(2.0, function ($timer) use ($client, $channel){
+        $client->subscribe($channel)->then(function () use ($timer) {
             echo 'Now subscribed again' . PHP_EOL;
-            $loop->cancelTimer($timer);
+            Loop::cancelTimer($timer);
         }, function (Exception $e) {
             echo 'Unable to subscribe again: ' . $e->getMessage() . PHP_EOL;
         });
     });
 });
-
-$loop->run();

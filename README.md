@@ -60,8 +60,7 @@ Once [installed](#install), you can use the following code to connect to your
 local Redis server and send some requests:
 
 ```php
-$loop = React\EventLoop\Factory::create();
-$factory = new Clue\React\Redis\Factory($loop);
+$factory = new Clue\React\Redis\Factory();
 
 $client = $factory->createLazyClient('localhost');
 $client->set('greeting', 'Hello world');
@@ -78,8 +77,6 @@ $client->incr('invocation')->then(function ($n) {
 
 // end connection once all pending requests have been resolved
 $client->end();
-
-$loop->run();
 ```
 
 See also the [examples](examples).
@@ -89,18 +86,22 @@ See also the [examples](examples).
 ### Factory
 
 The `Factory` is responsible for creating your [`Client`](#client) instance.
-It also registers everything with the main [`EventLoop`](https://github.com/reactphp/event-loop#usage).
 
 ```php
-$loop = \React\EventLoop\Factory::create();
-$factory = new \Clue\React\Redis\Factory($loop);
+$factory = new Clue\React\Redis\Factory();
 ```
+
+This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+pass the event loop instance to use for this object. You can use a `null` value
+here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+This value SHOULD NOT be given unless you're sure you want to explicitly use a
+given event loop instance.
 
 If you need custom DNS, proxy or TLS settings, you can explicitly pass a
 custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new \React\Socket\Connector($loop, array(
+$connector = new React\Socket\Connector(null, array(
     'dns' => '127.0.0.1',
     'tcp' => array(
         'bindto' => '192.168.10.1:0'
@@ -111,7 +112,7 @@ $connector = new \React\Socket\Connector($loop, array(
     )
 ));
 
-$factory = new Factory($loop, $connector);
+$factory = new Clue\React\Redis\Factory(null, $connector);
 ```
 
 #### createClient()
@@ -146,7 +147,7 @@ connection attempt and/or Redis authentication.
 ```php
 $promise = $factory->createClient($redisUri);
 
-$loop->addTimer(3.0, function () use ($promise) {
+Loop::addTimer(3.0, function () use ($promise) {
     $promise->cancel();
 });
 ```
@@ -466,7 +467,7 @@ respectively:
 ```php
 $client->subscribe('user');
 
-$loop->addTimer(60.0, function () use ($client) {
+Loop::addTimer(60.0, function () use ($client) {
     $client->unsubscribe('user');
 });
 ```
