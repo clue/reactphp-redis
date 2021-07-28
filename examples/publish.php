@@ -4,8 +4,7 @@ use Clue\React\Redis\Factory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 $channel = isset($argv[1]) ? $argv[1] : 'channel';
 $message = isset($argv[2]) ? $argv[2] : 'message';
@@ -22,5 +21,3 @@ $client->publish($channel, $message)->then(function ($received) {
 });
 
 $client->end();
-
-$loop->run();

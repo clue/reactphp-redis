@@ -3,6 +3,7 @@
 namespace Clue\React\Redis;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Timer\TimeoutException;
@@ -13,29 +14,25 @@ use InvalidArgumentException;
 
 class Factory
 {
+    /** @var LoopInterface */
     private $loop;
+
+    /** @var ConnectorInterface */
     private $connector;
+
+    /** @var ProtocolFactory */
     private $protocol;
 
     /**
-     * @param LoopInterface $loop
-     * @param ConnectorInterface|null $connector [optional] Connector to use.
-     *     Should be `null` in order to use default Connector.
-     * @param ProtocolFactory|null $protocol
+     * @param ?LoopInterface $loop
+     * @param ?ConnectorInterface $connector
+     * @param ?ProtocolFactory $protocol
      */
-    public function __construct(LoopInterface $loop, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
+    public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
-        if ($connector === null) {
-            $connector = new Connector($loop);
-        }
-
-        if ($protocol === null) {
-            $protocol = new ProtocolFactory();
-        }
-
-        $this->loop = $loop;
-        $this->connector = $connector;
-        $this->protocol = $protocol;
+        $this->loop = $loop ?: Loop::get();
+        $this->connector = $connector ?: new Connector($this->loop);
+        $this->protocol = $protocol ?: new ProtocolFactory();
     }
 
     /**

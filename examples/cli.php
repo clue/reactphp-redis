@@ -2,23 +2,23 @@
 
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
+use React\EventLoop\Loop;
 use React\Promise\PromiseInterface;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$loop = React\EventLoop\Factory::create();
-$factory = new Factory($loop);
+$factory = new Factory();
 
 echo '# connecting to redis...' . PHP_EOL;
 
-$factory->createClient('localhost')->then(function (Client $client) use ($loop) {
+$factory->createClient('localhost')->then(function (Client $client) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
-    $loop->addReadStream(STDIN, function () use ($client, $loop) {
+    Loop::addReadStream(STDIN, function () use ($client) {
         $line = fgets(STDIN);
         if ($line === false || $line === '') {
             echo '# CTRL-D -> Ending connection...' . PHP_EOL;
-            $loop->removeReadStream(STDIN);
+            Loop::removeReadStream(STDIN);
             return $client->end();
         }
 
@@ -43,10 +43,10 @@ $factory->createClient('localhost')->then(function (Client $client) use ($loop) 
         });
     });
 
-    $client->on('close', function() use ($loop) {
+    $client->on('close', function() {
         echo '## DISCONNECTED' . PHP_EOL;
 
-        $loop->removeReadStream(STDIN);
+        Loop::removeReadStream(STDIN);
     });
 }, function (Exception $error) {
     echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
@@ -55,5 +55,3 @@ $factory->createClient('localhost')->then(function (Client $client) use ($loop) 
     }
     exit(1);
 });
-
-$loop->run();
