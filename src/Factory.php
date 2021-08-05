@@ -31,7 +31,7 @@ class Factory
     public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         $this->loop = $loop ?: Loop::get();
-        $this->connector = $connector ?: new Connector($this->loop);
+        $this->connector = $connector ?: new Connector(array(), $this->loop);
         $this->protocol = $protocol ?: new ProtocolFactory();
     }
 

@@ -97,11 +97,12 @@ here in order to use the [default loop](https://github.com/reactphp/event-loop#l
 This value SHOULD NOT be given unless you're sure you want to explicitly use a
 given event loop instance.
 
-If you need custom DNS, proxy or TLS settings, you can explicitly pass a
-custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
+If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
+proxy servers etc.), you can explicitly pass a custom instance of the
+[`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new React\Socket\Connector(null, array(
+$connector = new React\Socket\Connector(array(
     'dns' => '127.0.0.1',
     'tcp' => array(
         'bindto' => '192.168.10.1:0'
