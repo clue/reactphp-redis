@@ -63,22 +63,22 @@ local Redis server and send some requests:
 
 ```php
 $factory = new Clue\React\Redis\Factory();
-$client = $factory->createLazyClient('localhost:6379');
+$redis = $factory->createLazyClient('localhost:6379');
 
-$client->set('greeting', 'Hello world');
-$client->append('greeting', '!');
+$redis->set('greeting', 'Hello world');
+$redis->append('greeting', '!');
 
-$client->get('greeting')->then(function ($greeting) {
+$redis->get('greeting')->then(function ($greeting) {
     // Hello world!
     echo $greeting . PHP_EOL;
 });
 
-$client->incr('invocation')->then(function ($n) {
+$redis->incr('invocation')->then(function ($n) {
     echo 'This is invocation #' . $n . PHP_EOL;
 });
 
 // end connection once all pending requests have been resolved
-$client->end();
+$redis->end();
 ```
 
 See also the [examples](examples).
@@ -91,20 +91,20 @@ Most importantly, this project provides a [`Client`](#client) instance that
 can be used to invoke all [Redis commands](https://redis.io/commands) (such as `GET`, `SET`, etc.).
 
 ```php
-$client->get($key);
-$client->set($key, $value);
-$client->exists($key);
-$client->expire($key, $seconds);
-$client->mget($key1, $key2, $key3);
+$redis->get($key);
+$redis->set($key, $value);
+$redis->exists($key);
+$redis->expire($key, $seconds);
+$redis->mget($key1, $key2, $key3);
 
-$client->multi();
-$client->exec();
+$redis->multi();
+$redis->exec();
 
-$client->publish($channel, $payload);
-$client->subscribe($channel);
+$redis->publish($channel, $payload);
+$redis->subscribe($channel);
 
-$client->ping();
-$client->select($database);
+$redis->ping();
+$redis->select($database);
 
 // many more…
 ```
@@ -161,7 +161,7 @@ send a message to all clients currently subscribed to a given channel:
 ```php
 $channel = 'user';
 $message = json_encode(array('id' => 10));
-$client->publish($channel, $message);
+$redis->publish($channel, $message);
 ```
 
 The [`SUBSCRIBE` command](https://redis.io/commands/subscribe) can be used to
@@ -169,9 +169,9 @@ subscribe to a channel and then receive incoming PubSub `message` events:
 
 ```php
 $channel = 'user';
-$client->subscribe($channel);
+$redis->subscribe($channel);
 
-$client->on('message', function ($channel, $payload) {
+$redis->on('message', function ($channel, $payload) {
     // pubsub message received on given $channel
     var_dump($channel, json_decode($payload));
 });
@@ -181,9 +181,9 @@ Likewise, you can use the same client connection to subscribe to multiple
 channels by simply executing this command multiple times:
 
 ```php
-$client->subscribe('user.register');
-$client->subscribe('user.join');
-$client->subscribe('user.leave');
+$redis->subscribe('user.register');
+$redis->subscribe('user.join');
+$redis->subscribe('user.leave');
 ```
 
 Similarly, the [`PSUBSCRIBE` command](https://redis.io/commands/psubscribe) can
@@ -193,9 +193,9 @@ all incoming PubSub messages with the `pmessage` event:
 
 ```php
 $pattern = 'user.*';
-$client->psubscribe($pattern);
+$redis->psubscribe($pattern);
 
-$client->on('pmessage', function ($pattern, $channel, $payload) {
+$redis->on('pmessage', function ($pattern, $channel, $payload) {
     // pubsub message received matching given $pattern
     var_dump($channel, json_decode($payload));
 });
@@ -213,10 +213,10 @@ receiving any further events for the given channel and pattern subscriptions
 respectively:
 
 ```php
-$client->subscribe('user');
+$redis->subscribe('user');
 
-Loop::addTimer(60.0, function () use ($client) {
-    $client->unsubscribe('user');
+Loop::addTimer(60.0, function () use ($redis) {
+    $redis->unsubscribe('user');
 });
 ```
 
@@ -235,16 +235,16 @@ Additionally, can listen for the following PubSub events to get notifications
 about subscribed/unsubscribed channels and patterns:
 
 ```php
-$client->on('subscribe', function ($channel, $total) {
+$redis->on('subscribe', function ($channel, $total) {
     // subscribed to given $channel
 });
-$client->on('psubscribe', function ($pattern, $total) {
+$redis->on('psubscribe', function ($pattern, $total) {
     // subscribed to matching given $pattern
 });
-$client->on('unsubscribe', function ($channel, $total) {
+$redis->on('unsubscribe', function ($channel, $total) {
     // unsubscribed from given $channel
 });
-$client->on('punsubscribe', function ($pattern, $total) {
+$redis->on('punsubscribe', function ($pattern, $total) {
     // unsubscribed from matching given $pattern
 });
 ```
@@ -299,7 +299,7 @@ and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
 $factory->createClient('localhost:6379')->then(
-    function (Client $client) {
+    function (Client $redis) {
         // client connected (and authenticated)
     },
     function (Exception $e) {
@@ -395,10 +395,10 @@ It helps with establishing a plain TCP/IP or secure TLS connection to Redis
 and optionally authenticating (AUTH) and selecting the right database (SELECT).
 
 ```php
-$client = $factory->createLazyClient('localhost:6379');
+$redis = $factory->createLazyClient('localhost:6379');
 
-$client->incr('hello');
-$client->end();
+$redis->incr('hello');
+$redis->end();
 ```
 
 This method immediately returns a "virtual" connection implementing the
@@ -576,7 +576,7 @@ when the client connection is lost or is invalid.
 The event receives a single `Exception` argument for the error instance.
 
 ```php
-$client->on('error', function (Exception $e) {
+$redis->on('error', function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
 });
 ```
@@ -590,7 +590,7 @@ errors caused by invalid commands.
 The `close` event will be emitted once the client connection closes (terminates).
 
 ```php
-$client->on('close', function () {
+$redis->on('close', function () {
     echo 'Connection closed' . PHP_EOL;
 });
 ```

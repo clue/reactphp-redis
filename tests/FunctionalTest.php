@@ -32,9 +32,9 @@ class FunctionalTest extends TestCase
 
     public function testPing()
     {
-        $client = $this->createClient($this->uri);
+        $redis = $this->createClient($this->uri);
 
-        $promise = $client->ping();
+        $promise = $redis->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
 
         $ret = Block\await($promise, $this->loop);
@@ -44,9 +44,9 @@ class FunctionalTest extends TestCase
 
     public function testPingLazy()
     {
-        $client = $this->factory->createLazyClient($this->uri);
+        $redis = $this->factory->createLazyClient($this->uri);
 
-        $promise = $client->ping();
+        $promise = $redis->ping();
         $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
 
         $ret = Block\await($promise, $this->loop);
@@ -59,9 +59,9 @@ class FunctionalTest extends TestCase
      */
     public function testPingLazyWillNotBlockLoopWhenIdleTimeIsSmall()
     {
-        $client = $this->factory->createLazyClient($this->uri . '?idle=0');
+        $redis = $this->factory->createLazyClient($this->uri . '?idle=0');
 
-        $client->ping();
+        $redis->ping();
 
         $this->loop->run();
     }
@@ -71,41 +71,41 @@ class FunctionalTest extends TestCase
      */
     public function testLazyClientWithoutCommandsWillNotBlockLoop()
     {
-        $client = $this->factory->createLazyClient($this->uri);
+        $redis = $this->factory->createLazyClient($this->uri);
 
         $this->loop->run();
 
-        unset($client);
+        unset($redis);
     }
 
     public function testMgetIsNotInterpretedAsSubMessage()
     {
-        $client = $this->createClient($this->uri);
+        $redis = $this->createClient($this->uri);
 
-        $client->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
+        $redis->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
-        $promise = $client->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
-        $client->on('message', $this->expectCallableNever());
+        $promise = $redis->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
+        $redis->on('message', $this->expectCallableNever());
 
         Block\await($promise, $this->loop);
     }
 
     public function testPipeline()
     {
-        $client = $this->createClient($this->uri);
+        $redis = $this->createClient($this->uri);
 
-        $client->set('a', 1)->then($this->expectCallableOnceWith('OK'));
-        $client->incr('a')->then($this->expectCallableOnceWith(2));
-        $client->incr('a')->then($this->expectCallableOnceWith(3));
-        $promise = $client->get('a')->then($this->expectCallableOnceWith('3'));
+        $redis->set('a', 1)->then($this->expectCallableOnceWith('OK'));
+        $redis->incr('a')->then($this->expectCallableOnceWith(2));
+        $redis->incr('a')->then($this->expectCallableOnceWith(3));
+        $promise = $redis->get('a')->then($this->expectCallableOnceWith('3'));
 
         Block\await($promise, $this->loop);
     }
 
     public function testInvalidCommand()
     {
-        $client = $this->createClient($this->uri);
-        $promise = $client->doesnotexist(1, 2, 3);
+        $redis = $this->createClient($this->uri);
+        $promise = $redis->doesnotexist(1, 2, 3);
 
         if (method_exists($this, 'expectException')) {
             $this->expectException('Exception');
@@ -117,23 +117,23 @@ class FunctionalTest extends TestCase
 
     public function testMultiExecEmpty()
     {
-        $client = $this->createClient($this->uri);
-        $client->multi()->then($this->expectCallableOnceWith('OK'));
-        $promise = $client->exec()->then($this->expectCallableOnceWith(array()));
+        $redis = $this->createClient($this->uri);
+        $redis->multi()->then($this->expectCallableOnceWith('OK'));
+        $promise = $redis->exec()->then($this->expectCallableOnceWith(array()));
 
         Block\await($promise, $this->loop);
     }
 
     public function testMultiExecQueuedExecHasValues()
     {
-        $client = $this->createClient($this->uri);
+        $redis = $this->createClient($this->uri);
 
-        $client->multi()->then($this->expectCallableOnceWith('OK'));
-        $client->set('b', 10)->then($this->expectCallableOnceWith('QUEUED'));
-        $client->expire('b', 20)->then($this->expectCallableOnceWith('QUEUED'));
-        $client->incrBy('b', 2)->then($this->expectCallableOnceWith('QUEUED'));
-        $client->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
-        $promise = $client->exec()->then($this->expectCallableOnceWith(array('OK', 1, 12, 20)));
+        $redis->multi()->then($this->expectCallableOnceWith('OK'));
+        $redis->set('b', 10)->then($this->expectCallableOnceWith('QUEUED'));
+        $redis->expire('b', 20)->then($this->expectCallableOnceWith('QUEUED'));
+        $redis->incrBy('b', 2)->then($this->expectCallableOnceWith('QUEUED'));
+        $redis->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
+        $promise = $redis->exec()->then($this->expectCallableOnceWith(array('OK', 1, 12, 20)));
 
         Block\await($promise, $this->loop);
     }
@@ -161,34 +161,34 @@ class FunctionalTest extends TestCase
 
     public function testClose()
     {
-        $client = $this->createClient($this->uri);
+        $redis = $this->createClient($this->uri);
 
-        $client->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
+        $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
-        $client->close();
+        $redis->close();
 
-        $client->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
+        $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
 
     public function testCloseLazy()
     {
-        $client = $this->factory->createLazyClient($this->uri);
+        $redis = $this->factory->createLazyClient($this->uri);
 
-        $client->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
+        $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
-        $client->close();
+        $redis->close();
 
-        $client->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
+        $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
 
     public function testInvalidProtocol()
     {
-        $client = $this->createClientResponse("communication does not conform to protocol\r\n");
+        $redis = $this->createClientResponse("communication does not conform to protocol\r\n");
 
-        $client->on('error', $this->expectCallableOnce());
-        $client->on('close', $this->expectCallableOnce());
+        $redis->on('error', $this->expectCallableOnce());
+        $redis->on('close', $this->expectCallableOnce());
 
-        $promise = $client->get('willBeRejectedDueToClosing');
+        $promise = $redis->get('willBeRejectedDueToClosing');
 
         if (method_exists($this, 'expectException')) {
             $this->expectException('Exception');
@@ -200,12 +200,12 @@ class FunctionalTest extends TestCase
 
     public function testInvalidServerRepliesWithDuplicateMessages()
     {
-        $client = $this->createClientResponse("+OK\r\n-ERR invalid\r\n");
+        $redis = $this->createClientResponse("+OK\r\n-ERR invalid\r\n");
 
-        $client->on('error', $this->expectCallableOnce());
-        $client->on('close', $this->expectCallableOnce());
+        $redis->on('error', $this->expectCallableOnce());
+        $redis->on('close', $this->expectCallableOnce());
 
-        $promise = $client->set('a', 0)->then($this->expectCallableOnceWith('OK'));
+        $promise = $redis->set('a', 0)->then($this->expectCallableOnceWith('OK'));
 
         Block\await($promise, $this->loop);
     }

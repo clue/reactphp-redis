@@ -53,9 +53,9 @@ class LazyClient extends EventEmitter implements Client
         $subscribed =& $this->subscribed;
         $psubscribed =& $this->psubscribed;
         $loop = $this->loop;
-        return $pending = $this->factory->createClient($this->target)->then(function (Client $client) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
+        return $pending = $this->factory->createClient($this->target)->then(function (Client $redis) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
             // connection completed => remember only until closed
-            $client->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
+            $redis->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
                 $pending = null;
 
                 // foward unsubscribe/punsubscribe events when underlying connection closes
@@ -77,21 +77,21 @@ class LazyClient extends EventEmitter implements Client
             });
 
             // keep track of all channels and patterns this connection is subscribed to
-            $client->on('subscribe', function ($channel) use (&$subscribed) {
+            $redis->on('subscribe', function ($channel) use (&$subscribed) {
                 $subscribed[$channel] = true;
             });
-            $client->on('psubscribe', function ($pattern) use (&$psubscribed) {
+            $redis->on('psubscribe', function ($pattern) use (&$psubscribed) {
                 $psubscribed[$pattern] = true;
             });
-            $client->on('unsubscribe', function ($channel) use (&$subscribed) {
+            $redis->on('unsubscribe', function ($channel) use (&$subscribed) {
                 unset($subscribed[$channel]);
             });
-            $client->on('punsubscribe', function ($pattern) use (&$psubscribed) {
+            $redis->on('punsubscribe', function ($pattern) use (&$psubscribed) {
                 unset($psubscribed[$pattern]);
             });
 
             Util::forwardEvents(
-                $client,
+                $redis,
                 $self,
                 array(
                     'message',
@@ -103,7 +103,7 @@ class LazyClient extends EventEmitter implements Client
                 )
             );
 
-            return $client;
+            return $redis;
         }, function (\Exception $e) use (&$pending) {
             // connection failed => discard connection attempt
             $pending = null;
@@ -122,9 +122,9 @@ class LazyClient extends EventEmitter implements Client
         }
 
         $that = $this;
-        return $this->client()->then(function (Client $client) use ($name, $args, $that) {
+        return $this->client()->then(function (Client $redis) use ($name, $args, $that) {
             $that->awake();
-            return \call_user_func_array(array($client, $name), $args)->then(
+            return \call_user_func_array(array($redis, $name), $args)->then(
                 function ($result) use ($that) {
                     $that->idle();
                     return $result;
@@ -148,11 +148,11 @@ class LazyClient extends EventEmitter implements Client
         }
 
         $that = $this;
-        return $this->client()->then(function (Client $client) use ($that) {
-            $client->on('close', function () use ($that) {
+        return $this->client()->then(function (Client $redis) use ($that) {
+            $redis->on('close', function () use ($that) {
                 $that->close();
             });
-            $client->end();
+            $redis->end();
         });
     }
 
@@ -166,8 +166,8 @@ class LazyClient extends EventEmitter implements Client
 
         // either close active connection or cancel pending connection attempt
         if ($this->promise !== null) {
-            $this->promise->then(function (Client $client) {
-                $client->close();
+            $this->promise->then(function (Client $redis) {
+                $redis->close();
             });
             if ($this->promise !== null) {
                 $this->promise->cancel();
@@ -208,8 +208,8 @@ class LazyClient extends EventEmitter implements Client
             $idleTimer =& $this->idleTimer;
             $promise =& $this->promise;
             $idleTimer = $this->loop->addTimer($this->idlePeriod, function () use (&$idleTimer, &$promise) {
-                $promise->then(function (Client $client) {
-                    $client->close();
+                $promise->then(function (Client $redis) {
+                    $redis->close();
                 });
                 $promise = null;
                 $idleTimer = null;

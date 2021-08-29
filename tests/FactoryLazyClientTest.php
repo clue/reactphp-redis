@@ -50,9 +50,9 @@ class FactoryLazyClientTest extends TestCase
         $stream->expects($this->never())->method('write');
 
         $this->connector->expects($this->never())->method('connect')->willReturn(Promise\resolve($stream));
-        $client = $this->factory->createLazyClient('localhost');
+        $redis = $this->factory->createLazyClient('localhost');
 
-        $this->assertInstanceOf('Clue\React\Redis\Client', $client);
+        $this->assertInstanceOf('Clue\React\Redis\Client', $redis);
     }
 
     public function testWillWriteSelectCommandIfTargetContainsPath()
@@ -148,15 +148,15 @@ class FactoryLazyClientTest extends TestCase
     public function testWillRejectIfConnectorRejects()
     {
         $this->connector->expects($this->never())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
-        $client = $this->factory->createLazyClient('redis://127.0.0.1:2');
+        $redis = $this->factory->createLazyClient('redis://127.0.0.1:2');
 
-        $this->assertInstanceOf('Clue\React\Redis\Client', $client);
+        $this->assertInstanceOf('Clue\React\Redis\Client', $redis);
     }
 
     public function testWillRejectIfTargetIsInvalid()
     {
-        $client = $this->factory->createLazyClient('http://invalid target');
+        $redis = $this->factory->createLazyClient('http://invalid target');
 
-        $this->assertInstanceOf('Clue\React\Redis\Client', $client);
+        $this->assertInstanceOf('Clue\React\Redis\Client', $redis);
     }
 }

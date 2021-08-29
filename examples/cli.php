@@ -3,26 +3,23 @@
 // $ php examples/cli.php
 // $ REDIS_URI=localhost:6379 php examples/cli.php
 
-use Clue\React\Redis\Client;
-use Clue\React\Redis\Factory;
 use React\EventLoop\Loop;
-use React\Promise\PromiseInterface;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$factory = new Factory();
+$factory = new Clue\React\Redis\Factory();
 
 echo '# connecting to redis...' . PHP_EOL;
 
-$factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (Client $client) {
+$factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (Clue\React\Redis\Client $redis) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
-    Loop::addReadStream(STDIN, function () use ($client) {
+    Loop::addReadStream(STDIN, function () use ($redis) {
         $line = fgets(STDIN);
         if ($line === false || $line === '') {
             echo '# CTRL-D -> Ending connection...' . PHP_EOL;
             Loop::removeReadStream(STDIN);
-            return $client->end();
+            return $redis->end();
         }
 
         $line = rtrim($line);
@@ -32,10 +29,10 @@ $factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (
 
         $params = explode(' ', $line);
         $method = array_shift($params);
-        $promise = call_user_func_array(array($client, $method), $params);
+        $promise = call_user_func_array(array($redis, $method), $params);
 
         // special method such as end() / close() called
-        if (!$promise instanceof PromiseInterface) {
+        if (!$promise instanceof React\Promise\PromiseInterface) {
             return;
         }
 
@@ -46,7 +43,7 @@ $factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (
         });
     });
 
-    $client->on('close', function() {
+    $redis->on('close', function() {
         echo '## DISCONNECTED' . PHP_EOL;
 
         Loop::removeReadStream(STDIN);
