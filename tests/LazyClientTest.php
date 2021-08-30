@@ -19,7 +19,7 @@ class LazyClientTest extends TestCase
 {
     private $factory;
     private $loop;
-    private $client;
+    private $redis;
 
     /**
      * @before
@@ -29,7 +29,7 @@ class LazyClientTest extends TestCase
         $this->factory = $this->getMockBuilder('Clue\React\Redis\Factory')->disableOriginalConstructor()->getMock();
         $this->loop = $this->getMockBuilder('React\EventLoop\LoopInterface')->getMock();
 
-        $this->client = new LazyClient('localhost', $this->factory, $this->loop);
+        $this->redis = new LazyClient('localhost', $this->factory, $this->loop);
     }
 
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise()
@@ -39,7 +39,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->never())->method('addTimer');
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
 
         $promise->then($this->expectCallableNever());
     }
@@ -49,8 +49,8 @@ class LazyClientTest extends TestCase
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
 
-        $this->client->ping();
-        $this->client->ping();
+        $this->redis->ping();
+        $this->redis->ping();
     }
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer()
@@ -63,7 +63,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->once())->method('addTimer')->with(60.0, $this->anything());
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
         $deferred->resolve($client);
 
         $promise->then($this->expectCallableOnceWith('PONG'));
@@ -71,7 +71,7 @@ class LazyClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam()
     {
-        $this->client = new LazyClient('localhost?idle=10', $this->factory, $this->loop);
+        $this->redis = new LazyClient('localhost?idle=10', $this->factory, $this->loop);
 
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
@@ -81,7 +81,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->once())->method('addTimer')->with(10.0, $this->anything());
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
         $deferred->resolve($client);
 
         $promise->then($this->expectCallableOnceWith('PONG'));
@@ -89,7 +89,7 @@ class LazyClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative()
     {
-        $this->client = new LazyClient('localhost?idle=-1', $this->factory, $this->loop);
+        $this->redis = new LazyClient('localhost?idle=-1', $this->factory, $this->loop);
 
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
@@ -99,7 +99,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->never())->method('addTimer');
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
         $deferred->resolve($client);
 
         $promise->then($this->expectCallableOnceWith('PONG'));
@@ -116,7 +116,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->once())->method('addTimer');
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
         $deferred->resolve($client);
 
         $promise->then(null, $this->expectCallableOnceWith($error));
@@ -129,10 +129,10 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->on('error', $this->expectCallableNever());
-        $this->client->on('close', $this->expectCallableNever());
+        $this->redis->on('error', $this->expectCallableNever());
+        $this->redis->on('close', $this->expectCallableNever());
 
-        $promise = $this->client->ping();
+        $promise = $this->redis->ping();
         $deferred->reject($error);
 
         $promise->then(null, $this->expectCallableOnceWith($error));
@@ -148,10 +148,10 @@ class LazyClientTest extends TestCase
             new Promise(function () { })
         );
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->reject($error);
 
-        $this->client->ping();
+        $this->redis->ping();
     }
 
     public function testPingAfterPreviousUnderlyingClientAlreadyClosedWillCreateNewUnderlyingConnection()
@@ -171,19 +171,19 @@ class LazyClientTest extends TestCase
             new Promise(function () { })
         );
 
-        $this->client->ping();
+        $this->redis->ping();
         $this->assertTrue(is_callable($closeHandler));
         $closeHandler();
 
-        $this->client->ping();
+        $this->redis->ping();
     }
 
     public function testPingAfterCloseWillRejectWithoutCreatingUnderlyingConnection()
     {
         $this->factory->expects($this->never())->method('createClient');
 
-        $this->client->close();
-        $promise = $this->client->ping();
+        $this->redis->close();
+        $promise = $this->redis->ping();
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -211,8 +211,8 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->never())->method('addTimer');
 
-        $this->client->ping();
-        $this->client->ping();
+        $this->redis->ping();
+        $this->redis->ping();
         $deferred->resolve();
     }
 
@@ -231,9 +231,9 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve();
-        $this->client->ping();
+        $this->redis->ping();
     }
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
@@ -251,9 +251,9 @@ class LazyClientTest extends TestCase
             return true;
         }))->willReturn($timer);
 
-        $this->client->on('close', $this->expectCallableNever());
+        $this->redis->on('close', $this->expectCallableNever());
 
-        $this->client->ping();
+        $this->redis->ping();
 
         $this->assertNotNull($timeout);
         $timeout();
@@ -263,17 +263,17 @@ class LazyClientTest extends TestCase
     {
         $this->factory->expects($this->never())->method('createClient');
 
-        $this->client->on('close', $this->expectCallableOnce());
+        $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->client->close();
+        $this->redis->close();
     }
 
     public function testCloseTwiceWillEmitCloseEventOnce()
     {
-        $this->client->on('close', $this->expectCallableOnce());
+        $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->client->close();
-        $this->client->close();
+        $this->redis->close();
+        $this->redis->close();
     }
 
     public function testCloseAfterPingWillCancelUnderlyingClientConnectionWhenStillPending()
@@ -281,8 +281,8 @@ class LazyClientTest extends TestCase
         $promise = new Promise(function () { }, $this->expectCallableOnce());
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
 
-        $this->client->ping();
-        $this->client->close();
+        $this->redis->ping();
+        $this->redis->close();
     }
 
     public function testCloseAfterPingWillEmitCloseWithoutErrorWhenUnderlyingClientConnectionThrowsDueToCancellation()
@@ -292,11 +292,11 @@ class LazyClientTest extends TestCase
         });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
 
-        $this->client->on('error', $this->expectCallableNever());
-        $this->client->on('close', $this->expectCallableOnce());
+        $this->redis->on('error', $this->expectCallableNever());
+        $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->client->ping();
-        $this->client->close();
+        $this->redis->ping();
+        $this->redis->close();
     }
 
     public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved()
@@ -308,9 +308,9 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve($client);
-        $this->client->close();
+        $this->redis->close();
     }
 
     public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved()
@@ -326,9 +326,9 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve();
-        $this->client->close();
+        $this->redis->close();
     }
 
     public function testCloseAfterPingRejectsWillEmitClose()
@@ -346,7 +346,7 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $ref = $this->client;
+        $ref = $this->redis;
         $ref->ping()->then(null, function () use ($ref, $client) {
             $ref->close();
         });
@@ -356,8 +356,8 @@ class LazyClientTest extends TestCase
 
     public function testEndWillCloseClientIfUnderlyingConnectionIsNotPending()
     {
-        $this->client->on('close', $this->expectCallableOnce());
-        $this->client->end();
+        $this->redis->on('close', $this->expectCallableOnce());
+        $this->redis->end();
     }
 
     public function testEndAfterPingWillEndUnderlyingClient()
@@ -369,9 +369,9 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve($client);
-        $this->client->end();
+        $this->redis->end();
     }
 
     public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose()
@@ -389,11 +389,11 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve($client);
 
-        $this->client->on('close', $this->expectCallableOnce());
-        $this->client->end();
+        $this->redis->on('close', $this->expectCallableOnce());
+        $this->redis->end();
 
         $this->assertTrue(is_callable($closeHandler));
         $closeHandler();
@@ -409,10 +409,10 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve($client);
 
-        $this->client->on('error', $this->expectCallableNever());
+        $this->redis->on('error', $this->expectCallableNever());
         $client->emit('error', array($error));
     }
 
@@ -424,10 +424,10 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve($client);
 
-        $this->client->on('close', $this->expectCallableNever());
+        $this->redis->on('close', $this->expectCallableNever());
         $client->emit('close');
     }
 
@@ -450,9 +450,9 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $this->client->on('close', $this->expectCallableNever());
+        $this->redis->on('close', $this->expectCallableNever());
 
-        $this->client->ping();
+        $this->redis->ping();
         $deferred->resolve();
 
         $this->assertTrue(is_callable($closeHandler));
@@ -473,10 +473,10 @@ class LazyClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->client->subscribe('foo');
+        $this->redis->subscribe('foo');
         $deferred->resolve($client);
 
-        $this->client->on('message', $this->expectCallableOnce());
+        $this->redis->on('message', $this->expectCallableOnce());
         $this->assertTrue(is_callable($messageHandler));
         $messageHandler('foo', 'bar');
     }
@@ -494,32 +494,32 @@ class LazyClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
-        $this->client->subscribe('foo');
+        $this->redis->subscribe('foo');
         $this->assertTrue(is_callable($allHandler['subscribe']));
         $allHandler['subscribe']('foo', 1);
 
-        $this->client->subscribe('bar');
+        $this->redis->subscribe('bar');
         $this->assertTrue(is_callable($allHandler['subscribe']));
         $allHandler['subscribe']('bar', 2);
 
-        $this->client->unsubscribe('bar');
+        $this->redis->unsubscribe('bar');
         $this->assertTrue(is_callable($allHandler['unsubscribe']));
         $allHandler['unsubscribe']('bar', 1);
 
-        $this->client->psubscribe('foo*');
+        $this->redis->psubscribe('foo*');
         $this->assertTrue(is_callable($allHandler['psubscribe']));
         $allHandler['psubscribe']('foo*', 1);
 
-        $this->client->psubscribe('bar*');
+        $this->redis->psubscribe('bar*');
         $this->assertTrue(is_callable($allHandler['psubscribe']));
         $allHandler['psubscribe']('bar*', 2);
 
-        $this->client->punsubscribe('bar*');
+        $this->redis->punsubscribe('bar*');
         $this->assertTrue(is_callable($allHandler['punsubscribe']));
         $allHandler['punsubscribe']('bar*', 1);
 
-        $this->client->on('unsubscribe', $this->expectCallableOnce());
-        $this->client->on('punsubscribe', $this->expectCallableOnce());
+        $this->redis->on('unsubscribe', $this->expectCallableOnce());
+        $this->redis->on('punsubscribe', $this->expectCallableOnce());
 
         $this->assertTrue(is_callable($allHandler['close']));
         $allHandler['close']();
@@ -541,7 +541,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->never())->method('addTimer');
 
-        $promise = $this->client->subscribe('foo');
+        $promise = $this->redis->subscribe('foo');
         $this->assertTrue(is_callable($subscribeHandler));
         $subscribeHandler('foo', 1);
         $deferred->resolve(array('subscribe', 'foo', 1));
@@ -570,13 +570,13 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->once())->method('addTimer');
 
-        $promise = $this->client->subscribe('foo');
+        $promise = $this->redis->subscribe('foo');
         $this->assertTrue(is_callable($subscribeHandler));
         $subscribeHandler('foo', 1);
         $deferredSubscribe->resolve(array('subscribe', 'foo', 1));
         $promise->then($this->expectCallableOnceWith(array('subscribe', 'foo', 1)));
 
-        $promise = $this->client->unsubscribe('foo');
+        $promise = $this->redis->unsubscribe('foo');
         $this->assertTrue(is_callable($unsubscribeHandler));
         $unsubscribeHandler('foo', 0);
         $deferredUnsubscribe->resolve(array('unsubscribe', 'foo', 0));
@@ -600,7 +600,7 @@ class LazyClientTest extends TestCase
 
         $this->loop->expects($this->never())->method('addTimer');
 
-        $promise = $this->client->blpop('list');
+        $promise = $this->redis->blpop('list');
 
         $this->assertTrue(is_callable($closeHandler));
         $closeHandler();

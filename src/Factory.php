@@ -103,13 +103,13 @@ class Factory
         $pass = isset($args['password']) ? $args['password'] : (isset($parts['pass']) ? rawurldecode($parts['pass']) : null);
         if (isset($args['password']) || isset($parts['pass'])) {
             $pass = isset($args['password']) ? $args['password'] : rawurldecode($parts['pass']);
-            $promise = $promise->then(function (StreamingClient $client) use ($pass, $uri) {
-                return $client->auth($pass)->then(
-                    function () use ($client) {
-                        return $client;
+            $promise = $promise->then(function (StreamingClient $redis) use ($pass, $uri) {
+                return $redis->auth($pass)->then(
+                    function () use ($redis) {
+                        return $redis;
                     },
-                    function (\Exception $e) use ($client, $uri) {
-                        $client->close();
+                    function (\Exception $e) use ($redis, $uri) {
+                        $redis->close();
 
                         $const = '';
                         $errno = $e->getCode();
@@ -131,13 +131,13 @@ class Factory
         // use `?db=1` query or `/1` path (skip first slash)
         if (isset($args['db']) || (isset($parts['path']) && $parts['path'] !== '/')) {
             $db = isset($args['db']) ? $args['db'] : substr($parts['path'], 1);
-            $promise = $promise->then(function (StreamingClient $client) use ($db, $uri) {
-                return $client->select($db)->then(
-                    function () use ($client) {
-                        return $client;
+            $promise = $promise->then(function (StreamingClient $redis) use ($db, $uri) {
+                return $redis->select($db)->then(
+                    function () use ($redis) {
+                        return $redis;
                     },
-                    function (\Exception $e) use ($client, $uri) {
-                        $client->close();
+                    function (\Exception $e) use ($redis, $uri) {
+                        $redis->close();
 
                         $const = '';
                         $errno = $e->getCode();
