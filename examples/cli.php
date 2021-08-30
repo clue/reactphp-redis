@@ -1,5 +1,8 @@
 <?php
 
+// $ php examples/cli.php
+// $ REDIS_URI=localhost:6379 php examples/cli.php
+
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
 use React\EventLoop\Loop;
@@ -11,7 +14,7 @@ $factory = new Factory();
 
 echo '# connecting to redis...' . PHP_EOL;
 
-$factory->createClient('localhost')->then(function (Client $client) {
+$factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (Client $client) {
     echo '# connected! Entering interactive mode, hit CTRL-D to quit' . PHP_EOL;
 
     Loop::addReadStream(STDIN, function () use ($client) {
@@ -38,7 +41,7 @@ $factory->createClient('localhost')->then(function (Client $client) {
 
         $promise->then(function ($data) {
             echo '# reply: ' . json_encode($data) . PHP_EOL;
-        }, function ($e) {
+        }, function (Exception $e) {
             echo '# error reply: ' . $e->getMessage() . PHP_EOL;
         });
     });
@@ -48,10 +51,7 @@ $factory->createClient('localhost')->then(function (Client $client) {
 
         Loop::removeReadStream(STDIN);
     });
-}, function (Exception $error) {
-    echo 'CONNECTION ERROR: ' . $error->getMessage() . PHP_EOL;
-    if ($error->getPrevious()) {
-        echo $error->getPrevious()->getMessage() . PHP_EOL;
-    }
+}, function (Exception $e) {
+    echo 'Error: ' . $e->getMessage() . PHP_EOL;
     exit(1);
 });

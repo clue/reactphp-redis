@@ -185,7 +185,17 @@ class LazyClientTest extends TestCase
         $this->client->close();
         $promise = $this->client->ping();
 
-        $promise->then(null, $this->expectCallableOnce());
+        $promise->then(null, $this->expectCallableOnceWith(
+            $this->logicalAnd(
+                $this->isInstanceOf('RuntimeException'),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getMessage() === 'Connection closed (ENOTCONN)';
+                }),
+                $this->callback(function (\RuntimeException $e) {
+                    return $e->getCode() === (defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107);
+                })
+            )
+        ));
     }
 
     public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves()

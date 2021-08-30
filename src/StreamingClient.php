@@ -2,18 +2,15 @@
 
 namespace Clue\React\Redis;
 
-use Evenement\EventEmitter;
-use Clue\Redis\Protocol\Parser\ParserInterface;
-use Clue\Redis\Protocol\Parser\ParserException;
-use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
-use UnderflowException;
-use RuntimeException;
-use InvalidArgumentException;
-use React\Promise\Deferred;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
+use Clue\Redis\Protocol\Parser\ParserException;
+use Clue\Redis\Protocol\Parser\ParserInterface;
+use Clue\Redis\Protocol\Serializer\SerializerInterface;
+use Evenement\EventEmitter;
+use React\Promise\Deferred;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -47,9 +44,12 @@ class StreamingClient extends EventEmitter implements Client
         $stream->on('data', function($chunk) use ($parser, $that) {
             try {
                 $models = $parser->pushIncoming($chunk);
-            }
-            catch (ParserException $error) {
-                $that->emit('error', array($error));
+            } catch (ParserException $error) {
+                $that->emit('error', array(new \UnexpectedValueException(
+                    'Invalid data received: ' . $error->getMessage() . ' (EBADMSG)',
+                    defined('SOCKET_EBADMSG') ? SOCKET_EBADMSG : 77,
+                    $error
+                )));
                 $that->close();
                 return;
             }
@@ -57,8 +57,7 @@ class StreamingClient extends EventEmitter implements Client
             foreach ($models as $data) {
                 try {
                     $that->handleMessage($data);
-                }
-                catch (UnderflowException $error) {
+                } catch (\UnderflowException $error) {
                     $that->emit('error', array($error));
                     $that->close();
                     return;
@@ -84,11 +83,20 @@ class StreamingClient extends EventEmitter implements Client
         static $pubsubs = array('subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe');
 
         if ($this->ending) {
-            $request->reject(new RuntimeException('Connection closed'));
+            $request->reject(new \RuntimeException(
+                'Connection ' . ($this->closed ? 'closed' : 'closing'). ' (ENOTCONN)',
+                defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107
+            ));
         } elseif (count($args) !== 1 && in_array($name, $pubsubs)) {
-            $request->reject(new InvalidArgumentException('PubSub commands limited to single argument'));
+            $request->reject(new \InvalidArgumentException(
+                'PubSub commands limited to single argument (EINVAL)',
+                defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
+            ));
         } elseif ($name === 'monitor') {
-            $request->reject(new \BadMethodCallException('MONITOR command explicitly not supported'));
+            $request->reject(new \BadMethodCallException(
+                'MONITOR command explicitly not supported (ENOTSUP)',
+                defined('SOCKET_ENOTSUP') ? SOCKET_ENOTSUP : (defined('SOCKET_EOPNOTSUPP') ? SOCKET_EOPNOTSUPP : 95)
+            ));
         } else {
             $this->stream->write($this->serializer->getRequestMessage($name, $args));
             $this->requests []= $request;
@@ -131,11 +139,14 @@ class StreamingClient extends EventEmitter implements Client
         }
 
         if (!$this->requests) {
-            throw new UnderflowException('Unexpected reply received, no matching request found');
+            throw new \UnderflowException(
+                'Unexpected reply received, no matching request found (ENOMSG)',
+                defined('SOCKET_ENOMSG') ? SOCKET_ENOMSG : 42
+            );
         }
 
         $request = array_shift($this->requests);
-        /* @var $request Deferred */
+        assert($request instanceof Deferred);
 
         if ($message instanceof ErrorReply) {
             $request->reject($message);
@@ -166,15 +177,27 @@ class StreamingClient extends EventEmitter implements Client
         $this->ending = true;
         $this->closed = true;
 
+        $remoteClosed = $this->stream->isReadable() === false && $this->stream->isWritable() === false;
         $this->stream->close();
 
         $this->emit('close');
 
         // reject all remaining requests in the queue
-        while($this->requests) {
+        while ($this->requests) {
             $request = array_shift($this->requests);
-            /* @var $request Request */
-            $request->reject(new RuntimeException('Connection closing'));
+            assert($request instanceof Deferred);
+
+            if ($remoteClosed) {
+                $request->reject(new \RuntimeException(
+                    'Connection closed by peer (ECONNRESET)',
+                    defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104
+                ));
+            } else {
+                $request->reject(new \RuntimeException(
+                    'Connection closing (ECONNABORTED)',
+                    defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103
+                ));
+            }
         }
     }
 }

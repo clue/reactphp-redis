@@ -115,7 +115,10 @@ class LazyClient extends EventEmitter implements Client
     public function __call($name, $args)
     {
         if ($this->closed) {
-            return \React\Promise\reject(new \RuntimeException('Connection closed'));
+            return \React\Promise\reject(new \RuntimeException(
+                'Connection closed (ENOTCONN)',
+                defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107
+            ));
         }
 
         $that = $this;
