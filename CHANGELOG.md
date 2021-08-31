@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.5.0 (2021-08-31)
+
+*   Feature: Simplify usage by supporting new [default loop](https://reactphp.org/event-loop/#loop) and new Socket API.
+    (#114 and #115 by @SimonFrings)
+
+    ```php
+    // old (still supported)
+    $factory = new Clue\React\Redis\Factory($loop);
+
+    // new (using default loop)
+    $factory = new Clue\React\Redis\Factory();
+    ```
+
+*   Feature: Improve error reporting, include Redis URI and socket error codes in all connection errors.
+    (#116 by @clue)
+
+*   Documentation improvements and updated examples.
+    (#117 by @clue, #112 by @Nyholm and #113 by @PaulRotmann)
+
+*   Improve test suite and use GitHub actions for continuous integration (CI).
+    (#111 by @SimonFrings)
+
 ## 2.4.0 (2020-09-25)
 
 *   Fix: Fix dangling timer when lazy connection closes with pending commands.
