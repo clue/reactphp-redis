@@ -31,7 +31,7 @@ class LazyClient extends EventEmitter implements Client
     public function __construct($target, Factory $factory, LoopInterface $loop)
     {
         $args = array();
-        \parse_str(\parse_url($target, \PHP_URL_QUERY), $args);
+        \parse_str((string) \parse_url($target, \PHP_URL_QUERY), $args);
         if (isset($args['idle'])) {
             $this->idlePeriod = (float)$args['idle'];
         }
