@@ -616,8 +616,7 @@ $ composer require clue/redis-react:^2.5
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
 
 This project aims to run on any platform and thus does not require any PHP
-extensions and supports running on legacy PHP 5.3 through current PHP 8+ and
-HHVM.
+extensions and supports running on legacy PHP 5.3 through current PHP 8+.
 It's *highly recommended to use the latest supported PHP version* for this project.
 
 ## Tests
