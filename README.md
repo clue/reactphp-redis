@@ -1,6 +1,6 @@
 # clue/reactphp-redis
 
-[![CI status](https://github.com/clue/reactphp-redis/workflows/CI/badge.svg)](https://github.com/clue/reactphp-redis/actions)
+[![CI status](https://github.com/clue/reactphp-redis/actions/workflows/ci.yml/badge.svg)](https://github.com/clue/reactphp-redis/actions)
 [![installs on Packagist](https://img.shields.io/packagist/dt/clue/redis-react?color=blue&label=installs%20on%20Packagist)](https://packagist.org/packages/clue/redis-react)
 
 Async [Redis](https://redis.io/) client implementation, built on top of [ReactPHP](https://reactphp.org/).
