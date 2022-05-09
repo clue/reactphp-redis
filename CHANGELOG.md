@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.0 (2022-05-09)
+
+*   Feature: Support PHP 8.1 release.
+    (#119 by @clue)
+
+*   Improve documentation and CI configuration.
+    (#123 and #125 by @SimonFrings)
+
 ## 2.5.0 (2021-08-31)
 
 *   Feature: Simplify usage by supporting new [default loop](https://reactphp.org/event-loop/#loop) and new Socket API.
