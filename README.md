@@ -144,7 +144,7 @@ interface that makes it easy to react to when a command is completed
 (i.e. either successfully fulfilled or rejected with an error):
 
 ```php
-$redis->get($key)->then(function (string $value) {
+$redis->get($key)->then(function (?string $value) {
     var_dump($value);
 }, function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
@@ -541,7 +541,7 @@ Each method call matches the respective [Redis command](https://redis.io/command
 For example, the `$redis->get()` method will invoke the [`GET` command](https://redis.io/commands/get).
 
 ```php
-$redis->get($key)->then(function (string $value) {
+$redis->get($key)->then(function (?string $value) {
     var_dump($value);
 }, function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
