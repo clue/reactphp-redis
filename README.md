@@ -5,6 +5,15 @@
 
 Async [Redis](https://redis.io/) client implementation, built on top of [ReactPHP](https://reactphp.org/).
 
+> **Development version:** This branch contains the code for the upcoming 3.0 release.
+> For the code of the current stable 2.x release, check out the
+> [`2.x` branch](https://github.com/reactphp/promise/tree/2.x).
+>
+> The upcoming 3.0 release will be the way forward for this package.
+> However, we will still actively support 2.x for those not yet
+> on the latest version.
+> See also [installation instructions](#install) for more details.
+
 [Redis](https://redis.io/) is an open source, advanced, in-memory key-value database.
 It offers a set of simple, atomic operations in order to work with its primitive data types.
 Its lightweight design and fast operation makes it an ideal candidate for modern application stacks.
@@ -606,11 +615,11 @@ See also the [`close()`](#close) method.
 The recommended way to install this library is [through Composer](https://getcomposer.org/).
 [New to Composer?](https://getcomposer.org/doc/00-intro.md)
 
-This project follows [SemVer](https://semver.org/).
-This will install the latest supported version:
+Once released, this project will follow [SemVer](https://semver.org/).
+At the moment, this will install the latest development version:
 
 ```bash
-$ composer require clue/redis-react:^2.6
+$ composer require clue/redis-react:^3@dev
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -619,6 +628,14 @@ This project aims to run on any platform and thus does not require any PHP
 extensions and supports running on legacy PHP 5.3 through current PHP 8+ and
 HHVM.
 It's *highly recommended to use the latest supported PHP version* for this project.
+
+We're committed to providing long-term support (LTS) options and to provide a
+smooth upgrade path. You may target multiple versions at the same time to
+support a wider range of PHP versions like this:
+
+```bash
+$ composer require "clue/redis-react:^3@dev || ^2"
+```
 
 ## Tests
 
