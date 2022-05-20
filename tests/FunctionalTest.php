@@ -2,13 +2,14 @@
 
 namespace Clue\Tests\React\Redis;
 
-use Clue\React\Block;
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
 use Clue\React\Redis\StreamingClient;
 use React\EventLoop\StreamSelectLoop;
 use React\Promise\Deferred;
+use React\Promise\PromiseInterface;
 use React\Stream\DuplexResourceStream;
+use function Clue\React\Block\await;
 
 class FunctionalTest extends TestCase
 {
@@ -35,9 +36,9 @@ class FunctionalTest extends TestCase
         $redis = $this->createClient($this->uri);
 
         $promise = $redis->ping();
-        $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = Block\await($promise, $this->loop);
+        $ret = await($promise, $this->loop);
 
         $this->assertEquals('PONG', $ret);
     }
@@ -47,9 +48,9 @@ class FunctionalTest extends TestCase
         $redis = $this->factory->createLazyClient($this->uri);
 
         $promise = $redis->ping();
-        $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = Block\await($promise, $this->loop);
+        $ret = await($promise, $this->loop);
 
         $this->assertEquals('PONG', $ret);
     }
@@ -87,7 +88,7 @@ class FunctionalTest extends TestCase
         $promise = $redis->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $redis->on('message', $this->expectCallableNever());
 
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     public function testPipeline()
@@ -99,7 +100,7 @@ class FunctionalTest extends TestCase
         $redis->incr('a')->then($this->expectCallableOnceWith(3));
         $promise = $redis->get('a')->then($this->expectCallableOnceWith('3'));
 
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     public function testInvalidCommand()
@@ -112,16 +113,16 @@ class FunctionalTest extends TestCase
         } else {
             $this->setExpectedException('Exception');
         }
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     public function testMultiExecEmpty()
     {
         $redis = $this->createClient($this->uri);
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
-        $promise = $redis->exec()->then($this->expectCallableOnceWith(array()));
+        $promise = $redis->exec()->then($this->expectCallableOnceWith([]));
 
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     public function testMultiExecQueuedExecHasValues()
@@ -133,9 +134,9 @@ class FunctionalTest extends TestCase
         $redis->expire('b', 20)->then($this->expectCallableOnceWith('QUEUED'));
         $redis->incrBy('b', 2)->then($this->expectCallableOnceWith('QUEUED'));
         $redis->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
-        $promise = $redis->exec()->then($this->expectCallableOnceWith(array('OK', 1, 12, 20)));
+        $promise = $redis->exec()->then($this->expectCallableOnceWith(['OK', 1, 12, 20]));
 
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     public function testPubSub()
@@ -148,7 +149,7 @@ class FunctionalTest extends TestCase
         // consumer receives a single message
         $deferred = new Deferred();
         $consumer->on('message', $this->expectCallableOnce());
-        $consumer->on('message', array($deferred, 'resolve'));
+        $consumer->on('message', [$deferred, 'resolve']);
         $once = $this->expectCallableOnceWith(1);
         $consumer->subscribe($channel)->then(function() use ($producer, $channel, $once){
             // producer sends a single message
@@ -156,7 +157,7 @@ class FunctionalTest extends TestCase
         })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
-        Block\await($deferred->promise(), $this->loop, 0.1);
+        await($deferred->promise(), $this->loop, 0.1);
     }
 
     public function testClose()
@@ -190,12 +191,8 @@ class FunctionalTest extends TestCase
 
         $promise = $redis->get('willBeRejectedDueToClosing');
 
-        if (method_exists($this, 'expectException')) {
-            $this->expectException('Exception');
-        } else {
-            $this->setExpectedException('Exception');
-        }
-        Block\await($promise, $this->loop);
+        $this->expectException(\Exception::class);
+        await($promise, $this->loop);
     }
 
     public function testInvalidServerRepliesWithDuplicateMessages()
@@ -207,7 +204,7 @@ class FunctionalTest extends TestCase
 
         $promise = $redis->set('a', 0)->then($this->expectCallableOnceWith('OK'));
 
-        Block\await($promise, $this->loop);
+        await($promise, $this->loop);
     }
 
     /**
@@ -216,7 +213,7 @@ class FunctionalTest extends TestCase
      */
     protected function createClient($uri)
     {
-        return Block\await($this->factory->createClient($uri), $this->loop);
+        return await($this->factory->createClient($uri), $this->loop);
     }
 
     protected function createClientResponse($response)

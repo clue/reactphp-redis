@@ -21,7 +21,7 @@
     },
     "require-dev": {
         "clue/block-react": "^1.1",
-        "phpunit/phpunit": "^9.3 || ^5.7"
+        "phpunit/phpunit": "^9.3 || ^7.5"
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }
