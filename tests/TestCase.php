@@ -2,7 +2,9 @@
 
 namespace Clue\Tests\React\Redis;
 
+use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\TestCase as BaseTestCase;
+use React\Promise\PromiseInterface;
 
 class TestCase extends BaseTestCase
 {
@@ -32,23 +34,22 @@ class TestCase extends BaseTestCase
 
     protected function createCallableMock()
     {
-        if (method_exists('PHPUnit\Framework\MockObject\MockBuilder', 'addMethods')) {
+        if (method_exists(MockBuilder::class, 'addMethods')) {
             // PHPUnit 9+
-            return $this->getMockBuilder('stdClass')->addMethods(array('__invoke'))->getMock();
+            return $this->getMockBuilder(\stdClass::class)->addMethods(['__invoke'])->getMock();
         } else {
-            // legacy PHPUnit 4 - PHPUnit 8
-            return $this->getMockBuilder('stdClass')->setMethods(array('__invoke'))->getMock();
+            // legacy PHPUnit < 9
+            return $this->getMockBuilder(\stdClass::class)->setMethods(['__invoke'])->getMock();
         }
     }
 
     protected function expectPromiseResolve($promise)
     {
-        $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $that = $this;
-        $promise->then(null, function($error) use ($that) {
-            $that->assertNull($error);
-            $that->fail('promise rejected');
+        $promise->then(null, function($error) {
+            $this->assertNull($error);
+            $this->fail('promise rejected');
         });
         $promise->then($this->expectCallableOnce(), $this->expectCallableNever());
 
@@ -57,12 +58,11 @@ class TestCase extends BaseTestCase
 
     protected function expectPromiseReject($promise)
     {
-        $this->assertInstanceOf('React\Promise\PromiseInterface', $promise);
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $that = $this;
-        $promise->then(function($value) use ($that) {
-            $that->assertNull($value);
-            $that->fail('promise resolved');
+        $promise->then(function($value) {
+            $this->assertNull($value);
+            $this->fail('promise resolved');
         });
 
         $promise->then($this->expectCallableNever(), $this->expectCallableOnce());

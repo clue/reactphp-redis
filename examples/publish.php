@@ -8,8 +8,8 @@ require __DIR__ . '/../vendor/autoload.php';
 $factory = new Clue\React\Redis\Factory();
 $redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
-$channel = isset($argv[1]) ? $argv[1] : 'channel';
-$message = isset($argv[2]) ? $argv[2] : 'message';
+$channel = $argv[1] ?? 'channel';
+$message = $argv[2] ?? 'message';
 
 $redis->publish($channel, $message)->then(function ($received) {
     echo 'Successfully published. Received by ' . $received . PHP_EOL;

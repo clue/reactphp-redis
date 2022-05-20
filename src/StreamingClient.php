@@ -21,7 +21,7 @@ class StreamingClient extends EventEmitter implements Client
     private $stream;
     private $parser;
     private $serializer;
-    private $requests = array();
+    private $requests = [];
     private $ending = false;
     private $closed = false;
 
@@ -40,32 +40,31 @@ class StreamingClient extends EventEmitter implements Client
             }
         }
 
-        $that = $this;
-        $stream->on('data', function($chunk) use ($parser, $that) {
+        $stream->on('data', function($chunk) use ($parser) {
             try {
                 $models = $parser->pushIncoming($chunk);
             } catch (ParserException $error) {
-                $that->emit('error', array(new \UnexpectedValueException(
+                $this->emit('error', [new \UnexpectedValueException(
                     'Invalid data received: ' . $error->getMessage() . ' (EBADMSG)',
                     defined('SOCKET_EBADMSG') ? SOCKET_EBADMSG : 77,
                     $error
-                )));
-                $that->close();
+                )]);
+                $this->close();
                 return;
             }
 
             foreach ($models as $data) {
                 try {
-                    $that->handleMessage($data);
+                    $this->handleMessage($data);
                 } catch (\UnderflowException $error) {
-                    $that->emit('error', array($error));
-                    $that->close();
+                    $this->emit('error', [$error]);
+                    $this->close();
                     return;
                 }
             }
         });
 
-        $stream->on('close', array($this, 'close'));
+        $stream->on('close', [$this, 'close']);
 
         $this->stream = $stream;
         $this->parser = $parser;
@@ -80,7 +79,7 @@ class StreamingClient extends EventEmitter implements Client
         $name = strtolower($name);
 
         // special (p)(un)subscribe commands only accept a single parameter and have custom response logic applied
-        static $pubsubs = array('subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe');
+        static $pubsubs = ['subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe'];
 
         if ($this->ending) {
             $request->reject(new \RuntimeException(
@@ -103,21 +102,17 @@ class StreamingClient extends EventEmitter implements Client
         }
 
         if (in_array($name, $pubsubs)) {
-            $that = $this;
-            $subscribed =& $this->subscribed;
-            $psubscribed =& $this->psubscribed;
-
-            $promise->then(function ($array) use ($that, &$subscribed, &$psubscribed) {
+            $promise->then(function ($array) {
                 $first = array_shift($array);
 
                 // (p)(un)subscribe messages are to be forwarded
-                $that->emit($first, $array);
+                $this->emit($first, $array);
 
                 // remember number of (p)subscribe topics
                 if ($first === 'subscribe' || $first === 'unsubscribe') {
-                    $subscribed = $array[1];
+                    $this->subscribed = $array[1];
                 } else {
-                    $psubscribed = $array[1];
+                    $this->psubscribed = $array[1];
                 }
             });
         }
@@ -132,7 +127,7 @@ class StreamingClient extends EventEmitter implements Client
             $first = array_shift($array);
 
             // pub/sub messages are to be forwarded and should not be processed as request responses
-            if (in_array($first, array('message', 'pmessage'))) {
+            if (in_array($first, ['message', 'pmessage'])) {
                 $this->emit($first, $array);
                 return;
             }

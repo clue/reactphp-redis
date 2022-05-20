@@ -17,11 +17,6 @@ jobs:
           - 7.3
           - 7.2
           - 7.1
-          - 7.0
-          - 5.6
-          - 5.5
-          - 5.4
-          - 5.3
     steps:
       - uses: actions/checkout@v2
       - uses: shivammathur/setup-php@v2
@@ -34,17 +29,3 @@ jobs:
         if: ${{ matrix.php >= 7.3 }}
       - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text -c phpunit.xml.legacy
         if: ${{ matrix.php < 7.3 }}
-
-  PHPUnit-hhvm:
-    name: PHPUnit (HHVM)
-    runs-on: ubuntu-18.04
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v2
-      - uses: azjezz/setup-hhvm@v1
-        with:
-          version: lts-3.30
-      - run: composer self-update --2.2 # downgrade Composer for HHVM
-      - run: hhvm $(which composer) install
-      - run: docker run --net=host -d redis
-      - run: REDIS_URI=localhost:6379 hhvm vendor/bin/phpunit

@@ -7,7 +7,7 @@ Async [Redis](https://redis.io/) client implementation, built on top of [ReactPH
 
 > **Development version:** This branch contains the code for the upcoming 3.0 release.
 > For the code of the current stable 2.x release, check out the
-> [`2.x` branch](https://github.com/reactphp/promise/tree/2.x).
+> [`2.x` branch](https://github.com/clue/reactphp-redis/tree/2.x).
 >
 > The upcoming 3.0 release will be the way forward for this package.
 > However, we will still actively support 2.x for those not yet
@@ -173,7 +173,7 @@ send a message to all clients currently subscribed to a given channel:
 
 ```php
 $channel = 'user';
-$message = json_encode(array('id' => 10));
+$message = json_encode(['id' => 10]);
 $redis->publish($channel, $message);
 ```
 
@@ -288,16 +288,16 @@ proxy servers etc.), you can explicitly pass a custom instance of the
 [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new React\Socket\Connector(array(
+$connector = new React\Socket\Connector([
     'dns' => '127.0.0.1',
-    'tcp' => array(
+    'tcp' => [
         'bindto' => '192.168.10.1:0'
-    ),
-    'tls' => array(
+    ],
+    'tls' => [
         'verify_peer' => false,
         'verify_peer_name' => false
-    )
-));
+    ]
+]);
 
 $factory = new Clue\React\Redis\Factory(null, $connector);
 ```
@@ -625,8 +625,7 @@ $ composer require clue/redis-react:^3@dev
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
 
 This project aims to run on any platform and thus does not require any PHP
-extensions and supports running on legacy PHP 5.3 through current PHP 8+ and
-HHVM.
+extensions and supports running on PHP 7.1 through current PHP 8+.
 It's *highly recommended to use the latest supported PHP version* for this project.
 
 We're committed to providing long-term support (LTS) options and to provide a
