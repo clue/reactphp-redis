@@ -10,6 +10,8 @@ use React\Promise\Timer\TimeoutException;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
+use function React\Promise\reject;
+use function React\Promise\Timer\timeout;
 
 class Factory
 {
@@ -30,7 +32,7 @@ class Factory
     public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
         $this->loop = $loop ?: Loop::get();
-        $this->connector = $connector ?: new Connector(array(), $this->loop);
+        $this->connector = $connector ?: new Connector([], $this->loop);
         $this->protocol = $protocol ?: new ProtocolFactory();
     }
 
@@ -54,18 +56,18 @@ class Factory
             $parts = parse_url($uri);
         }
 
-        $uri = preg_replace(array('/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'), '$1***$2', $uri);
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], array('redis', 'rediss', 'redis+unix'))) {
-            return \React\Promise\reject(new \InvalidArgumentException(
+        $uri = preg_replace(['/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'], '$1***$2', $uri);
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], ['redis', 'rediss', 'redis+unix'])) {
+            return reject(new \InvalidArgumentException(
                 'Invalid Redis URI given (EINVAL)',
                 defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
             ));
         }
 
-        $args = array();
-        parse_str(isset($parts['query']) ? $parts['query'] : '', $args);
+        $args = [];
+        parse_str($parts['query'] ?? '', $args);
 
-        $authority = $parts['host'] . ':' . (isset($parts['port']) ? $parts['port'] : 6379);
+        $authority = $parts['host'] . ':' . ($parts['port'] ?? 6379);
         if ($parts['scheme'] === 'rediss') {
             $authority = 'tls://' . $authority;
         } elseif ($parts['scheme'] === 'redis+unix') {
@@ -88,9 +90,8 @@ class Factory
             $connecting->cancel();
         });
 
-        $protocol = $this->protocol;
-        $promise = $connecting->then(function (ConnectionInterface $stream) use ($protocol) {
-            return new StreamingClient($stream, $protocol->createResponseParser(), $protocol->createSerializer());
+        $promise = $connecting->then(function (ConnectionInterface $stream) {
+            return new StreamingClient($stream, $this->protocol->createResponseParser(), $this->protocol->createSerializer());
         }, function (\Exception $e) use ($uri) {
             throw new \RuntimeException(
                 'Connection to ' . $uri . ' failed: ' . $e->getMessage(),
@@ -100,9 +101,8 @@ class Factory
         });
 
         // use `?password=secret` query or `user:secret@host` password form URL
-        $pass = isset($args['password']) ? $args['password'] : (isset($parts['pass']) ? rawurldecode($parts['pass']) : null);
         if (isset($args['password']) || isset($parts['pass'])) {
-            $pass = isset($args['password']) ? $args['password'] : rawurldecode($parts['pass']);
+            $pass = $args['password'] ?? rawurldecode($parts['pass']);
             $promise = $promise->then(function (StreamingClient $redis) use ($pass, $uri) {
                 return $redis->auth($pass)->then(
                     function () use ($redis) {
@@ -130,7 +130,7 @@ class Factory
 
         // use `?db=1` query or `/1` path (skip first slash)
         if (isset($args['db']) || (isset($parts['path']) && $parts['path'] !== '/')) {
-            $db = isset($args['db']) ? $args['db'] : substr($parts['path'], 1);
+            $db = $args['db'] ?? substr($parts['path'], 1);
             $promise = $promise->then(function (StreamingClient $redis) use ($db, $uri) {
                 return $redis->select($db)->then(
                     function () use ($redis) {
@@ -159,7 +159,7 @@ class Factory
             });
         }
 
-        $promise->then(array($deferred, 'resolve'), array($deferred, 'reject'));
+        $promise->then([$deferred, 'resolve'], [$deferred, 'reject']);
 
         // use timeout from explicit ?timeout=x parameter or default to PHP's default_socket_timeout (60)
         $timeout = isset($args['timeout']) ? (float) $args['timeout'] : (int) ini_get("default_socket_timeout");
@@ -167,7 +167,7 @@ class Factory
             return $deferred->promise();
         }
 
-        return \React\Promise\Timer\timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
+        return timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
                     'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds (ETIMEDOUT)',

@@ -10,7 +10,7 @@ require __DIR__ . '/../vendor/autoload.php';
 $factory = new Clue\React\Redis\Factory();
 $redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
-$channel = isset($argv[1]) ? $argv[1] : 'channel';
+$channel = $argv[1] ?? 'channel';
 
 $redis->subscribe($channel)->then(function () {
     echo 'Now subscribed to channel ' . PHP_EOL;

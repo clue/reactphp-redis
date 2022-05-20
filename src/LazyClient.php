@@ -5,6 +5,7 @@ namespace Clue\React\Redis;
 use Evenement\EventEmitter;
 use React\Stream\Util;
 use React\EventLoop\LoopInterface;
+use function React\Promise\reject;
 
 /**
  * @internal
@@ -22,15 +23,15 @@ class LazyClient extends EventEmitter implements Client
     private $idleTimer;
     private $pending = 0;
 
-    private $subscribed = array();
-    private $psubscribed = array();
+    private $subscribed = [];
+    private $psubscribed = [];
 
     /**
      * @param $target
      */
     public function __construct($target, Factory $factory, LoopInterface $loop)
     {
-        $args = array();
+        $args = [];
         \parse_str((string) \parse_url($target, \PHP_URL_QUERY), $args);
         if (isset($args['idle'])) {
             $this->idlePeriod = (float)$args['idle'];
@@ -47,66 +48,59 @@ class LazyClient extends EventEmitter implements Client
             return $this->promise;
         }
 
-        $self = $this;
-        $pending =& $this->promise;
-        $idleTimer=& $this->idleTimer;
-        $subscribed =& $this->subscribed;
-        $psubscribed =& $this->psubscribed;
-        $loop = $this->loop;
-        return $pending = $this->factory->createClient($this->target)->then(function (Client $redis) use ($self, &$pending, &$idleTimer, &$subscribed, &$psubscribed, $loop) {
+        return $this->promise = $this->factory->createClient($this->target)->then(function (Client $redis) {
             // connection completed => remember only until closed
-            $redis->on('close', function () use (&$pending, $self, &$subscribed, &$psubscribed, &$idleTimer, $loop) {
-                $pending = null;
+            $redis->on('close', function () {
+                $this->promise = null;
 
                 // foward unsubscribe/punsubscribe events when underlying connection closes
-                $n = count($subscribed);
-                foreach ($subscribed as $channel => $_) {
-                    $self->emit('unsubscribe', array($channel, --$n));
+                $n = count($this->subscribed);
+                foreach ($this->subscribed as $channel => $_) {
+                    $this->emit('unsubscribe', [$channel, --$n]);
                 }
-                $n = count($psubscribed);
-                foreach ($psubscribed as $pattern => $_) {
-                    $self->emit('punsubscribe', array($pattern, --$n));
+                $n = count($this->psubscribed);
+                foreach ($this->psubscribed as $pattern => $_) {
+                    $this->emit('punsubscribe', [$pattern, --$n]);
                 }
-                $subscribed = array();
-                $psubscribed = array();
+                $this->subscribed = $this->psubscribed = [];
 
-                if ($idleTimer !== null) {
-                    $loop->cancelTimer($idleTimer);
-                    $idleTimer = null;
+                if ($this->idleTimer !== null) {
+                    $this->loop->cancelTimer($this->idleTimer);
+                    $this->idleTimer = null;
                 }
             });
 
             // keep track of all channels and patterns this connection is subscribed to
-            $redis->on('subscribe', function ($channel) use (&$subscribed) {
-                $subscribed[$channel] = true;
+            $redis->on('subscribe', function ($channel) {
+                $this->subscribed[$channel] = true;
             });
-            $redis->on('psubscribe', function ($pattern) use (&$psubscribed) {
-                $psubscribed[$pattern] = true;
+            $redis->on('psubscribe', function ($pattern) {
+                $this->psubscribed[$pattern] = true;
             });
-            $redis->on('unsubscribe', function ($channel) use (&$subscribed) {
-                unset($subscribed[$channel]);
+            $redis->on('unsubscribe', function ($channel) {
+                unset($this->subscribed[$channel]);
             });
-            $redis->on('punsubscribe', function ($pattern) use (&$psubscribed) {
-                unset($psubscribed[$pattern]);
+            $redis->on('punsubscribe', function ($pattern) {
+                unset($this->psubscribed[$pattern]);
             });
 
             Util::forwardEvents(
                 $redis,
-                $self,
-                array(
+                $this,
+                [
                     'message',
                     'subscribe',
                     'unsubscribe',
                     'pmessage',
                     'psubscribe',
                     'punsubscribe',
-                )
+                ]
             );
 
             return $redis;
-        }, function (\Exception $e) use (&$pending) {
+        }, function (\Exception $e) {
             // connection failed => discard connection attempt
-            $pending = null;
+            $this->promise = null;
 
             throw $e;
         });
@@ -115,22 +109,21 @@ class LazyClient extends EventEmitter implements Client
     public function __call($name, $args)
     {
         if ($this->closed) {
-            return \React\Promise\reject(new \RuntimeException(
+            return reject(new \RuntimeException(
                 'Connection closed (ENOTCONN)',
                 defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107
             ));
         }
 
-        $that = $this;
-        return $this->client()->then(function (Client $redis) use ($name, $args, $that) {
-            $that->awake();
-            return \call_user_func_array(array($redis, $name), $args)->then(
-                function ($result) use ($that) {
-                    $that->idle();
+        return $this->client()->then(function (Client $redis) use ($name, $args) {
+            $this->awake();
+            return \call_user_func_array([$redis, $name], $args)->then(
+                function ($result) {
+                    $this->idle();
                     return $result;
                 },
-                function ($error) use ($that) {
-                    $that->idle();
+                function ($error) {
+                    $this->idle();
                     throw $error;
                 }
             );
@@ -147,10 +140,9 @@ class LazyClient extends EventEmitter implements Client
             return;
         }
 
-        $that = $this;
-        return $this->client()->then(function (Client $redis) use ($that) {
-            $redis->on('close', function () use ($that) {
-                $that->close();
+        return $this->client()->then(function (Client $redis) {
+            $redis->on('close', function () {
+                $this->close();
             });
             $redis->end();
         });
@@ -205,14 +197,12 @@ class LazyClient extends EventEmitter implements Client
         --$this->pending;
 
         if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
-            $idleTimer =& $this->idleTimer;
-            $promise =& $this->promise;
-            $idleTimer = $this->loop->addTimer($this->idlePeriod, function () use (&$idleTimer, &$promise) {
-                $promise->then(function (Client $redis) {
+            $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+                $this->promise->then(function (Client $redis) {
                     $redis->close();
                 });
-                $promise = null;
-                $idleTimer = null;
+                $this->promise = null;
+                $this->idleTimer = null;
             });
         }
     }

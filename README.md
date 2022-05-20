@@ -173,7 +173,7 @@ send a message to all clients currently subscribed to a given channel:
 
 ```php
 $channel = 'user';
-$message = json_encode(array('id' => 10));
+$message = json_encode(['id' => 10]);
 $redis->publish($channel, $message);
 ```
 
@@ -288,16 +288,16 @@ proxy servers etc.), you can explicitly pass a custom instance of the
 [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
 ```php
-$connector = new React\Socket\Connector(array(
+$connector = new React\Socket\Connector([
     'dns' => '127.0.0.1',
-    'tcp' => array(
+    'tcp' => [
         'bindto' => '192.168.10.1:0'
-    ),
-    'tls' => array(
+    ],
+    'tls' => [
         'verify_peer' => false,
         'verify_peer_name' => false
-    )
-));
+    ]
+]);
 
 $factory = new Clue\React\Redis\Factory(null, $connector);
 ```

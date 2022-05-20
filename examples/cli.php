@@ -29,7 +29,7 @@ $factory->createClient(getenv('REDIS_URI') ?: 'localhost:6379')->then(function (
 
         $params = explode(' ', $line);
         $method = array_shift($params);
-        $promise = call_user_func_array(array($redis, $method), $params);
+        $promise = call_user_func_array([$redis, $method], $params);
 
         // special method such as end() / close() called
         if (!$promise instanceof React\Promise\PromiseInterface) {
