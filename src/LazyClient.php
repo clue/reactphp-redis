@@ -3,8 +3,10 @@
 namespace Clue\React\Redis;
 
 use Evenement\EventEmitter;
-use React\Stream\Util;
 use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
+use React\Promise\PromiseInterface;
+use React\Stream\Util;
 use function React\Promise\reject;
 
 /**
@@ -12,24 +14,37 @@ use function React\Promise\reject;
  */
 class LazyClient extends EventEmitter implements Client
 {
+    /** @var string */
     private $target;
+
     /** @var Factory */
     private $factory;
-    private $closed = false;
-    private $promise;
 
+    /** @var bool */
+    private $closed = false;
+
+    /** @var ?PromiseInterface */
+    private $promise = null;
+
+    /** @var LoopInterface */
     private $loop;
+
+    /** @var float */
     private $idlePeriod = 60.0;
-    private $idleTimer;
+
+    /** @var ?TimerInterface */
+    private $idleTimer = null;
+
+    /** @var int */
     private $pending = 0;
 
+    /** @var array<string,bool> */
     private $subscribed = [];
+
+    /** @var array<string,bool> */
     private $psubscribed = [];
 
-    /**
-     * @param $target
-     */
-    public function __construct($target, Factory $factory, LoopInterface $loop)
+    public function __construct(string $target, Factory $factory, LoopInterface $loop)
     {
         $args = [];
         \parse_str((string) \parse_url($target, \PHP_URL_QUERY), $args);
@@ -42,7 +57,7 @@ class LazyClient extends EventEmitter implements Client
         $this->loop = $loop;
     }
 
-    private function client()
+    private function client(): PromiseInterface
     {
         if ($this->promise !== null) {
             return $this->promise;
@@ -71,16 +86,16 @@ class LazyClient extends EventEmitter implements Client
             });
 
             // keep track of all channels and patterns this connection is subscribed to
-            $redis->on('subscribe', function ($channel) {
+            $redis->on('subscribe', function (string $channel) {
                 $this->subscribed[$channel] = true;
             });
-            $redis->on('psubscribe', function ($pattern) {
+            $redis->on('psubscribe', function (string $pattern) {
                 $this->psubscribed[$pattern] = true;
             });
-            $redis->on('unsubscribe', function ($channel) {
+            $redis->on('unsubscribe', function (string $channel) {
                 unset($this->subscribed[$channel]);
             });
-            $redis->on('punsubscribe', function ($pattern) {
+            $redis->on('punsubscribe', function (string $pattern) {
                 unset($this->psubscribed[$pattern]);
             });
 
@@ -106,7 +121,7 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
-    public function __call($name, $args)
+    public function __call(string $name, array $args): PromiseInterface
     {
         if ($this->closed) {
             return reject(new \RuntimeException(
@@ -122,7 +137,7 @@ class LazyClient extends EventEmitter implements Client
                     $this->idle();
                     return $result;
                 },
-                function ($error) {
+                function (\Exception $error) {
                     $this->idle();
                     throw $error;
                 }
@@ -130,7 +145,7 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
-    public function end()
+    public function end(): void
     {
         if ($this->promise === null) {
             $this->close();
@@ -140,7 +155,7 @@ class LazyClient extends EventEmitter implements Client
             return;
         }
 
-        return $this->client()->then(function (Client $redis) {
+        $this->client()->then(function (Client $redis) {
             $redis->on('close', function () {
                 $this->close();
             });
@@ -148,7 +163,7 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
-    public function close()
+    public function close(): void
     {
         if ($this->closed) {
             return;
@@ -176,10 +191,7 @@ class LazyClient extends EventEmitter implements Client
         $this->removeAllListeners();
     }
 
-    /**
-     * @internal
-     */
-    public function awake()
+    private function awake(): void
     {
         ++$this->pending;
 
@@ -189,10 +201,7 @@ class LazyClient extends EventEmitter implements Client
         }
     }
 
-    /**
-     * @internal
-     */
-    public function idle()
+    private function idle(): void
     {
         --$this->pending;
 

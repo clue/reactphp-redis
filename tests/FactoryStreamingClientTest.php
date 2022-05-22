@@ -4,6 +4,7 @@ namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
+use PHPUnit\Framework\MockObject\MockObject;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Socket\ConnectionInterface;
@@ -13,14 +14,16 @@ use function React\Promise\resolve;
 
 class FactoryStreamingClientTest extends TestCase
 {
+    /** @var MockObject */
     private $loop;
+
+    /** @var MockObject */
     private $connector;
+
+    /** @var Factory */
     private $factory;
 
-    /**
-     * @before
-     */
-    public function setUpFactory()
+    public function setUp(): void
     {
         $this->loop = $this->createMock(LoopInterface::class);
         $this->connector = $this->createMock(ConnectorInterface::class);

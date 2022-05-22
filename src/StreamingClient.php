@@ -11,6 +11,7 @@ use Clue\Redis\Protocol\Parser\ParserInterface;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Evenement\EventEmitter;
 use React\Promise\Deferred;
+use React\Promise\PromiseInterface;
 use React\Stream\DuplexStreamInterface;
 
 /**
@@ -18,14 +19,28 @@ use React\Stream\DuplexStreamInterface;
  */
 class StreamingClient extends EventEmitter implements Client
 {
+    /** @var DuplexStreamInterface */
     private $stream;
+
+    /** @var ParserInterface */
     private $parser;
+
+    /** @var SerializerInterface */
     private $serializer;
+
+    /** @var Deferred[] */
     private $requests = [];
+
+    /** @var bool */
     private $ending = false;
+
+    /** @var bool */
     private $closed = false;
 
+    /** @var int */
     private $subscribed = 0;
+
+    /** @var int */
     private $psubscribed = 0;
 
     public function __construct(DuplexStreamInterface $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
@@ -40,7 +55,7 @@ class StreamingClient extends EventEmitter implements Client
             }
         }
 
-        $stream->on('data', function($chunk) use ($parser) {
+        $stream->on('data', function (string $chunk) use ($parser) {
             try {
                 $models = $parser->pushIncoming($chunk);
             } catch (ParserException $error) {
@@ -71,7 +86,7 @@ class StreamingClient extends EventEmitter implements Client
         $this->serializer = $serializer;
     }
 
-    public function __call($name, $args)
+    public function __call(string $name, array $args): PromiseInterface
     {
         $request = new Deferred();
         $promise = $request->promise();
@@ -102,7 +117,7 @@ class StreamingClient extends EventEmitter implements Client
         }
 
         if (in_array($name, $pubsubs)) {
-            $promise->then(function ($array) {
+            $promise->then(function (array $array) {
                 $first = array_shift($array);
 
                 // (p)(un)subscribe messages are to be forwarded
@@ -120,7 +135,7 @@ class StreamingClient extends EventEmitter implements Client
         return $promise;
     }
 
-    public function handleMessage(ModelInterface $message)
+    public function handleMessage(ModelInterface $message): void
     {
         if (($this->subscribed !== 0 || $this->psubscribed !== 0) && $message instanceof MultiBulkReply) {
             $array = $message->getValueNative();
@@ -154,7 +169,7 @@ class StreamingClient extends EventEmitter implements Client
         }
     }
 
-    public function end()
+    public function end(): void
     {
         $this->ending = true;
 
@@ -163,7 +178,7 @@ class StreamingClient extends EventEmitter implements Client
         }
     }
 
-    public function close()
+    public function close(): void
     {
         if ($this->closed) {
             return;

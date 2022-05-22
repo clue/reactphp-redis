@@ -11,20 +11,25 @@ use Clue\Redis\Protocol\Parser\ParserInterface;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
 use Clue\React\Redis\Client;
 use Clue\React\Redis\StreamingClient;
+use PHPUnit\Framework\MockObject\MockObject;
 use React\Stream\ThroughStream;
 use React\Stream\DuplexStreamInterface;
 
 class StreamingClientTest extends TestCase
 {
+    /** @var MockObject */
     private $stream;
+
+    /** @var MockObject */
     private $parser;
+
+    /** @var MockObject */
     private $serializer;
+
+    /** @var StreamingClient */
     private $redis;
 
-    /**
-     * @before
-     */
-    public function setUpClient()
+    public function setUp(): void
     {
         $this->stream = $this->createMock(DuplexStreamInterface::class);
         $this->parser = $this->createMock(ParserInterface::class);
@@ -72,18 +77,18 @@ class StreamingClientTest extends TestCase
 
     public function testClosingStreamClosesClient()
     {
-        $this->stream = new ThroughStream();
-        $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
+        $stream = new ThroughStream();
+        $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->stream->emit('close');
+        $stream->emit('close');
     }
 
     public function testReceiveParseErrorEmitsErrorEvent()
     {
-        $this->stream = new ThroughStream();
-        $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
+        $stream = new ThroughStream();
+        $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('error', $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -99,13 +104,13 @@ class StreamingClientTest extends TestCase
         $this->redis->on('close', $this->expectCallableOnce());
 
         $this->parser->expects($this->once())->method('pushIncoming')->with('message')->willThrowException(new ParserException('Foo'));
-        $this->stream->emit('data', ['message']);
+        $stream->emit('data', ['message']);
     }
 
     public function testReceiveUnexpectedReplyEmitsErrorEvent()
     {
-        $this->stream = new ThroughStream();
-        $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
+        $stream = new ThroughStream();
+        $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('error', $this->expectCallableOnce());
         $this->redis->on('error', $this->expectCallableOnceWith(
@@ -122,7 +127,7 @@ class StreamingClientTest extends TestCase
 
 
         $this->parser->expects($this->once())->method('pushIncoming')->with('message')->willReturn([new IntegerReply(2)]);
-        $this->stream->emit('data', ['message']);
+        $stream->emit('data', ['message']);
     }
 
     /**
@@ -192,12 +197,12 @@ class StreamingClientTest extends TestCase
 
     public function testClosingStreamRejectsAllRemainingRequests()
     {
-        $this->stream = new ThroughStream();
+        $stream = new ThroughStream(function () { return ''; });
         $this->parser->expects($this->once())->method('pushIncoming')->willReturn([]);
-        $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
+        $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $promise = $this->redis->ping();
-        $this->stream->close();
+        $stream->close();
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(

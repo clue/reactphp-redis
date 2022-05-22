@@ -13,17 +13,19 @@ use function Clue\React\Block\await;
 
 class FunctionalTest extends TestCase
 {
+    /** @var StreamSelectLoop */
     private $loop;
+
+    /** @var Factory */
     private $factory;
+
+    /** @var string */
     private $uri;
 
-    /**
-     * @before
-     */
-    public function setUpFactory()
+    public function setUp(): void
     {
-        $this->uri = getenv('REDIS_URI');
-        if ($this->uri === false) {
+        $this->uri = getenv('REDIS_URI') ?: '';
+        if ($this->uri === '') {
             $this->markTestSkipped('No REDIS_URI environment variable given');
         }
 

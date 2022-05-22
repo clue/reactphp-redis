@@ -10,7 +10,7 @@ $redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
 $redis->incr('test');
 
-$redis->get('test')->then(function ($result) {
+$redis->get('test')->then(function (string $result) {
     var_dump($result);
 }, function (Exception $e) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;

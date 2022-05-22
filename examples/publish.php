@@ -11,7 +11,7 @@ $redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
 $channel = $argv[1] ?? 'channel';
 $message = $argv[2] ?? 'message';
 
-$redis->publish($channel, $message)->then(function ($received) {
+$redis->publish($channel, $message)->then(function (int $received) {
     echo 'Successfully published. Received by ' . $received . PHP_EOL;
 }, function (Exception $e) {
     echo 'Unable to publish: ' . $e->getMessage() . PHP_EOL;
