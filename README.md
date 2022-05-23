@@ -81,12 +81,12 @@ $redis = $factory->createLazyClient('localhost:6379');
 $redis->set('greeting', 'Hello world');
 $redis->append('greeting', '!');
 
-$redis->get('greeting')->then(function ($greeting) {
+$redis->get('greeting')->then(function (string $greeting) {
     // Hello world!
     echo $greeting . PHP_EOL;
 });
 
-$redis->incr('invocation')->then(function ($n) {
+$redis->incr('invocation')->then(function (int $n) {
     echo 'This is invocation #' . $n . PHP_EOL;
 });
 
@@ -184,7 +184,7 @@ subscribe to a channel and then receive incoming PubSub `message` events:
 $channel = 'user';
 $redis->subscribe($channel);
 
-$redis->on('message', function ($channel, $payload) {
+$redis->on('message', function (string $channel, string $payload) {
     // pubsub message received on given $channel
     var_dump($channel, json_decode($payload));
 });
@@ -208,7 +208,7 @@ all incoming PubSub messages with the `pmessage` event:
 $pattern = 'user.*';
 $redis->psubscribe($pattern);
 
-$redis->on('pmessage', function ($pattern, $channel, $payload) {
+$redis->on('pmessage', function (string $pattern, string $channel, string $payload) {
     // pubsub message received matching given $pattern
     var_dump($channel, json_decode($payload));
 });
@@ -248,16 +248,16 @@ Additionally, can listen for the following PubSub events to get notifications
 about subscribed/unsubscribed channels and patterns:
 
 ```php
-$redis->on('subscribe', function ($channel, $total) {
+$redis->on('subscribe', function (string $channel, int $total) {
     // subscribed to given $channel
 });
-$redis->on('psubscribe', function ($pattern, $total) {
+$redis->on('psubscribe', function (string $pattern, int $total) {
     // subscribed to matching given $pattern
 });
-$redis->on('unsubscribe', function ($channel, $total) {
+$redis->on('unsubscribe', function (string $channel, int $total) {
     // unsubscribed from given $channel
 });
-$redis->on('punsubscribe', function ($pattern, $total) {
+$redis->on('punsubscribe', function (string $pattern, int $total) {
     // unsubscribed from matching given $pattern
 });
 ```

@@ -6,6 +6,7 @@ use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
+use React\Promise\PromiseInterface;
 use React\Promise\Timer\TimeoutException;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
@@ -40,10 +41,10 @@ class Factory
      * Create Redis client connected to address of given redis instance
      *
      * @param string $uri Redis server URI to connect to
-     * @return \React\Promise\PromiseInterface<Client,\Exception> Promise that will
+     * @return PromiseInterface<Client,\Exception> Promise that will
      *     be fulfilled with `Client` on success or rejects with `\Exception` on error.
      */
-    public function createClient($uri)
+    public function createClient(string $uri): PromiseInterface
     {
         // support `redis+unix://` scheme for Unix domain socket (UDS) paths
         if (preg_match('/^(redis\+unix:\/\/(?:[^:]*:[^@]*@)?)(.+?)?$/', $uri, $match)) {
@@ -184,7 +185,7 @@ class Factory
      * @param string $target
      * @return Client
      */
-    public function createLazyClient($target)
+    public function createLazyClient($target): Client
     {
         return new LazyClient($target, $this, $this->loop);
     }

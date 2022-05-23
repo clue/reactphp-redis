@@ -5,6 +5,7 @@ namespace Clue\Tests\React\Redis;
 use Clue\React\Redis\Client;
 use Clue\React\Redis\Factory;
 use Clue\React\Redis\LazyClient;
+use PHPUnit\Framework\MockObject\MockObject;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Promise\Promise;
@@ -12,14 +13,16 @@ use React\Promise\Deferred;
 
 class LazyClientTest extends TestCase
 {
+    /** @var MockObject */
     private $factory;
+
+    /** @var MockObject */
     private $loop;
+
+    /** @var LazyClient */
     private $redis;
 
-    /**
-     * @before
-     */
-    public function setUpClient()
+    public function setUp(): void
     {
         $this->factory = $this->createMock(Factory::class);
         $this->loop = $this->createMock(LoopInterface::class);
@@ -235,7 +238,7 @@ class LazyClientTest extends TestCase
     {
         $client = $this->createMock(Client::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
-        $client->expects($this->once())->method('close')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('close');
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
