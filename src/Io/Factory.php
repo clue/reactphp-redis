@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\React\Redis;
+namespace Clue\React\Redis\Io;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\Loop;
@@ -14,6 +14,9 @@ use React\Socket\ConnectorInterface;
 use function React\Promise\reject;
 use function React\Promise\Timer\timeout;
 
+/**
+ * @internal
+ */
 class Factory
 {
     /** @var LoopInterface */
@@ -41,8 +44,8 @@ class Factory
      * Create Redis client connected to address of given redis instance
      *
      * @param string $uri Redis server URI to connect to
-     * @return PromiseInterface<Client,\Exception> Promise that will
-     *     be fulfilled with `Client` on success or rejects with `\Exception` on error.
+     * @return PromiseInterface<StreamingClient,\Exception> Promise that will
+     *     be fulfilled with `StreamingClient` on success or rejects with `\Exception` on error.
      */
     public function createClient(string $uri): PromiseInterface
     {
@@ -177,16 +180,5 @@ class Factory
             }
             throw $e;
         });
-    }
-
-    /**
-     * Create Redis client connected to address of given redis instance
-     *
-     * @param string $target
-     * @return Client
-     */
-    public function createLazyClient($target): Client
-    {
-        return new LazyClient($target, $this, $this->loop);
     }
 }

@@ -2,17 +2,31 @@
 
 namespace Clue\React\Redis;
 
+use Clue\React\Redis\Io\Factory;
+use Clue\React\Redis\Io\StreamingClient;
 use Evenement\EventEmitter;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
-use React\EventLoop\TimerInterface;
 use React\Promise\PromiseInterface;
+use React\Socket\ConnectorInterface;
 use React\Stream\Util;
 use function React\Promise\reject;
 
 /**
- * @internal
+ * Simple interface for executing redis commands
+ *
+ * @event error(Exception $error)
+ * @event close()
+ *
+ * @event message($channel, $message)
+ * @event subscribe($channel, $numberOfChannels)
+ * @event unsubscribe($channel, $numberOfChannels)
+ *
+ * @event pmessage($pattern, $channel, $message)
+ * @event psubscribe($channel, $numberOfChannels)
+ * @event punsubscribe($channel, $numberOfChannels)
  */
-class LazyClient extends EventEmitter implements Client
+class RedisClient extends EventEmitter
 {
     /** @var string */
     private $target;
@@ -44,17 +58,22 @@ class LazyClient extends EventEmitter implements Client
     /** @var array<string,bool> */
     private $psubscribed = [];
 
-    public function __construct(string $target, Factory $factory, LoopInterface $loop)
+    /**
+     * @param string $url
+     * @param ?ConnectorInterface $connector
+     * @param ?LoopInterface $loop
+     */
+    public function __construct($url, ConnectorInterface $connector = null, LoopInterface $loop = null)
     {
         $args = [];
-        \parse_str((string) \parse_url($target, \PHP_URL_QUERY), $args);
+        \parse_str((string) \parse_url($url, \PHP_URL_QUERY), $args);
         if (isset($args['idle'])) {
             $this->idlePeriod = (float)$args['idle'];
         }
 
-        $this->target = $target;
-        $this->factory = $factory;
-        $this->loop = $loop;
+        $this->target = $url;
+        $this->loop = $loop ?: Loop::get();
+        $this->factory = new Factory($this->loop, $connector);
     }
 
     private function client(): PromiseInterface
@@ -63,7 +82,7 @@ class LazyClient extends EventEmitter implements Client
             return $this->promise;
         }
 
-        return $this->promise = $this->factory->createClient($this->target)->then(function (Client $redis) {
+        return $this->promise = $this->factory->createClient($this->target)->then(function (StreamingClient $redis) {
             // connection completed => remember only until closed
             $redis->on('close', function () {
                 $this->promise = null;
@@ -121,6 +140,16 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
+    /**
+     * Invoke the given command and return a Promise that will be resolved when the request has been replied to
+     *
+     * This is a magic method that will be invoked when calling any redis
+     * command on this instance.
+     *
+     * @param string   $name
+     * @param string[] $args
+     * @return PromiseInterface Promise<mixed,Exception>
+     */
     public function __call(string $name, array $args): PromiseInterface
     {
         if ($this->closed) {
@@ -130,7 +159,7 @@ class LazyClient extends EventEmitter implements Client
             ));
         }
 
-        return $this->client()->then(function (Client $redis) use ($name, $args) {
+        return $this->client()->then(function (StreamingClient $redis) use ($name, $args) {
             $this->awake();
             return \call_user_func_array([$redis, $name], $args)->then(
                 function ($result) {
@@ -145,6 +174,13 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
+    /**
+     * end connection once all pending requests have been replied to
+     *
+     * @return void
+     * @uses self::close() once all replies have been received
+     * @see self::close() for closing the connection immediately
+     */
     public function end(): void
     {
         if ($this->promise === null) {
@@ -155,7 +191,7 @@ class LazyClient extends EventEmitter implements Client
             return;
         }
 
-        $this->client()->then(function (Client $redis) {
+        $this->client()->then(function (StreamingClient $redis) {
             $redis->on('close', function () {
                 $this->close();
             });
@@ -163,6 +199,14 @@ class LazyClient extends EventEmitter implements Client
         });
     }
 
+    /**
+     * close connection immediately
+     *
+     * This will emit the "close" event.
+     *
+     * @return void
+     * @see self::end() for closing the connection once the client is idle
+     */
     public function close(): void
     {
         if ($this->closed) {
@@ -173,7 +217,7 @@ class LazyClient extends EventEmitter implements Client
 
         // either close active connection or cancel pending connection attempt
         if ($this->promise !== null) {
-            $this->promise->then(function (Client $redis) {
+            $this->promise->then(function (StreamingClient $redis) {
                 $redis->close();
             });
             if ($this->promise !== null) {
@@ -207,7 +251,7 @@ class LazyClient extends EventEmitter implements Client
 
         if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
-                $this->promise->then(function (Client $redis) {
+                $this->promise->then(function (StreamingClient $redis) {
                     $redis->close();
                 });
                 $this->promise = null;

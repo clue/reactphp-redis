@@ -1,9 +1,10 @@
 <?php
 
-namespace Clue\Tests\React\Redis;
+namespace Clue\Tests\React\Redis\Io;
 
-use Clue\React\Redis\Client;
-use Clue\React\Redis\Factory;
+use Clue\React\Redis\Io\Factory;
+use Clue\React\Redis\Io\StreamingClient;
+use Clue\Tests\React\Redis\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
@@ -181,7 +182,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->assertTrue(is_callable($dataHandler));
         $dataHandler("+OK\r\n");
 
-        $promise->then($this->expectCallableOnceWith($this->isInstanceOf(Client::class)));
+        $promise->then($this->expectCallableOnceWith($this->isInstanceOf(StreamingClient::class)));
     }
 
     public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo()
@@ -286,7 +287,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->assertTrue(is_callable($dataHandler));
         $dataHandler("+OK\r\n");
 
-        $promise->then($this->expectCallableOnceWith($this->isInstanceOf(Client::class)));
+        $promise->then($this->expectCallableOnceWith($this->isInstanceOf(StreamingClient::class)));
     }
 
     public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath()

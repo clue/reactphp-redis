@@ -5,8 +5,7 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$factory = new Clue\React\Redis\Factory();
-$redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
+$redis = new Clue\React\Redis\RedisClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
 $redis->incr('test');
 
@@ -17,4 +16,4 @@ $redis->get('test')->then(function (string $result) {
     exit(1);
 });
 
-//$redis->end();
+$redis->end();
