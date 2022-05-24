@@ -2,16 +2,16 @@
 
 namespace Clue\Tests\React\Redis;
 
-use Clue\React\Redis\Client;
-use Clue\React\Redis\Factory;
-use Clue\React\Redis\LazyClient;
+use Clue\React\Redis\RedisClient;
+use Clue\React\Redis\Io\Factory;
+use Clue\React\Redis\Io\StreamingClient;
 use PHPUnit\Framework\MockObject\MockObject;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
-use React\Promise\Promise;
 use React\Promise\Deferred;
+use React\Promise\Promise;
 
-class LazyClientTest extends TestCase
+class RedisClientTest extends TestCase
 {
     /** @var MockObject */
     private $factory;
@@ -19,7 +19,7 @@ class LazyClientTest extends TestCase
     /** @var MockObject */
     private $loop;
 
-    /** @var LazyClient */
+    /** @var RedisClient */
     private $redis;
 
     public function setUp(): void
@@ -27,7 +27,11 @@ class LazyClientTest extends TestCase
         $this->factory = $this->createMock(Factory::class);
         $this->loop = $this->createMock(LoopInterface::class);
 
-        $this->redis = new LazyClient('localhost', $this->factory, $this->loop);
+        $this->redis = new RedisClient('localhost', null, $this->loop);
+
+        $ref = new \ReflectionProperty($this->redis, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($this->redis, $this->factory);
     }
 
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise()
@@ -53,7 +57,7 @@ class LazyClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer()
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
@@ -69,9 +73,13 @@ class LazyClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam()
     {
-        $this->redis = new LazyClient('localhost?idle=10', $this->factory, $this->loop);
+        $this->redis = new RedisClient('localhost?idle=10', null, $this->loop);
 
-        $client = $this->createMock(Client::class);
+        $ref = new \ReflectionProperty($this->redis, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($this->redis, $this->factory);
+
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
@@ -87,9 +95,13 @@ class LazyClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative()
     {
-        $this->redis = new LazyClient('localhost?idle=-1', $this->factory, $this->loop);
+        $this->redis = new RedisClient('localhost?idle=-1', null, $this->loop);
 
-        $client = $this->createMock(Client::class);
+        $ref = new \ReflectionProperty($this->redis, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($this->redis, $this->factory);
+
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
@@ -106,7 +118,7 @@ class LazyClientTest extends TestCase
     public function testPingWillRejectWhenUnderlyingClientRejectsPingAndStartIdleTimer()
     {
         $error = new \RuntimeException();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\reject($error));
 
         $deferred = new Deferred();
@@ -155,7 +167,7 @@ class LazyClientTest extends TestCase
     public function testPingAfterPreviousUnderlyingClientAlreadyClosedWillCreateNewUnderlyingConnection()
     {
         $closeHandler = null;
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->any())->method('on')->withConsecutive(
             ['close', $this->callback(function ($arg) use (&$closeHandler) {
@@ -199,7 +211,7 @@ class LazyClientTest extends TestCase
     public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves()
     {
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
@@ -217,7 +229,7 @@ class LazyClientTest extends TestCase
     public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
     {
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
@@ -236,7 +248,7 @@ class LazyClientTest extends TestCase
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
         $client->expects($this->once())->method('close');
 
@@ -299,7 +311,7 @@ class LazyClientTest extends TestCase
 
     public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved()
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
         $client->expects($this->once())->method('close');
 
@@ -314,7 +326,7 @@ class LazyClientTest extends TestCase
     public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved()
     {
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close');
 
@@ -332,7 +344,7 @@ class LazyClientTest extends TestCase
     public function testCloseAfterPingRejectsWillEmitClose()
     {
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
             $client->emit('close');
@@ -360,7 +372,7 @@ class LazyClientTest extends TestCase
 
     public function testEndAfterPingWillEndUnderlyingClient()
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
 
@@ -375,7 +387,7 @@ class LazyClientTest extends TestCase
     public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose()
     {
         $closeHandler = null;
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$closeHandler) {
@@ -401,7 +413,7 @@ class LazyClientTest extends TestCase
     {
         $error = new \RuntimeException();
 
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
 
         $deferred = new Deferred();
@@ -416,7 +428,7 @@ class LazyClientTest extends TestCase
 
     public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose()
     {
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
 
         $deferred = new Deferred();
@@ -432,7 +444,7 @@ class LazyClientTest extends TestCase
     public function testEmitsNoCloseEventButWillCancelIdleTimerWhenUnderlyingConnectionEmitsCloseAfterPingIsAlreadyResolved()
     {
         $closeHandler = null;
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $deferred = new Deferred();
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->withConsecutive(
@@ -460,7 +472,7 @@ class LazyClientTest extends TestCase
     public function testEmitsMessageEventWhenUnderlyingClientEmitsMessageForPubSubChannel()
     {
         $messageHandler = null;
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$messageHandler) {
             if ($event === 'message') {
@@ -482,7 +494,7 @@ class LazyClientTest extends TestCase
     public function testEmitsUnsubscribeAndPunsubscribeEventsWhenUnderlyingClientClosesWhileUsingPubSubChannel()
     {
         $allHandler = null;
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$allHandler) {
             if (!isset($allHandler[$event])) {
@@ -527,7 +539,7 @@ class LazyClientTest extends TestCase
     {
         $subscribeHandler = null;
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('subscribe')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$subscribeHandler) {
             if ($event === 'subscribe' && $subscribeHandler === null) {
@@ -553,7 +565,7 @@ class LazyClientTest extends TestCase
         $unsubscribeHandler = null;
         $deferredSubscribe = new Deferred();
         $deferredUnsubscribe = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls($deferredSubscribe->promise(), $deferredUnsubscribe->promise());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$subscribeHandler, &$unsubscribeHandler) {
             if ($event === 'subscribe' && $subscribeHandler === null) {
@@ -585,7 +597,7 @@ class LazyClientTest extends TestCase
     {
         $closeHandler = null;
         $deferred = new Deferred();
-        $client = $this->createMock(Client::class);
+        $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('blpop')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->withConsecutive(
             ['close', $this->callback(function ($arg) use (&$closeHandler) {

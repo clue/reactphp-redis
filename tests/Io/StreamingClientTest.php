@@ -1,7 +1,8 @@
 <?php
 
-namespace Clue\Tests\React\Redis;
+namespace Clue\Tests\React\Redis\Io;
 
+use Clue\React\Redis\Io\StreamingClient;
 use Clue\Redis\Protocol\Model\BulkReply;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\IntegerReply;
@@ -9,8 +10,7 @@ use Clue\Redis\Protocol\Model\MultiBulkReply;
 use Clue\Redis\Protocol\Parser\ParserException;
 use Clue\Redis\Protocol\Parser\ParserInterface;
 use Clue\Redis\Protocol\Serializer\SerializerInterface;
-use Clue\React\Redis\Client;
-use Clue\React\Redis\StreamingClient;
+use Clue\Tests\React\Redis\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use React\Stream\ThroughStream;
 use React\Stream\DuplexStreamInterface;
@@ -306,9 +306,9 @@ class StreamingClientTest extends TestCase
 
     /**
      * @depends testPubsubSubscribe
-     * @param Client $client
+     * @param StreamingClient $client
      */
-    public function testPubsubPatternSubscribe(Client $client)
+    public function testPubsubPatternSubscribe(StreamingClient $client)
     {
          $promise = $client->psubscribe('demo_*');
          $this->expectPromiseResolve($promise);
@@ -321,9 +321,9 @@ class StreamingClientTest extends TestCase
 
     /**
      * @depends testPubsubPatternSubscribe
-     * @param Client $client
+     * @param StreamingClient $client
      */
-    public function testPubsubMessage(Client $client)
+    public function testPubsubMessage(StreamingClient $client)
     {
         $client->on('message', $this->expectCallableOnce());
         $client->handleMessage(new MultiBulkReply([new BulkReply('message'), new BulkReply('test'), new BulkReply('payload')]));

@@ -7,10 +7,9 @@ use React\EventLoop\Loop;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$factory = new Clue\React\Redis\Factory();
-$redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
-
 $channel = $argv[1] ?? 'channel';
+
+$redis = new Clue\React\Redis\RedisClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
 $redis->subscribe($channel)->then(function () {
     echo 'Now subscribed to channel ' . PHP_EOL;

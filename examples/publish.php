@@ -5,11 +5,10 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$factory = new Clue\React\Redis\Factory();
-$redis = $factory->createLazyClient(getenv('REDIS_URI') ?: 'localhost:6379');
-
 $channel = $argv[1] ?? 'channel';
 $message = $argv[2] ?? 'message';
+
+$redis = new Clue\React\Redis\RedisClient(getenv('REDIS_URI') ?: 'localhost:6379');
 
 $redis->publish($channel, $message)->then(function (int $received) {
     echo 'Successfully published. Received by ' . $received . PHP_EOL;

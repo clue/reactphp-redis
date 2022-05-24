@@ -2,22 +2,16 @@
 
 namespace Clue\Tests\React\Redis;
 
-use Clue\React\Redis\Client;
-use Clue\React\Redis\Factory;
-use Clue\React\Redis\StreamingClient;
+use Clue\React\Redis\RedisClient;
 use React\EventLoop\StreamSelectLoop;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use React\Stream\DuplexResourceStream;
 use function Clue\React\Block\await;
 
 class FunctionalTest extends TestCase
 {
     /** @var StreamSelectLoop */
     private $loop;
-
-    /** @var Factory */
-    private $factory;
 
     /** @var string */
     private $uri;
@@ -30,12 +24,11 @@ class FunctionalTest extends TestCase
         }
 
         $this->loop = new StreamSelectLoop();
-        $this->factory = new Factory($this->loop);
     }
 
     public function testPing()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
@@ -47,7 +40,7 @@ class FunctionalTest extends TestCase
 
     public function testPingLazy()
     {
-        $redis = $this->factory->createLazyClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
@@ -62,7 +55,7 @@ class FunctionalTest extends TestCase
      */
     public function testPingLazyWillNotBlockLoopWhenIdleTimeIsSmall()
     {
-        $redis = $this->factory->createLazyClient($this->uri . '?idle=0');
+        $redis = new RedisClient($this->uri . '?idle=0', null, $this->loop);
 
         $redis->ping();
 
@@ -74,7 +67,7 @@ class FunctionalTest extends TestCase
      */
     public function testLazyClientWithoutCommandsWillNotBlockLoop()
     {
-        $redis = $this->factory->createLazyClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $this->loop->run();
 
@@ -83,7 +76,7 @@ class FunctionalTest extends TestCase
 
     public function testMgetIsNotInterpretedAsSubMessage()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
@@ -95,7 +88,7 @@ class FunctionalTest extends TestCase
 
     public function testPipeline()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->set('a', 1)->then($this->expectCallableOnceWith('OK'));
         $redis->incr('a')->then($this->expectCallableOnceWith(2));
@@ -107,7 +100,7 @@ class FunctionalTest extends TestCase
 
     public function testInvalidCommand()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
         $promise = $redis->doesnotexist(1, 2, 3);
 
         if (method_exists($this, 'expectException')) {
@@ -120,7 +113,7 @@ class FunctionalTest extends TestCase
 
     public function testMultiExecEmpty()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
         $promise = $redis->exec()->then($this->expectCallableOnceWith([]));
 
@@ -129,7 +122,7 @@ class FunctionalTest extends TestCase
 
     public function testMultiExecQueuedExecHasValues()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
         $redis->set('b', 10)->then($this->expectCallableOnceWith('QUEUED'));
@@ -143,8 +136,8 @@ class FunctionalTest extends TestCase
 
     public function testPubSub()
     {
-        $consumer = $this->createClient($this->uri);
-        $producer = $this->createClient($this->uri);
+        $consumer = new RedisClient($this->uri, null, $this->loop);
+        $producer = new RedisClient($this->uri, null, $this->loop);
 
         $channel = 'channel:test:' . mt_rand();
 
@@ -164,7 +157,7 @@ class FunctionalTest extends TestCase
 
     public function testClose()
     {
-        $redis = $this->createClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
@@ -175,57 +168,12 @@ class FunctionalTest extends TestCase
 
     public function testCloseLazy()
     {
-        $redis = $this->factory->createLazyClient($this->uri);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
         $redis->close();
 
         $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
-    }
-
-    public function testInvalidProtocol()
-    {
-        $redis = $this->createClientResponse("communication does not conform to protocol\r\n");
-
-        $redis->on('error', $this->expectCallableOnce());
-        $redis->on('close', $this->expectCallableOnce());
-
-        $promise = $redis->get('willBeRejectedDueToClosing');
-
-        $this->expectException(\Exception::class);
-        await($promise, $this->loop);
-    }
-
-    public function testInvalidServerRepliesWithDuplicateMessages()
-    {
-        $redis = $this->createClientResponse("+OK\r\n-ERR invalid\r\n");
-
-        $redis->on('error', $this->expectCallableOnce());
-        $redis->on('close', $this->expectCallableOnce());
-
-        $promise = $redis->set('a', 0)->then($this->expectCallableOnceWith('OK'));
-
-        await($promise, $this->loop);
-    }
-
-    /**
-     * @param string $uri
-     * @return Client
-     */
-    protected function createClient($uri)
-    {
-        return await($this->factory->createClient($uri), $this->loop);
-    }
-
-    protected function createClientResponse($response)
-    {
-        $fp = fopen('php://temp', 'r+');
-        fwrite($fp, $response);
-        fseek($fp, 0);
-
-        $stream = new DuplexResourceStream($fp, $this->loop);
-
-        return new StreamingClient($stream);
     }
 }

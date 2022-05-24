@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\React\Redis;
+namespace Clue\React\Redis\Io;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use Clue\Redis\Protocol\Model\ErrorReply;
@@ -17,7 +17,7 @@ use React\Stream\DuplexStreamInterface;
 /**
  * @internal
  */
-class StreamingClient extends EventEmitter implements Client
+class StreamingClient extends EventEmitter
 {
     /** @var DuplexStreamInterface */
     private $stream;

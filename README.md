@@ -42,10 +42,8 @@ It enables you to set and query its data or use its PubSub topics to react to in
     * [Promises](#promises)
     * [PubSub](#pubsub)
 * [API](#api)
-    * [Factory](#factory)
-        * [createClient()](#createclient)
-        * [createLazyClient()](#createlazyclient)
-    * [Client](#client)
+    * [RedisClient](#redisclient)
+        * [__construct()](#__construct)
         * [__call()](#__call)
         * [end()](#end)
         * [close()](#close)
@@ -75,8 +73,7 @@ local Redis server and send some requests:
 
 require __DIR__ . '/vendor/autoload.php';
 
-$factory = new Clue\React\Redis\Factory();
-$redis = $factory->createLazyClient('localhost:6379');
+$redis = new Clue\React\Redis\RedisClient('localhost:6379');
 
 $redis->set('greeting', 'Hello world');
 $redis->append('greeting', '!');
@@ -100,10 +97,12 @@ See also the [examples](examples).
 
 ### Commands
 
-Most importantly, this project provides a [`Client`](#client) instance that
+Most importantly, this project provides a [`RedisClient`](#redisclient) instance that
 can be used to invoke all [Redis commands](https://redis.io/commands) (such as `GET`, `SET`, etc.).
 
 ```php
+$redis = new Clue\React\Redis\RedisClient('localhost:6379');
+
 $redis->get($key);
 $redis->set($key, $value);
 $redis->exists($key);
@@ -262,161 +261,28 @@ $redis->on('punsubscribe', function (string $pattern, int $total) {
 });
 ```
 
-When using the [`createLazyClient()`](#createlazyclient) method, the `unsubscribe`
-and `punsubscribe` events will be invoked automatically when the underlying
-connection is lost. This gives you control over re-subscribing to the channels
-and patterns as appropriate.
+When the underlying connection is lost, the `unsubscribe` and `punsubscribe` events
+will be invoked automatically. This gives you control over re-subscribing to the
+channels and patterns as appropriate.
 
 ## API
 
-### Factory
+### RedisClient
 
-The `Factory` is responsible for creating your [`Client`](#client) instance.
-
-```php
-$factory = new Clue\React\Redis\Factory();
-```
-
-This class takes an optional `LoopInterface|null $loop` parameter that can be used to
-pass the event loop instance to use for this object. You can use a `null` value
-here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
-This value SHOULD NOT be given unless you're sure you want to explicitly use a
-given event loop instance.
-
-If you need custom connector settings (DNS resolution, TLS parameters, timeouts,
-proxy servers etc.), you can explicitly pass a custom instance of the
-[`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
+The `RedisClient` is responsible for exchanging messages with your Redis server
+and keeps track of pending commands.
 
 ```php
-$connector = new React\Socket\Connector([
-    'dns' => '127.0.0.1',
-    'tcp' => [
-        'bindto' => '192.168.10.1:0'
-    ],
-    'tls' => [
-        'verify_peer' => false,
-        'verify_peer_name' => false
-    ]
-]);
-
-$factory = new Clue\React\Redis\Factory(null, $connector);
-```
-
-#### createClient()
-
-The `createClient(string $uri): PromiseInterface<Client,Exception>` method can be used to
-create a new [`Client`](#client).
-
-It helps with establishing a plain TCP/IP or secure TLS connection to Redis
-and optionally authenticating (AUTH) and selecting the right database (SELECT).
-
-```php
-$factory->createClient('localhost:6379')->then(
-    function (Client $redis) {
-        // client connected (and authenticated)
-    },
-    function (Exception $e) {
-        // an error occurred while trying to connect (or authenticate) client
-    }
-);
-```
-
-The method returns a [Promise](https://github.com/reactphp/promise) that
-will resolve with a [`Client`](#client)
-instance on success or will reject with an `Exception` if the URL is
-invalid or the connection or authentication fails.
-
-The returned Promise is implemented in such a way that it can be
-cancelled when it is still pending. Cancelling a pending promise will
-reject its value with an Exception and will cancel the underlying TCP/IP
-connection attempt and/or Redis authentication.
-
-```php
-$promise = $factory->createClient($uri);
-
-Loop::addTimer(3.0, function () use ($promise) {
-    $promise->cancel();
-});
-```
-
-The `$redisUri` can be given in the
-[standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
-`[redis[s]://][:auth@]host[:port][/db]`.
-You can omit the URI scheme and port if you're connecting to the default port 6379:
-
-```php
-// both are equivalent due to defaults being applied
-$factory->createClient('localhost');
-$factory->createClient('redis://localhost:6379');
-```
-
-Redis supports password-based authentication (`AUTH` command). Note that Redis'
-authentication mechanism does not employ a username, so you can pass the
-password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
-
-```php
-// all forms are equivalent
-$factory->createClient('redis://:h%40llo@localhost');
-$factory->createClient('redis://ignored:h%40llo@localhost');
-$factory->createClient('redis://localhost?password=h%40llo');
-```
-
-You can optionally include a path that will be used to select (SELECT command) the right database:
-
-```php
-// both forms are equivalent
-$factory->createClient('redis://localhost/2');
-$factory->createClient('redis://localhost?db=2');
-```
-
-You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
-`rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
-
-```php
-$factory->createClient('rediss://redis.example.com:6340');
-```
-
-You can use the `redis+unix://` URI scheme if your Redis instance is listening
-on a Unix domain socket (UDS) path:
-
-```php
-$factory->createClient('redis+unix:///tmp/redis.sock');
-
-// the URI MAY contain `password` and `db` query parameters as seen above
-$factory->createClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
-
-// the URI MAY contain authentication details as userinfo as seen above
-// should be used with care, also note that database can not be passed as path
-$factory->createClient('redis+unix://:secret@/tmp/redis.sock');
-```
-
-This method respects PHP's `default_socket_timeout` setting (default 60s)
-as a timeout for establishing the connection and waiting for successful
-authentication. You can explicitly pass a custom timeout value in seconds
-(or use a negative number to not apply a timeout) like this:
-
-```php
-$factory->createClient('localhost?timeout=0.5');
-```
-
-#### createLazyClient()
-
-The `createLazyClient(string $uri): Client` method can be used to
-create a new [`Client`](#client).
-
-It helps with establishing a plain TCP/IP or secure TLS connection to Redis
-and optionally authenticating (AUTH) and selecting the right database (SELECT).
-
-```php
-$redis = $factory->createLazyClient('localhost:6379');
+$redis = new Clue\React\Redis\RedisClient('localhost:6379');
 
 $redis->incr('hello');
 $redis->end();
 ```
 
-This method immediately returns a "virtual" connection implementing the
-[`Client`](#client) that can be used to interface with your Redis database.
-Internally, it lazily creates the underlying database connection only on
+Besides defining a few methods, this interface also implements the
+`EventEmitterInterface` which allows you to react to certain events as documented below.
+
+Internally, this class creates the underlying database connection only on
 demand once the first request is invoked on this instance and will queue
 all outstanding requests until the underlying connection is ready.
 Additionally, it will only keep this underlying connection in an "idle" state
@@ -428,9 +294,6 @@ database right away while the underlying connection may still be
 outstanding. Because creating this underlying connection may take some
 time, it will enqueue all oustanding commands and will ensure that all
 commands will be executed in correct order once the connection is ready.
-In other words, this "virtual" connection behaves just like a "real"
-connection as described in the `Client` interface and frees you from having
-to deal with its async resolution.
 
 If the underlying database connection fails, it will reject all
 outstanding commands and will return to the initial "idle" state. This
@@ -450,24 +313,25 @@ creating a new underlying connection repeating the above commands again.
 Note that creating the underlying connection will be deferred until the
 first request is invoked. Accordingly, any eventual connection issues
 will be detected once this instance is first used. You can use the
-`end()` method to ensure that the "virtual" connection will be soft-closed
+`end()` method to ensure that the connection will be soft-closed
 and no further commands can be enqueued. Similarly, calling `end()` on
 this instance when not currently connected will succeed immediately and
 will not have to wait for an actual underlying connection.
 
-Depending on your particular use case, you may prefer this method or the
-underlying `createClient()` which resolves with a promise. For many
-simple use cases it may be easier to create a lazy connection.
+#### __construct()
 
-The `$redisUri` can be given in the
+The `new RedisClient(string $url, ConnectorInterface $connector = null, LoopInterface $loop = null)` constructor can be used to
+create a new `RedisClient` instance.
+
+The `$url` can be given in the
 [standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
 `[redis[s]://][:auth@]host[:port][/db]`.
 You can omit the URI scheme and port if you're connecting to the default port 6379:
 
 ```php
 // both are equivalent due to defaults being applied
-$factory->createLazyClient('localhost');
-$factory->createLazyClient('redis://localhost:6379');
+$redis = new Clue\React\Redis\RedisClient('localhost');
+$redis = new Clue\React\Redis\RedisClient('redis://localhost:6379');
 ```
 
 Redis supports password-based authentication (`AUTH` command). Note that Redis'
@@ -476,38 +340,38 @@ password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
 
 ```php
 // all forms are equivalent
-$factory->createLazyClient('redis://:h%40llo@localhost');
-$factory->createLazyClient('redis://ignored:h%40llo@localhost');
-$factory->createLazyClient('redis://localhost?password=h%40llo');
+$redis = new Clue\React\Redis\RedisClient('redis://:h%40llo@localhost');
+$redis = new Clue\React\Redis\RedisClient('redis://ignored:h%40llo@localhost');
+$redis = new Clue\React\Redis\RedisClient('redis://localhost?password=h%40llo');
 ```
 
 You can optionally include a path that will be used to select (SELECT command) the right database:
 
 ```php
 // both forms are equivalent
-$factory->createLazyClient('redis://localhost/2');
-$factory->createLazyClient('redis://localhost?db=2');
+$redis = new Clue\React\Redis\RedisClient('redis://localhost/2');
+$redis = new Clue\React\Redis\RedisClient('redis://localhost?db=2');
 ```
 
 You can use the [standard](https://www.iana.org/assignments/uri-schemes/prov/rediss)
 `rediss://` URI scheme if you're using a secure TLS proxy in front of Redis:
 
 ```php
-$factory->createLazyClient('rediss://redis.example.com:6340');
+$redis = new Clue\React\Redis\RedisClient('rediss://redis.example.com:6340');
 ```
 
 You can use the `redis+unix://` URI scheme if your Redis instance is listening
 on a Unix domain socket (UDS) path:
 
 ```php
-$factory->createLazyClient('redis+unix:///tmp/redis.sock');
+$redis = new Clue\React\Redis\RedisClient('redis+unix:///tmp/redis.sock');
 
 // the URI MAY contain `password` and `db` query parameters as seen above
-$factory->createLazyClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
+$redis = new Clue\React\Redis\RedisClient('redis+unix:///tmp/redis.sock?password=secret&db=2');
 
 // the URI MAY contain authentication details as userinfo as seen above
 // should be used with care, also note that database can not be passed as path
-$factory->createLazyClient('redis+unix://:secret@/tmp/redis.sock');
+$redis = new Clue\React\Redis\RedisClient('redis+unix://:secret@/tmp/redis.sock');
 ```
 
 This method respects PHP's `default_socket_timeout` setting (default 60s)
@@ -516,7 +380,7 @@ successful authentication. You can explicitly pass a custom timeout value
 in seconds (or use a negative number to not apply a timeout) like this:
 
 ```php
-$factory->createLazyClient('localhost?timeout=0.5');
+$redis = new Clue\React\Redis\RedisClient('localhost?timeout=0.5');
 ```
 
 By default, this method will keep "idle" connections open for 60s and will
@@ -529,16 +393,32 @@ idle timeout value in seconds (or use a negative number to not apply a
 timeout) like this:
 
 ```php
-$factory->createLazyClient('localhost?idle=0.1');
+$redis = new Clue\React\Redis\RedisClient('localhost?idle=0.1');
 ```
 
-### Client
+If you need custom DNS, proxy or TLS settings, you can explicitly pass a
+custom instance of the [`ConnectorInterface`](https://github.com/reactphp/socket#connectorinterface):
 
-The `Client` is responsible for exchanging messages with Redis
-and keeps track of pending commands.
+```php
+$connector = new React\Socket\Connector([
+    'dns' => '127.0.0.1',
+    'tcp' => [
+        'bindto' => '192.168.10.1:0'
+    ],
+    'tls' => [
+        'verify_peer' => false,
+        'verify_peer_name' => false
+    ]
+]);
 
-Besides defining a few methods, this interface also implements the
-`EventEmitterInterface` which allows you to react to certain events as documented below.
+$redis = new Clue\React\Redis\RedisClient('localhost', $connector);
+```
+
+This class takes an optional `LoopInterface|null $loop` parameter that can be used to
+pass the event loop instance to use for this object. You can use a `null` value
+here in order to use the [default loop](https://github.com/reactphp/event-loop#loop).
+This value SHOULD NOT be given unless you're sure you want to explicitly use a
+given event loop instance.
 
 #### __call()
 
