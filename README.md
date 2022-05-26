@@ -86,9 +86,6 @@ $redis->get('greeting')->then(function (string $greeting) {
 $redis->incr('invocation')->then(function (int $n) {
     echo 'This is invocation #' . $n . PHP_EOL;
 });
-
-// end connection once all pending requests have been resolved
-$redis->end();
 ```
 
 See also the [examples](examples).
@@ -276,18 +273,18 @@ and keeps track of pending commands.
 $redis = new Clue\React\Redis\RedisClient('localhost:6379');
 
 $redis->incr('hello');
-$redis->end();
 ```
 
 Besides defining a few methods, this interface also implements the
 `EventEmitterInterface` which allows you to react to certain events as documented below.
 
-Internally, this class creates the underlying database connection only on
+Internally, this class creates the underlying connection to Redis only on
 demand once the first request is invoked on this instance and will queue
 all outstanding requests until the underlying connection is ready.
-Additionally, it will only keep this underlying connection in an "idle" state
-for 60s by default and will automatically close the underlying connection when
-it is no longer needed.
+This underlying connection will be reused for all requests until it is closed.
+By default, idle connections will be held open for 1ms (0.001s) when not used.
+The next request will either reuse the existing connection or will automatically
+create a new underlying connection if this idle time is expired.
 
 From a consumer side this means that you can start sending commands to the
 database right away while the underlying connection may still be
@@ -383,17 +380,17 @@ in seconds (or use a negative number to not apply a timeout) like this:
 $redis = new Clue\React\Redis\RedisClient('localhost?timeout=0.5');
 ```
 
-By default, this method will keep "idle" connections open for 60s and will
-then end the underlying connection. The next request after an "idle"
-connection ended will automatically create a new underlying connection.
-This ensure you always get a "fresh" connection and as such should not be
+By default, idle connections will be held open for 1ms (0.001s) when not used.
+The next request will either reuse the existing connection or will automatically
+create a new underlying connection if this idle time is expired.
+This ensures you always get a "fresh" connection and as such should not be
 confused with a "keepalive" or "heartbeat" mechanism, as this will not
 actively try to probe the connection. You can explicitly pass a custom
 idle timeout value in seconds (or use a negative number to not apply a
 timeout) like this:
 
 ```php
-$redis = new Clue\React\Redis\RedisClient('localhost?idle=0.1');
+$redis = new Clue\React\Redis\RedisClient('localhost?idle=10.0');
 ```
 
 If you need custom DNS, proxy or TLS settings, you can explicitly pass a

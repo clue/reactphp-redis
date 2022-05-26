@@ -15,5 +15,3 @@ $redis->get('test')->then(function (string $result) {
     echo 'Error: ' . $e->getMessage() . PHP_EOL;
     exit(1);
 });
-
-$redis->end();
