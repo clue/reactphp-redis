@@ -53,9 +53,9 @@ class FunctionalTest extends TestCase
     /**
      * @doesNotPerformAssertions
      */
-    public function testPingLazyWillNotBlockLoopWhenIdleTimeIsSmall()
+    public function testPingLazyWillNotBlockLoop()
     {
-        $redis = new RedisClient($this->uri . '?idle=0', null, $this->loop);
+        $redis = new RedisClient($this->uri, null, $this->loop);
 
         $redis->ping();
 

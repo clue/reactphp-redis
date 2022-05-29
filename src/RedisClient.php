@@ -44,7 +44,7 @@ class RedisClient extends EventEmitter
     private $loop;
 
     /** @var float */
-    private $idlePeriod = 60.0;
+    private $idlePeriod = 0.001;
 
     /** @var ?TimerInterface */
     private $idleTimer = null;

@@ -16,5 +16,3 @@ $redis->publish($channel, $message)->then(function (int $received) {
     echo 'Unable to publish: ' . $e->getMessage() . PHP_EOL;
     exit(1);
 });
-
-$redis->end();

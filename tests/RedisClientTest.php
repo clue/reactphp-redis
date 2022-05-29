@@ -63,7 +63,7 @@ class RedisClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->loop->expects($this->once())->method('addTimer')->with(60.0, $this->anything());
+        $this->loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything());
 
         $promise = $this->redis->ping();
         $deferred->resolve($client);
