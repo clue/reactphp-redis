@@ -43,7 +43,7 @@ class SentinelClient
         $this->factory = new Factory($loop ?: Loop::get(), $connector);
     }
 
-    public function masterUrl(): PromiseInterface
+    public function masterAddress(): PromiseInterface
     {
         $chain = reject();
         foreach ($this->urls as $url) {
@@ -57,16 +57,17 @@ class SentinelClient
         return $chain;
     }
 
-    public function masterConnection(): PromiseInterface
+    public function masterConnection(string $masterUriPath = '', array $masterUriParams = []): PromiseInterface
     {
         if (isset($this->masterClient)) {
             return resolve($this->masterClient);
         }
 
         return $this
-            ->masterUrl()
-            ->then(function (string $masterUrl) {
-                return $this->factory->createClient($masterUrl);
+            ->masterAddress()
+            ->then(function (string $masterUrl) use ($masterUriPath, $masterUriParams) {
+                $query = $masterUriParams ? '?' . http_build_query($masterUriParams) : '';
+                return $this->factory->createClient($masterUrl . $masterUriPath . $query);
             })
             ->then(function (StreamingClient $client) {
                 $this->masterClient = $client;
