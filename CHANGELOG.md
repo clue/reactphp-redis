@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.7.0 (TBA)
+
+*   Feature: Support Redis Sentinel auto master discovery (alpha).
+    (@sartor)
+
 ## 2.6.0 (2022-05-09)
 
 *   Feature: Support PHP 8.1 release.
