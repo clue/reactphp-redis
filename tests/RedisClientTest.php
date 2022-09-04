@@ -223,7 +223,7 @@ class RedisClientTest extends TestCase
 
         $this->redis->ping();
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
     }
 
     public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
@@ -242,14 +242,14 @@ class RedisClientTest extends TestCase
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
         $this->redis->ping();
     }
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->once())->method('close');
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -312,7 +312,7 @@ class RedisClientTest extends TestCase
     public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved()
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->once())->method('close');
 
         $deferred = new Deferred();
@@ -337,7 +337,7 @@ class RedisClientTest extends TestCase
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
         $this->redis->close();
     }
 
@@ -414,7 +414,7 @@ class RedisClientTest extends TestCase
         $error = new \RuntimeException();
 
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -429,7 +429,7 @@ class RedisClientTest extends TestCase
     public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose()
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -463,7 +463,7 @@ class RedisClientTest extends TestCase
         $this->redis->on('close', $this->expectCallableNever());
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
 
         $this->assertTrue(is_callable($closeHandler));
         $closeHandler();
@@ -473,7 +473,7 @@ class RedisClientTest extends TestCase
     {
         $messageHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$messageHandler) {
             if ($event === 'message') {
                 $messageHandler = $callback;
@@ -495,7 +495,7 @@ class RedisClientTest extends TestCase
     {
         $allHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$allHandler) {
             if (!isset($allHandler[$event])) {
                 $allHandler[$event] = $callback;

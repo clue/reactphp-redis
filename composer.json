@@ -15,12 +15,12 @@
         "clue/redis-protocol": "0.3.*",
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
         "react/event-loop": "^1.2",
-        "react/promise": "^2.0 || ^1.1",
-        "react/promise-timer": "^1.8",
-        "react/socket": "^1.9"
+        "react/promise": "^3 || ^2.0 || ^1.1",
+        "react/promise-timer": "^1.9",
+        "react/socket": "^1.12"
     },
     "require-dev": {
-        "clue/block-react": "^1.1",
+        "clue/block-react": "^1.5",
         "phpunit/phpunit": "^9.3 || ^7.5"
     },
     "autoload": {
