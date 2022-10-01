@@ -6,7 +6,6 @@ use Clue\React\Redis\RedisClient;
 use React\EventLoop\StreamSelectLoop;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use function Clue\React\Block\await;
 
 class FunctionalTest extends TestCase
 {
@@ -33,7 +32,7 @@ class FunctionalTest extends TestCase
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = await($promise, $this->loop);
+        $ret = \React\Async\await($promise);
 
         $this->assertEquals('PONG', $ret);
     }
@@ -45,7 +44,7 @@ class FunctionalTest extends TestCase
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = await($promise, $this->loop);
+        $ret = \React\Async\await($promise);
 
         $this->assertEquals('PONG', $ret);
     }
@@ -83,7 +82,7 @@ class FunctionalTest extends TestCase
         $promise = $redis->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $redis->on('message', $this->expectCallableNever());
 
-        await($promise, $this->loop);
+        \React\Async\await($promise);
     }
 
     public function testPipeline()
@@ -95,7 +94,7 @@ class FunctionalTest extends TestCase
         $redis->incr('a')->then($this->expectCallableOnceWith(3));
         $promise = $redis->get('a')->then($this->expectCallableOnceWith('3'));
 
-        await($promise, $this->loop);
+        \React\Async\await($promise);
     }
 
     public function testInvalidCommand()
@@ -108,7 +107,7 @@ class FunctionalTest extends TestCase
         } else {
             $this->setExpectedException('Exception');
         }
-        await($promise, $this->loop);
+        \React\Async\await($promise);
     }
 
     public function testMultiExecEmpty()
@@ -117,7 +116,7 @@ class FunctionalTest extends TestCase
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
         $promise = $redis->exec()->then($this->expectCallableOnceWith([]));
 
-        await($promise, $this->loop);
+        \React\Async\await($promise);
     }
 
     public function testMultiExecQueuedExecHasValues()
@@ -131,7 +130,7 @@ class FunctionalTest extends TestCase
         $redis->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
         $promise = $redis->exec()->then($this->expectCallableOnceWith(['OK', 1, 12, 20]));
 
-        await($promise, $this->loop);
+        \React\Async\await($promise);
     }
 
     public function testPubSub()
@@ -152,7 +151,7 @@ class FunctionalTest extends TestCase
         })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
-        await($deferred->promise(), $this->loop, 0.1);
+        \React\Async\await($deferred->promise());
     }
 
     public function testClose()
