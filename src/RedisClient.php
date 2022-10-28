@@ -161,6 +161,7 @@ class RedisClient extends EventEmitter
 
         return $this->client()->then(function (StreamingClient $redis) use ($name, $args) {
             $this->awake();
+            assert(\is_callable([$redis, $name])); // @phpstan-ignore-next-line
             return \call_user_func_array([$redis, $name], $args)->then(
                 function ($result) {
                     $this->idle();
@@ -252,6 +253,7 @@ class RedisClient extends EventEmitter
 
         if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+                assert($this->promise instanceof PromiseInterface);
                 $this->promise->then(function (StreamingClient $redis) {
                     $redis->close();
                 });

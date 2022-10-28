@@ -38,29 +38,7 @@ class StreamingClientTest extends TestCase
         $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
     }
 
-    public function testConstructWithoutParserAssignsParserAutomatically()
-    {
-        $this->redis = new StreamingClient($this->stream, null, $this->serializer);
-
-        $ref = new \ReflectionProperty($this->redis, 'parser');
-        $ref->setAccessible(true);
-        $parser = $ref->getValue($this->redis);
-
-        $this->assertInstanceOf(ParserInterface::class, $parser);
-    }
-
-    public function testConstructWithoutParserAndSerializerAssignsParserAndSerializerAutomatically()
-    {
-        $this->redis = new StreamingClient($this->stream, $this->parser);
-
-        $ref = new \ReflectionProperty($this->redis, 'serializer');
-        $ref->setAccessible(true);
-        $serializer = $ref->getValue($this->redis);
-
-        $this->assertInstanceOf(SerializerInterface::class, $serializer);
-    }
-
-    public function testSending()
+    public function testSending(): void
     {
         $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('ping'))->will($this->returnValue('message'));
         $this->stream->expects($this->once())->method('write')->with($this->equalTo('message'));
@@ -68,14 +46,14 @@ class StreamingClientTest extends TestCase
         $this->redis->ping();
     }
 
-    public function testClosingClientEmitsEvent()
+    public function testClosingClientEmitsEvent(): void
     {
         $this->redis->on('close', $this->expectCallableOnce());
 
         $this->redis->close();
     }
 
-    public function testClosingStreamClosesClient()
+    public function testClosingStreamClosesClient(): void
     {
         $stream = new ThroughStream();
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
@@ -85,7 +63,7 @@ class StreamingClientTest extends TestCase
         $stream->emit('close');
     }
 
-    public function testReceiveParseErrorEmitsErrorEvent()
+    public function testReceiveParseErrorEmitsErrorEvent(): void
     {
         $stream = new ThroughStream();
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
@@ -107,7 +85,7 @@ class StreamingClientTest extends TestCase
         $stream->emit('data', ['message']);
     }
 
-    public function testReceiveUnexpectedReplyEmitsErrorEvent()
+    public function testReceiveUnexpectedReplyEmitsErrorEvent(): void
     {
         $stream = new ThroughStream();
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
@@ -130,15 +108,7 @@ class StreamingClientTest extends TestCase
         $stream->emit('data', ['message']);
     }
 
-    /**
-     * @doesNotPerformAssertions
-     */
-    public function testDefaultCtor()
-    {
-        new StreamingClient($this->stream);
-    }
-
-    public function testPingPong()
+    public function testPingPong(): void
     {
         $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('ping'));
 
@@ -150,7 +120,7 @@ class StreamingClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
-    public function testMonitorCommandIsNotSupported()
+    public function testMonitorCommandIsNotSupported(): void
     {
         $promise = $this->redis->monitor();
 
@@ -167,7 +137,7 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testErrorReply()
+    public function testErrorReply(): void
     {
         $promise = $this->redis->invalid();
 
@@ -177,7 +147,7 @@ class StreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($err));
     }
 
-    public function testClosingClientRejectsAllRemainingRequests()
+    public function testClosingClientRejectsAllRemainingRequests(): void
     {
         $promise = $this->redis->ping();
         $this->redis->close();
@@ -195,7 +165,7 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testClosingStreamRejectsAllRemainingRequests()
+    public function testClosingStreamRejectsAllRemainingRequests(): void
     {
         $stream = new ThroughStream(function () { return ''; });
         $this->parser->expects($this->once())->method('pushIncoming')->willReturn([]);
@@ -217,7 +187,7 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testEndingClientRejectsAllNewRequests()
+    public function testEndingClientRejectsAllNewRequests(): void
     {
         $this->redis->ping();
         $this->redis->end();
@@ -236,7 +206,7 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testClosedClientRejectsAllNewRequests()
+    public function testClosedClientRejectsAllNewRequests(): void
     {
         $this->redis->close();
         $promise = $this->redis->ping();
@@ -254,13 +224,13 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testEndingNonBusyClosesClient()
+    public function testEndingNonBusyClosesClient(): void
     {
         $this->redis->on('close', $this->expectCallableOnce());
         $this->redis->end();
     }
 
-    public function testEndingBusyClosesClientWhenNotBusyAnymore()
+    public function testEndingBusyClosesClientWhenNotBusyAnymore(): void
     {
         // count how often the "close" method has been called
         $closed = 0;
@@ -279,7 +249,7 @@ class StreamingClientTest extends TestCase
         $this->assertEquals(1, $closed);
     }
 
-    public function testClosingMultipleTimesEmitsOnce()
+    public function testClosingMultipleTimesEmitsOnce(): void
     {
         $this->redis->on('close', $this->expectCallableOnce());
 
@@ -287,13 +257,13 @@ class StreamingClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testReceivingUnexpectedMessageThrowsException()
+    public function testReceivingUnexpectedMessageThrowsException(): void
     {
         $this->expectException(\UnderflowException::class);
         $this->redis->handleMessage(new BulkReply('PONG'));
     }
 
-    public function testPubsubSubscribe()
+    public function testPubsubSubscribe(): StreamingClient
     {
         $promise = $this->redis->subscribe('test');
         $this->expectPromiseResolve($promise);
@@ -306,9 +276,8 @@ class StreamingClientTest extends TestCase
 
     /**
      * @depends testPubsubSubscribe
-     * @param StreamingClient $client
      */
-    public function testPubsubPatternSubscribe(StreamingClient $client)
+    public function testPubsubPatternSubscribe(StreamingClient $client): StreamingClient
     {
          $promise = $client->psubscribe('demo_*');
          $this->expectPromiseResolve($promise);
@@ -321,15 +290,14 @@ class StreamingClientTest extends TestCase
 
     /**
      * @depends testPubsubPatternSubscribe
-     * @param StreamingClient $client
      */
-    public function testPubsubMessage(StreamingClient $client)
+    public function testPubsubMessage(StreamingClient $client): void
     {
         $client->on('message', $this->expectCallableOnce());
         $client->handleMessage(new MultiBulkReply([new BulkReply('message'), new BulkReply('test'), new BulkReply('payload')]));
     }
 
-    public function testSubscribeWithMultipleArgumentsRejects()
+    public function testSubscribeWithMultipleArgumentsRejects(): void
     {
         $promise = $this->redis->subscribe('a', 'b');
 
@@ -346,7 +314,7 @@ class StreamingClientTest extends TestCase
         ));
     }
 
-    public function testUnsubscribeWithoutArgumentsRejects()
+    public function testUnsubscribeWithoutArgumentsRejects(): void
     {
         $promise = $this->redis->unsubscribe();
 

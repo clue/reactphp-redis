@@ -13,14 +13,17 @@ class TestCase extends BaseTestCase
     {
         $mock = $this->createCallableMock();
         $mock->expects($this->once())->method('__invoke');
+        assert(is_callable($mock));
 
         return $mock;
     }
 
+    /** @param mixed $argument */
     protected function expectCallableOnceWith($argument): callable
     {
         $mock = $this->createCallableMock();
         $mock->expects($this->once())->method('__invoke')->with($argument);
+        assert(is_callable($mock));
 
         return $mock;
     }
@@ -29,6 +32,7 @@ class TestCase extends BaseTestCase
     {
         $mock = $this->createCallableMock();
         $mock->expects($this->never())->method('__invoke');
+        assert(is_callable($mock));
 
         return $mock;
     }

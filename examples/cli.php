@@ -25,7 +25,9 @@ Loop::addReadStream(STDIN, function () use ($redis) {
 
     $params = explode(' ', $line);
     $method = array_shift($params);
-    $promise = call_user_func_array([$redis, $method], $params);
+
+    assert(is_callable([$redis, $method]));
+    $promise = $redis->$method(...$params);
 
     // special method such as end() / close() called
     if (!$promise instanceof React\Promise\PromiseInterface) {

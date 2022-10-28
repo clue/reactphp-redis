@@ -2,7 +2,6 @@
 
 namespace Clue\React\Redis\Io;
 
-use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use Clue\Redis\Protocol\Model\ErrorReply;
 use Clue\Redis\Protocol\Model\ModelInterface;
 use Clue\Redis\Protocol\Model\MultiBulkReply;
@@ -22,9 +21,6 @@ class StreamingClient extends EventEmitter
     /** @var DuplexStreamInterface */
     private $stream;
 
-    /** @var ParserInterface */
-    private $parser;
-
     /** @var SerializerInterface */
     private $serializer;
 
@@ -43,18 +39,8 @@ class StreamingClient extends EventEmitter
     /** @var int */
     private $psubscribed = 0;
 
-    public function __construct(DuplexStreamInterface $stream, ParserInterface $parser = null, SerializerInterface $serializer = null)
+    public function __construct(DuplexStreamInterface $stream, ParserInterface $parser, SerializerInterface $serializer)
     {
-        if ($parser === null || $serializer === null) {
-            $factory = new ProtocolFactory();
-            if ($parser === null) {
-                $parser = $factory->createResponseParser();
-            }
-            if ($serializer === null) {
-                $serializer = $factory->createSerializer();
-            }
-        }
-
         $stream->on('data', function (string $chunk) use ($parser) {
             try {
                 $models = $parser->pushIncoming($chunk);
@@ -82,10 +68,10 @@ class StreamingClient extends EventEmitter
         $stream->on('close', [$this, 'close']);
 
         $this->stream = $stream;
-        $this->parser = $parser;
         $this->serializer = $serializer;
     }
 
+    /** @param string[] $args */
     public function __call(string $name, array $args): PromiseInterface
     {
         $request = new Deferred();
@@ -139,6 +125,7 @@ class StreamingClient extends EventEmitter
     {
         if (($this->subscribed !== 0 || $this->psubscribed !== 0) && $message instanceof MultiBulkReply) {
             $array = $message->getValueNative();
+            assert(\is_array($array));
             $first = array_shift($array);
 
             // pub/sub messages are to be forwarded and should not be processed as request responses

@@ -31,7 +31,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory = new Factory($this->loop, $this->connector);
     }
 
-    public function testConstructWithoutLoopAssignsLoopAutomatically()
+    public function testConstructWithoutLoopAssignsLoopAutomatically(): void
     {
         $factory = new Factory();
 
@@ -45,24 +45,24 @@ class FactoryStreamingClientTest extends TestCase
     /**
      * @doesNotPerformAssertions
      */
-    public function testCtor()
+    public function testCtor(): void
     {
         $this->factory = new Factory($this->loop);
     }
 
-    public function testWillConnectWithDefaultPort()
+    public function testWillConnectWithDefaultPort(): void
     {
         $this->connector->expects($this->once())->method('connect')->with('redis.example.com:6379')->willReturn(reject(new \RuntimeException()));
         $this->factory->createClient('redis.example.com');
     }
 
-    public function testWillConnectToLocalhost()
+    public function testWillConnectToLocalhost(): void
     {
         $this->connector->expects($this->once())->method('connect')->with('localhost:1337')->willReturn(reject(new \RuntimeException()));
         $this->factory->createClient('localhost:1337');
     }
 
-    public function testWillResolveIfConnectorResolves()
+    public function testWillResolveIfConnectorResolves(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->never())->method('write');
@@ -73,7 +73,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->expectPromiseResolve($promise);
     }
 
-    public function testWillWriteSelectCommandIfTargetContainsPath()
+    public function testWillWriteSelectCommandIfTargetContainsPath(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
@@ -82,7 +82,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://127.0.0.1/demo');
     }
 
-    public function testWillWriteSelectCommandIfTargetContainsDbQueryParameter()
+    public function testWillWriteSelectCommandIfTargetContainsDbQueryParameter(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$1\r\n4\r\n");
@@ -91,7 +91,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://127.0.0.1?db=4');
     }
 
-    public function testWillWriteAuthCommandIfRedisUriContainsUserInfo()
+    public function testWillWriteAuthCommandIfRedisUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
@@ -100,7 +100,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://hello:world@example.com');
     }
 
-    public function testWillWriteAuthCommandIfRedisUriContainsEncodedUserInfo()
+    public function testWillWriteAuthCommandIfRedisUriContainsEncodedUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
@@ -109,7 +109,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://:h%40llo@example.com');
     }
 
-    public function testWillWriteAuthCommandIfTargetContainsPasswordQueryParameter()
+    public function testWillWriteAuthCommandIfTargetContainsPasswordQueryParameter(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$6\r\nsecret\r\n");
@@ -118,7 +118,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://example.com?password=secret');
     }
 
-    public function testWillWriteAuthCommandIfTargetContainsEncodedPasswordQueryParameter()
+    public function testWillWriteAuthCommandIfTargetContainsEncodedPasswordQueryParameter(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
@@ -127,7 +127,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://example.com?password=h%40llo');
     }
 
-    public function testWillWriteAuthCommandIfRedissUriContainsUserInfo()
+    public function testWillWriteAuthCommandIfRedissUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
@@ -136,7 +136,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('rediss://hello:world@example.com');
     }
 
-    public function testWillWriteAuthCommandIfRedisUnixUriContainsPasswordQueryParameter()
+    public function testWillWriteAuthCommandIfRedisUnixUriContainsPasswordQueryParameter(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
@@ -145,7 +145,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix:///tmp/redis.sock?password=world');
     }
 
-    public function testWillNotWriteAnyCommandIfRedisUnixUriContainsNoPasswordOrDb()
+    public function testWillNotWriteAnyCommandIfRedisUnixUriContainsNoPasswordOrDb(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->never())->method('write');
@@ -154,7 +154,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix:///tmp/redis.sock');
     }
 
-    public function testWillWriteAuthCommandIfRedisUnixUriContainsUserInfo()
+    public function testWillWriteAuthCommandIfRedisUnixUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
@@ -163,7 +163,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix://hello:world@/tmp/redis.sock');
     }
 
-    public function testWillResolveWhenAuthCommandReceivesOkResponseIfRedisUriContainsUserInfo()
+    public function testWillResolveWhenAuthCommandReceivesOkResponseIfRedisUriContainsUserInfo(): void
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -185,7 +185,7 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf(StreamingClient::class)));
     }
 
-    public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo()
+    public function testWillRejectAndCloseAutomaticallyWhenAuthCommandReceivesErrorResponseIfRedisUriContainsUserInfo(): void
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -215,13 +215,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
                 }),
                 $this->callback(function (\RuntimeException $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'ERR invalid password';
                 })
             )
         ));
     }
 
-    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForAuthCommand()
+    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForAuthCommand(): void
     {
         $closeHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -253,13 +254,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
                 }),
                 $this->callback(function (\Exception $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'Connection closed by peer (ECONNRESET)';
                 })
             )
         ));
     }
 
-    public function testWillWriteSelectCommandIfRedisUnixUriContainsDbQueryParameter()
+    public function testWillWriteSelectCommandIfRedisUnixUriContainsDbQueryParameter(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
@@ -268,7 +270,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis+unix:///tmp/redis.sock?db=demo');
     }
 
-    public function testWillResolveWhenSelectCommandReceivesOkResponseIfRedisUriContainsPath()
+    public function testWillResolveWhenSelectCommandReceivesOkResponseIfRedisUriContainsPath(): void
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -290,7 +292,7 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith($this->isInstanceOf(StreamingClient::class)));
     }
 
-    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath()
+    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesErrorResponseIfRedisUriContainsPath(): void
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -320,13 +322,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === (defined('SOCKET_ENOENT') ? SOCKET_ENOENT : 2);
                 }),
                 $this->callback(function (\RuntimeException $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'ERR DB index is out of range';
                 })
             )
         ));
     }
 
-    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesAuthErrorResponseIfRedisUriContainsPath()
+    public function testWillRejectAndCloseAutomaticallyWhenSelectCommandReceivesAuthErrorResponseIfRedisUriContainsPath(): void
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -356,13 +359,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === (defined('SOCKET_EACCES') ? SOCKET_EACCES : 13);
                 }),
                 $this->callback(function (\Exception $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'NOAUTH Authentication required.';
                 })
             )
         ));
     }
 
-    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForSelectCommand()
+    public function testWillRejectAndCloseAutomaticallyWhenConnectionIsClosedWhileWaitingForSelectCommand(): void
     {
         $closeHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
@@ -394,13 +398,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === (defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104);
                 }),
                 $this->callback(function (\Exception $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'Connection closed by peer (ECONNRESET)';
                 })
             )
         ));
     }
 
-    public function testWillRejectIfConnectorRejects()
+    public function testWillRejectIfConnectorRejects(): void
     {
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn(reject(new \RuntimeException('Foo', 42)));
         $promise = $this->factory->createClient('redis://127.0.0.1:2');
@@ -415,13 +420,14 @@ class FactoryStreamingClientTest extends TestCase
                     return $e->getCode() === 42;
                 }),
                 $this->callback(function (\RuntimeException $e) {
+                    assert($e->getPrevious() !== null);
                     return $e->getPrevious()->getMessage() === 'Foo';
                 })
             )
         ));
     }
 
-    public function testWillRejectIfTargetIsInvalid()
+    public function testWillRejectIfTargetIsInvalid(): void
     {
         $promise = $this->factory->createClient('http://invalid target');
 
@@ -438,7 +444,7 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
-    public function testCancelWillRejectPromise()
+    public function testCancelWillRejectPromise(): void
     {
         $promise = new \React\Promise\Promise(function () { });
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($promise);
@@ -451,7 +457,8 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf(\RuntimeException::class)));
     }
 
-    public function provideUris()
+    /** @return list<list<string>> */
+    public function provideUris(): array
     {
         return [
             [
@@ -519,10 +526,8 @@ class FactoryStreamingClientTest extends TestCase
 
     /**
      * @dataProvider provideUris
-     * @param string $uri
-     * @param string $safe
      */
-    public function testCancelWillRejectWithUriInMessageAndCancelConnectorWhenConnectionIsPending($uri, $safe)
+    public function testCancelWillRejectWithUriInMessageAndCancelConnectorWhenConnectionIsPending(string $uri, string $safe): void
     {
         $deferred = new Deferred($this->expectCallableOnce());
         $this->connector->expects($this->once())->method('connect')->willReturn($deferred->promise());
@@ -545,7 +550,7 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
-    public function testCancelWillCloseConnectionWhenConnectionWaitsForSelect()
+    public function testCancelWillCloseConnectionWhenConnectionWaitsForSelect(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write');
@@ -571,7 +576,7 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
-    public function testCreateClientWithTimeoutParameterWillStartTimerAndRejectOnExplicitTimeout()
+    public function testCreateClientWithTimeoutParameterWillStartTimerAndRejectOnExplicitTimeout(): void
     {
         $timeout = null;
         $this->loop->expects($this->once())->method('addTimer')->with(0, $this->callback(function ($cb) use (&$timeout) {
@@ -600,7 +605,7 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
-    public function testCreateClientWithNegativeTimeoutParameterWillNotStartTimer()
+    public function testCreateClientWithNegativeTimeoutParameterWillNotStartTimer(): void
     {
         $this->loop->expects($this->never())->method('addTimer');
 
@@ -610,7 +615,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->factory->createClient('redis://127.0.0.1:2?timeout=-1');
     }
 
-    public function testCreateClientWithoutTimeoutParameterWillStartTimerWithDefaultTimeoutFromIni()
+    public function testCreateClientWithoutTimeoutParameterWillStartTimerWithDefaultTimeoutFromIni(): void
     {
         $this->loop->expects($this->once())->method('addTimer')->with(42, $this->anything());
 
@@ -618,6 +623,7 @@ class FactoryStreamingClientTest extends TestCase
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
 
         $old = ini_get('default_socket_timeout');
+        assert(is_string($old));
         ini_set('default_socket_timeout', '42');
         $this->factory->createClient('redis://127.0.0.1:2');
         ini_set('default_socket_timeout', $old);

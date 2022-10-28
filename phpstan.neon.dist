@@ -1,5 +1,5 @@
 parameters:
-    level: 3
+    level: max
 
     paths:
         - examples/
@@ -13,3 +13,5 @@ parameters:
         # ignore undefined methods due to magic `__call()` method
         - '/^Call to an undefined method Clue\\React\\Redis\\RedisClient::.+\(\)\.$/'
         - '/^Call to an undefined method Clue\\React\\Redis\\Io\\StreamingClient::.+\(\)\.$/'
+        # ignore incomplete type information for mocks in legacy PHPUnit 7.5
+        - '/^Parameter #\d+ .+ of .+ expects .+, PHPUnit\\Framework\\MockObject\\MockObject given\.$/'
