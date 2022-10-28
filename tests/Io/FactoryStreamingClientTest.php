@@ -6,6 +6,7 @@ use Clue\React\Redis\Io\Factory;
 use Clue\React\Redis\Io\StreamingClient;
 use Clue\Tests\React\Redis\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
@@ -17,33 +18,30 @@ use function React\Promise\resolve;
 class FactoryStreamingClientTest extends TestCase
 {
     /** @var MockObject */
-    private $loop;
-
-    /** @var MockObject */
     private $connector;
 
     /** @var Factory */
     private $factory;
 
-    public function setUp(): void
-    {
-        $this->loop = $this->createMock(LoopInterface::class);
-        $this->connector = $this->createMock(ConnectorInterface::class);
+    /** @var LoopInterface */
+    public static $loop;
 
-        assert($this->loop instanceof LoopInterface);
-        assert($this->connector instanceof ConnectorInterface);
-        $this->factory = new Factory($this->loop, $this->connector);
+    public static function setUpBeforeClass(): void
+    {
+        self::$loop = Loop::get();
     }
 
-    public function testConstructWithoutLoopAssignsLoopAutomatically(): void
+    public static function tearDownAfterClass(): void
     {
-        $factory = new Factory();
+        Loop::set(self::$loop);
+    }
 
-        $ref = new \ReflectionProperty($factory, 'loop');
-        $ref->setAccessible(true);
-        $loop = $ref->getValue($factory);
+    public function setUp(): void
+    {
+        $this->connector = $this->createMock(ConnectorInterface::class);
 
-        $this->assertInstanceOf(LoopInterface::class, $loop);
+        assert($this->connector instanceof ConnectorInterface);
+        $this->factory = new Factory($this->connector);
     }
 
     /**
@@ -51,8 +49,7 @@ class FactoryStreamingClientTest extends TestCase
      */
     public function testCtor(): void
     {
-        assert($this->loop instanceof LoopInterface);
-        $this->factory = new Factory($this->loop);
+        $this->factory = new Factory();
     }
 
     public function testWillConnectWithDefaultPort(): void
@@ -87,6 +84,11 @@ class FactoryStreamingClientTest extends TestCase
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
 
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
         $this->connector->expects($this->once())->method('connect')->willReturn(resolve($stream));
         $this->factory->createClient('redis://127.0.0.1/demo');
     }
@@ -95,6 +97,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$1\r\n4\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->willReturn(resolve($stream));
         $this->factory->createClient('redis://127.0.0.1?db=4');
@@ -105,6 +112,11 @@ class FactoryStreamingClientTest extends TestCase
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
 
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
         $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(resolve($stream));
         $this->factory->createClient('redis://hello:world@example.com');
     }
@@ -113,6 +125,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(resolve($stream));
         $this->factory->createClient('redis://:h%40llo@example.com');
@@ -123,6 +140,11 @@ class FactoryStreamingClientTest extends TestCase
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$6\r\nsecret\r\n");
 
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
         $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(resolve($stream));
         $this->factory->createClient('redis://example.com?password=secret');
     }
@@ -131,6 +153,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->with('example.com:6379')->willReturn(resolve($stream));
         $this->factory->createClient('redis://example.com?password=h%40llo');
@@ -141,6 +168,11 @@ class FactoryStreamingClientTest extends TestCase
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
 
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
         $this->connector->expects($this->once())->method('connect')->with('tls://example.com:6379')->willReturn(resolve($stream));
         $this->factory->createClient('rediss://hello:world@example.com');
     }
@@ -149,6 +181,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(resolve($stream));
         $this->factory->createClient('redis+unix:///tmp/redis.sock?password=world');
@@ -167,6 +204,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(resolve($stream));
         $this->factory->createClient('redis+unix://hello:world@/tmp/redis.sock');
@@ -274,6 +316,11 @@ class FactoryStreamingClientTest extends TestCase
     {
         $stream = $this->createMock(ConnectionInterface::class);
         $stream->expects($this->once())->method('write')->with("*2\r\n$6\r\nselect\r\n$4\r\ndemo\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->connector->expects($this->once())->method('connect')->with('unix:///tmp/redis.sock')->willReturn(resolve($stream));
         $this->factory->createClient('redis+unix:///tmp/redis.sock?db=demo');
@@ -584,8 +631,12 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWithTimeoutParameterWillStartTimerAndRejectOnExplicitTimeout(): void
     {
+        $loop = $this->createMock(LoopInterface::class);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
         $timeout = null;
-        $this->loop->expects($this->once())->method('addTimer')->with(0, $this->callback(function ($cb) use (&$timeout) {
+        $loop->expects($this->once())->method('addTimer')->with(0, $this->callback(function ($cb) use (&$timeout) {
             $timeout = $cb;
             return true;
         }));
@@ -613,7 +664,11 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWithNegativeTimeoutParameterWillNotStartTimer(): void
     {
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $loop->expects($this->never())->method('addTimer');
 
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
@@ -623,7 +678,10 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWithoutTimeoutParameterWillStartTimerWithDefaultTimeoutFromIni(): void
     {
-        $this->loop->expects($this->once())->method('addTimer')->with(42, $this->anything());
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer')->with(42, $this->anything());
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($deferred->promise());
@@ -637,9 +695,12 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWillCancelTimerWhenConnectionResolves(): void
     {
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());
@@ -652,9 +713,12 @@ class FactoryStreamingClientTest extends TestCase
 
     public function testCreateClientWillCancelTimerWhenConnectionRejects(): void
     {
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());

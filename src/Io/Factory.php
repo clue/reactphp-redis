@@ -4,7 +4,6 @@ namespace Clue\React\Redis\Io;
 
 use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\Loop;
-use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -18,9 +17,6 @@ use function React\Promise\reject;
  */
 class Factory
 {
-    /** @var LoopInterface */
-    private $loop;
-
     /** @var ConnectorInterface */
     private $connector;
 
@@ -28,14 +24,12 @@ class Factory
     private $protocol;
 
     /**
-     * @param ?LoopInterface $loop
      * @param ?ConnectorInterface $connector
      * @param ?ProtocolFactory $protocol
      */
-    public function __construct(LoopInterface $loop = null, ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
+    public function __construct(ConnectorInterface $connector = null, ProtocolFactory $protocol = null)
     {
-        $this->loop = $loop ?: Loop::get();
-        $this->connector = $connector ?: new Connector([], $this->loop);
+        $this->connector = $connector ?: new Connector();
         $this->protocol = $protocol ?: new ProtocolFactory();
     }
 
@@ -182,13 +176,13 @@ class Factory
             $timer = null;
             $promise = $promise->then(function (StreamingClient $v) use (&$timer, $resolve): void {
                 if ($timer) {
-                    $this->loop->cancelTimer($timer);
+                    Loop::cancelTimer($timer);
                 }
                 $timer = false;
                 $resolve($v);
             }, function (\Throwable $e) use (&$timer, $reject): void {
                 if ($timer) {
-                    $this->loop->cancelTimer($timer);
+                    Loop::cancelTimer($timer);
                 }
                 $timer = false;
                 $reject($e);
@@ -200,7 +194,7 @@ class Factory
             }
 
             // start timeout timer which will cancel the pending promise
-            $timer = $this->loop->addTimer($timeout, function () use ($timeout, &$promise, $reject, $uri): void {
+            $timer = Loop::addTimer($timeout, function () use ($timeout, &$promise, $reject, $uri): void {
                 $reject(new \RuntimeException(
                     'Connection to ' . $uri . ' timed out after ' . $timeout . ' seconds (ETIMEDOUT)',
                     \defined('SOCKET_ETIMEDOUT') ? \SOCKET_ETIMEDOUT : 110

@@ -6,6 +6,7 @@ use Clue\React\Redis\RedisClient;
 use Clue\React\Redis\Io\Factory;
 use Clue\React\Redis\Io\StreamingClient;
 use PHPUnit\Framework\MockObject\MockObject;
+use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
@@ -16,19 +17,27 @@ class RedisClientTest extends TestCase
     /** @var MockObject */
     private $factory;
 
-    /** @var MockObject */
-    private $loop;
-
     /** @var RedisClient */
     private $redis;
+
+    /** @var Loopinterface */
+    public static $loop;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$loop = Loop::get();
+    }
+
+    public static function tearDownAfterClass(): void
+    {
+        Loop::set(self::$loop);
+    }
 
     public function setUp(): void
     {
         $this->factory = $this->createMock(Factory::class);
-        $this->loop = $this->createMock(LoopInterface::class);
 
-        assert($this->loop instanceof LoopInterface);
-        $this->redis = new RedisClient('localhost', null, $this->loop);
+        $this->redis = new RedisClient('localhost');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
         $ref->setAccessible(true);
@@ -40,7 +49,10 @@ class RedisClientTest extends TestCase
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
 
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->ping();
 
@@ -64,7 +76,10 @@ class RedisClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything());
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer')->with(0.001, $this->anything());
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->ping();
         $deferred->resolve($client);
@@ -74,8 +89,7 @@ class RedisClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam(): void
     {
-        assert($this->loop instanceof LoopInterface);
-        $this->redis = new RedisClient('localhost?idle=10', null, $this->loop);
+        $this->redis = new RedisClient('localhost?idle=10');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
         $ref->setAccessible(true);
@@ -87,7 +101,10 @@ class RedisClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->loop->expects($this->once())->method('addTimer')->with(10.0, $this->anything());
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer')->with(10.0, $this->anything());
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->ping();
         $deferred->resolve($client);
@@ -97,8 +114,7 @@ class RedisClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative(): void
     {
-        assert($this->loop instanceof LoopInterface);
-        $this->redis = new RedisClient('localhost?idle=-1', null, $this->loop);
+        $this->redis = new RedisClient('localhost?idle=-1');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
         $ref->setAccessible(true);
@@ -110,7 +126,10 @@ class RedisClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->ping();
         $deferred->resolve($client);
@@ -127,7 +146,10 @@ class RedisClientTest extends TestCase
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
 
-        $this->loop->expects($this->once())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->ping();
         $deferred->resolve($client);
@@ -225,7 +247,10 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->ping();
         $this->redis->ping();
@@ -243,9 +268,12 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->ping();
         $deferred->resolve(null);
@@ -260,12 +288,15 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
+        $loop = $this->createMock(LoopInterface::class);
         $timeout = null;
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
+        $loop->expects($this->once())->method('addTimer')->with($this->anything(), $this->callback(function ($cb) use (&$timeout) {
             $timeout = $cb;
             return true;
         }))->willReturn($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->on('close', $this->expectCallableNever());
 
@@ -341,9 +372,12 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->ping();
         $deferred->resolve(null);
@@ -362,9 +396,12 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->ping()->then(null, function () {
             $this->redis->close();
@@ -467,9 +504,12 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
+        $loop = $this->createMock(LoopInterface::class);
         $timer = $this->createMock(TimerInterface::class);
-        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
-        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+        $loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $loop->expects($this->once())->method('cancelTimer')->with($timer);
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $this->redis->on('close', $this->expectCallableNever());
 
@@ -558,7 +598,10 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->subscribe('foo');
         $this->assertTrue(is_callable($subscribeHandler));
@@ -587,7 +630,10 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
-        $this->loop->expects($this->once())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->subscribe('foo');
         $this->assertTrue(is_callable($subscribeHandler));
@@ -617,7 +663,10 @@ class RedisClientTest extends TestCase
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
-        $this->loop->expects($this->never())->method('addTimer');
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
 
         $promise = $this->redis->blpop('list');
 
