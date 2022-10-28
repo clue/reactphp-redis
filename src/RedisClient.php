@@ -46,7 +46,7 @@ class RedisClient extends EventEmitter
     /** @var float */
     private $idlePeriod = 0.001;
 
-    /** @var ?TimerInterface */
+    /** @var ?\React\EventLoop\TimerInterface */
     private $idleTimer = null;
 
     /** @var int */
@@ -221,6 +221,7 @@ class RedisClient extends EventEmitter
                 $redis->close();
             });
             if ($this->promise !== null) {
+                assert(\method_exists($this->promise, 'cancel'));
                 $this->promise->cancel();
                 $this->promise = null;
             }

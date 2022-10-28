@@ -106,6 +106,7 @@ class FunctionalTest extends TestCase
         if (method_exists($this, 'expectException')) {
             $this->expectException('Exception');
         } else {
+            assert(method_exists($this, 'setExpectedException'));
             $this->setExpectedException('Exception');
         }
         await($promise, $this->loop);

@@ -347,6 +347,7 @@ class RedisClientTest extends TestCase
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
+            assert($client instanceof StreamingClient);
             $client->emit('close');
         });
 
@@ -356,11 +357,10 @@ class RedisClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $ref = $this->redis;
-        $ref->ping()->then(null, function () use ($ref, $client) {
-            $ref->close();
+        $this->redis->ping()->then(null, function () {
+            $this->redis->close();
         });
-        $ref->on('close', $this->expectCallableOnce());
+        $this->redis->on('close', $this->expectCallableOnce());
         $deferred->reject(new \RuntimeException());
     }
 
@@ -423,6 +423,7 @@ class RedisClientTest extends TestCase
         $deferred->resolve($client);
 
         $this->redis->on('error', $this->expectCallableNever());
+        assert($client instanceof StreamingClient);
         $client->emit('error', [$error]);
     }
 
@@ -438,6 +439,7 @@ class RedisClientTest extends TestCase
         $deferred->resolve($client);
 
         $this->redis->on('close', $this->expectCallableNever());
+        assert($client instanceof StreamingClient);
         $client->emit('close');
     }
 

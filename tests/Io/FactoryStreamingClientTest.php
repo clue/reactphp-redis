@@ -444,6 +444,8 @@ class FactoryStreamingClientTest extends TestCase
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:2')->willReturn($promise);
 
         $promise = $this->factory->createClient('redis://127.0.0.1:2');
+
+        assert(method_exists($promise, 'cancel'));
         $promise->cancel();
 
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf(\RuntimeException::class)));
@@ -526,6 +528,8 @@ class FactoryStreamingClientTest extends TestCase
         $this->connector->expects($this->once())->method('connect')->willReturn($deferred->promise());
 
         $promise = $this->factory->createClient($uri);
+
+        assert(method_exists($promise, 'cancel'));
         $promise->cancel();
 
         $promise->then(null, $this->expectCallableOnceWith(
@@ -550,6 +554,8 @@ class FactoryStreamingClientTest extends TestCase
         $this->connector->expects($this->once())->method('connect')->willReturn(resolve($stream));
 
         $promise = $this->factory->createClient('redis://127.0.0.1:2/123');
+
+        assert(method_exists($promise, 'cancel'));
         $promise->cancel();
 
         $promise->then(null, $this->expectCallableOnceWith(

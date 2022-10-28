@@ -91,6 +91,7 @@ class Factory
             $connecting->then(function (ConnectionInterface $connection) {
                 $connection->close();
             });
+            assert(\method_exists($connecting, 'cancel'));
             $connecting->cancel();
         });
 

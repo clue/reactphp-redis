@@ -36,7 +36,7 @@ class TestCase extends BaseTestCase
     protected function createCallableMock(): MockObject
     {
         if (method_exists(MockBuilder::class, 'addMethods')) {
-            // PHPUnit 9+
+            // @phpstan-ignore-next-line requires PHPUnit 9+
             return $this->getMockBuilder(\stdClass::class)->addMethods(['__invoke'])->getMock();
         } else {
             // legacy PHPUnit < 9
