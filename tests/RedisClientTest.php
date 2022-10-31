@@ -34,7 +34,7 @@ class RedisClientTest extends TestCase
         $ref->setValue($this->redis, $this->factory);
     }
 
-    public function testPingWillCreateUnderlyingClientAndReturnPendingPromise()
+    public function testPingWillCreateUnderlyingClientAndReturnPendingPromise(): void
     {
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
@@ -46,7 +46,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableNever());
     }
 
-    public function testPingTwiceWillCreateOnceUnderlyingClient()
+    public function testPingTwiceWillCreateOnceUnderlyingClient(): void
     {
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
@@ -55,7 +55,7 @@ class RedisClientTest extends TestCase
         $this->redis->ping();
     }
 
-    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer()
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer(): void
     {
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
@@ -71,7 +71,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
-    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam()
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam(): void
     {
         $this->redis = new RedisClient('localhost?idle=10', null, $this->loop);
 
@@ -93,7 +93,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
-    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative()
+    public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative(): void
     {
         $this->redis = new RedisClient('localhost?idle=-1', null, $this->loop);
 
@@ -115,7 +115,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith('PONG'));
     }
 
-    public function testPingWillRejectWhenUnderlyingClientRejectsPingAndStartIdleTimer()
+    public function testPingWillRejectWhenUnderlyingClientRejectsPingAndStartIdleTimer(): void
     {
         $error = new \RuntimeException();
         $client = $this->createMock(StreamingClient::class);
@@ -132,7 +132,7 @@ class RedisClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($error));
     }
 
-    public function testPingWillRejectAndNotEmitErrorOrCloseWhenFactoryRejectsUnderlyingClient()
+    public function testPingWillRejectAndNotEmitErrorOrCloseWhenFactoryRejectsUnderlyingClient(): void
     {
         $error = new \RuntimeException();
 
@@ -148,7 +148,7 @@ class RedisClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($error));
     }
 
-    public function testPingAfterPreviousFactoryRejectsUnderlyingClientWillCreateNewUnderlyingConnection()
+    public function testPingAfterPreviousFactoryRejectsUnderlyingClientWillCreateNewUnderlyingConnection(): void
     {
         $error = new \RuntimeException();
 
@@ -164,7 +164,7 @@ class RedisClientTest extends TestCase
         $this->redis->ping();
     }
 
-    public function testPingAfterPreviousUnderlyingClientAlreadyClosedWillCreateNewUnderlyingConnection()
+    public function testPingAfterPreviousUnderlyingClientAlreadyClosedWillCreateNewUnderlyingConnection(): void
     {
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
@@ -188,7 +188,7 @@ class RedisClientTest extends TestCase
         $this->redis->ping();
     }
 
-    public function testPingAfterCloseWillRejectWithoutCreatingUnderlyingConnection()
+    public function testPingAfterCloseWillRejectWithoutCreatingUnderlyingConnection(): void
     {
         $this->factory->expects($this->never())->method('createClient');
 
@@ -208,7 +208,7 @@ class RedisClientTest extends TestCase
         ));
     }
 
-    public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves()
+    public function testPingAfterPingWillNotStartIdleTimerWhenFirstPingResolves(): void
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
@@ -226,7 +226,7 @@ class RedisClientTest extends TestCase
         $deferred->resolve(null);
     }
 
-    public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
+    public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves(): void
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
@@ -246,7 +246,7 @@ class RedisClientTest extends TestCase
         $this->redis->ping();
     }
 
-    public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
+    public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent(): void
     {
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
@@ -269,7 +269,7 @@ class RedisClientTest extends TestCase
         $timeout();
     }
 
-    public function testCloseWillEmitCloseEventWithoutCreatingUnderlyingClient()
+    public function testCloseWillEmitCloseEventWithoutCreatingUnderlyingClient(): void
     {
         $this->factory->expects($this->never())->method('createClient');
 
@@ -278,7 +278,7 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseTwiceWillEmitCloseEventOnce()
+    public function testCloseTwiceWillEmitCloseEventOnce(): void
     {
         $this->redis->on('close', $this->expectCallableOnce());
 
@@ -286,7 +286,7 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseAfterPingWillCancelUnderlyingClientConnectionWhenStillPending()
+    public function testCloseAfterPingWillCancelUnderlyingClientConnectionWhenStillPending(): void
     {
         $promise = new Promise(function () { }, $this->expectCallableOnce());
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
@@ -295,7 +295,7 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseAfterPingWillEmitCloseWithoutErrorWhenUnderlyingClientConnectionThrowsDueToCancellation()
+    public function testCloseAfterPingWillEmitCloseWithoutErrorWhenUnderlyingClientConnectionThrowsDueToCancellation(): void
     {
         $promise = new Promise(function () { }, function () {
             throw new \RuntimeException('Discarded');
@@ -309,7 +309,7 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved()
+    public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved(): void
     {
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
@@ -323,7 +323,7 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved()
+    public function testCloseAfterPingWillCancelIdleTimerWhenPingIsAlreadyResolved(): void
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
@@ -341,12 +341,13 @@ class RedisClientTest extends TestCase
         $this->redis->close();
     }
 
-    public function testCloseAfterPingRejectsWillEmitClose()
+    public function testCloseAfterPingRejectsWillEmitClose(): void
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
+            assert($client instanceof StreamingClient);
             $client->emit('close');
         });
 
@@ -356,21 +357,20 @@ class RedisClientTest extends TestCase
         $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
-        $ref = $this->redis;
-        $ref->ping()->then(null, function () use ($ref, $client) {
-            $ref->close();
+        $this->redis->ping()->then(null, function () {
+            $this->redis->close();
         });
-        $ref->on('close', $this->expectCallableOnce());
+        $this->redis->on('close', $this->expectCallableOnce());
         $deferred->reject(new \RuntimeException());
     }
 
-    public function testEndWillCloseClientIfUnderlyingConnectionIsNotPending()
+    public function testEndWillCloseClientIfUnderlyingConnectionIsNotPending(): void
     {
         $this->redis->on('close', $this->expectCallableOnce());
         $this->redis->end();
     }
 
-    public function testEndAfterPingWillEndUnderlyingClient()
+    public function testEndAfterPingWillEndUnderlyingClient(): void
     {
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
@@ -384,7 +384,7 @@ class RedisClientTest extends TestCase
         $this->redis->end();
     }
 
-    public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose()
+    public function testEndAfterPingWillCloseClientWhenUnderlyingClientEmitsClose(): void
     {
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
@@ -409,7 +409,7 @@ class RedisClientTest extends TestCase
         $closeHandler();
     }
 
-    public function testEmitsNoErrorEventWhenUnderlyingClientEmitsError()
+    public function testEmitsNoErrorEventWhenUnderlyingClientEmitsError(): void
     {
         $error = new \RuntimeException();
 
@@ -423,10 +423,11 @@ class RedisClientTest extends TestCase
         $deferred->resolve($client);
 
         $this->redis->on('error', $this->expectCallableNever());
+        assert($client instanceof StreamingClient);
         $client->emit('error', [$error]);
     }
 
-    public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose()
+    public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose(): void
     {
         $client = $this->createMock(StreamingClient::class);
         $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
@@ -438,10 +439,11 @@ class RedisClientTest extends TestCase
         $deferred->resolve($client);
 
         $this->redis->on('close', $this->expectCallableNever());
+        assert($client instanceof StreamingClient);
         $client->emit('close');
     }
 
-    public function testEmitsNoCloseEventButWillCancelIdleTimerWhenUnderlyingConnectionEmitsCloseAfterPingIsAlreadyResolved()
+    public function testEmitsNoCloseEventButWillCancelIdleTimerWhenUnderlyingConnectionEmitsCloseAfterPingIsAlreadyResolved(): void
     {
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
@@ -469,7 +471,7 @@ class RedisClientTest extends TestCase
         $closeHandler();
     }
 
-    public function testEmitsMessageEventWhenUnderlyingClientEmitsMessageForPubSubChannel()
+    public function testEmitsMessageEventWhenUnderlyingClientEmitsMessageForPubSubChannel(): void
     {
         $messageHandler = null;
         $client = $this->createMock(StreamingClient::class);
@@ -491,7 +493,7 @@ class RedisClientTest extends TestCase
         $messageHandler('foo', 'bar');
     }
 
-    public function testEmitsUnsubscribeAndPunsubscribeEventsWhenUnderlyingClientClosesWhileUsingPubSubChannel()
+    public function testEmitsUnsubscribeAndPunsubscribeEventsWhenUnderlyingClientClosesWhileUsingPubSubChannel(): void
     {
         $allHandler = null;
         $client = $this->createMock(StreamingClient::class);
@@ -505,27 +507,25 @@ class RedisClientTest extends TestCase
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
         $this->redis->subscribe('foo');
-        $this->assertTrue(is_callable($allHandler['subscribe']));
+        assert(isset($allHandler['subscribe']) && is_callable($allHandler['subscribe']));
         $allHandler['subscribe']('foo', 1);
 
         $this->redis->subscribe('bar');
-        $this->assertTrue(is_callable($allHandler['subscribe']));
         $allHandler['subscribe']('bar', 2);
 
         $this->redis->unsubscribe('bar');
-        $this->assertTrue(is_callable($allHandler['unsubscribe']));
+        assert(isset($allHandler['unsubscribe']) && is_callable($allHandler['unsubscribe']));
         $allHandler['unsubscribe']('bar', 1);
 
         $this->redis->psubscribe('foo*');
-        $this->assertTrue(is_callable($allHandler['psubscribe']));
+        assert(isset($allHandler['psubscribe']) && is_callable($allHandler['psubscribe']));
         $allHandler['psubscribe']('foo*', 1);
 
         $this->redis->psubscribe('bar*');
-        $this->assertTrue(is_callable($allHandler['psubscribe']));
         $allHandler['psubscribe']('bar*', 2);
 
         $this->redis->punsubscribe('bar*');
-        $this->assertTrue(is_callable($allHandler['punsubscribe']));
+        assert(isset($allHandler['punsubscribe']) && is_callable($allHandler['punsubscribe']));
         $allHandler['punsubscribe']('bar*', 1);
 
         $this->redis->on('unsubscribe', $this->expectCallableOnce());
@@ -535,7 +535,7 @@ class RedisClientTest extends TestCase
         $allHandler['close']();
     }
 
-    public function testSubscribeWillResolveWhenUnderlyingClientResolvesSubscribeAndNotStartIdleTimerWithIdleDueToSubscription()
+    public function testSubscribeWillResolveWhenUnderlyingClientResolvesSubscribeAndNotStartIdleTimerWithIdleDueToSubscription(): void
     {
         $subscribeHandler = null;
         $deferred = new Deferred();
@@ -559,7 +559,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith(['subscribe', 'foo', 1]));
     }
 
-    public function testUnsubscribeAfterSubscribeWillResolveWhenUnderlyingClientResolvesUnsubscribeAndStartIdleTimerWhenSubscriptionStopped()
+    public function testUnsubscribeAfterSubscribeWillResolveWhenUnderlyingClientResolvesUnsubscribeAndStartIdleTimerWhenSubscriptionStopped(): void
     {
         $subscribeHandler = null;
         $unsubscribeHandler = null;
@@ -593,7 +593,7 @@ class RedisClientTest extends TestCase
         $promise->then($this->expectCallableOnceWith(['unsubscribe', 'foo', 0]));
     }
 
-    public function testBlpopWillRejectWhenUnderlyingClientClosesWhileWaitingForResponse()
+    public function testBlpopWillRejectWhenUnderlyingClientClosesWhileWaitingForResponse(): void
     {
         $closeHandler = null;
         $deferred = new Deferred();

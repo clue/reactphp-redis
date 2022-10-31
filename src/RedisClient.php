@@ -46,7 +46,7 @@ class RedisClient extends EventEmitter
     /** @var float */
     private $idlePeriod = 0.001;
 
-    /** @var ?TimerInterface */
+    /** @var ?\React\EventLoop\TimerInterface */
     private $idleTimer = null;
 
     /** @var int */
@@ -161,6 +161,7 @@ class RedisClient extends EventEmitter
 
         return $this->client()->then(function (StreamingClient $redis) use ($name, $args) {
             $this->awake();
+            assert(\is_callable([$redis, $name])); // @phpstan-ignore-next-line
             return \call_user_func_array([$redis, $name], $args)->then(
                 function ($result) {
                     $this->idle();
@@ -221,6 +222,7 @@ class RedisClient extends EventEmitter
                 $redis->close();
             });
             if ($this->promise !== null) {
+                assert(\method_exists($this->promise, 'cancel'));
                 $this->promise->cancel();
                 $this->promise = null;
             }
@@ -251,6 +253,7 @@ class RedisClient extends EventEmitter
 
         if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
             $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+                assert($this->promise instanceof PromiseInterface);
                 $this->promise->then(function (StreamingClient $redis) {
                     $redis->close();
                 });

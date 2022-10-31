@@ -75,6 +75,7 @@ class Factory
         if ($parts['scheme'] === 'rediss') {
             $authority = 'tls://' . $authority;
         } elseif ($parts['scheme'] === 'redis+unix') {
+            assert(isset($parts['path']));
             $authority = 'unix://' . substr($parts['path'], 1);
             unset($parts['path']);
         }
@@ -91,6 +92,7 @@ class Factory
             $connecting->then(function (ConnectionInterface $connection) {
                 $connection->close();
             });
+            assert(\method_exists($connecting, 'cancel'));
             $connecting->cancel();
         });
 
@@ -106,7 +108,7 @@ class Factory
 
         // use `?password=secret` query or `user:secret@host` password form URL
         if (isset($args['password']) || isset($parts['pass'])) {
-            $pass = $args['password'] ?? rawurldecode($parts['pass']);
+            $pass = $args['password'] ?? rawurldecode($parts['pass']); // @phpstan-ignore-line
             $promise = $promise->then(function (StreamingClient $redis) use ($pass, $uri) {
                 return $redis->auth($pass)->then(
                     function () use ($redis) {
@@ -134,7 +136,7 @@ class Factory
 
         // use `?db=1` query or `/1` path (skip first slash)
         if (isset($args['db']) || (isset($parts['path']) && $parts['path'] !== '/')) {
-            $db = $args['db'] ?? substr($parts['path'], 1);
+            $db = $args['db'] ?? substr($parts['path'], 1); // @phpstan-ignore-line
             $promise = $promise->then(function (StreamingClient $redis) use ($db, $uri) {
                 return $redis->select($db)->then(
                     function () use ($redis) {

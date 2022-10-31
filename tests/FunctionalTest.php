@@ -26,7 +26,7 @@ class FunctionalTest extends TestCase
         $this->loop = new StreamSelectLoop();
     }
 
-    public function testPing()
+    public function testPing(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -38,7 +38,7 @@ class FunctionalTest extends TestCase
         $this->assertEquals('PONG', $ret);
     }
 
-    public function testPingLazy()
+    public function testPingLazy(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -53,7 +53,7 @@ class FunctionalTest extends TestCase
     /**
      * @doesNotPerformAssertions
      */
-    public function testPingLazyWillNotBlockLoop()
+    public function testPingLazyWillNotBlockLoop(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -65,7 +65,7 @@ class FunctionalTest extends TestCase
     /**
      * @doesNotPerformAssertions
      */
-    public function testLazyClientWithoutCommandsWillNotBlockLoop()
+    public function testLazyClientWithoutCommandsWillNotBlockLoop(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -74,7 +74,7 @@ class FunctionalTest extends TestCase
         unset($redis);
     }
 
-    public function testMgetIsNotInterpretedAsSubMessage()
+    public function testMgetIsNotInterpretedAsSubMessage(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -86,7 +86,7 @@ class FunctionalTest extends TestCase
         await($promise, $this->loop);
     }
 
-    public function testPipeline()
+    public function testPipeline(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -98,7 +98,7 @@ class FunctionalTest extends TestCase
         await($promise, $this->loop);
     }
 
-    public function testInvalidCommand()
+    public function testInvalidCommand(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
         $promise = $redis->doesnotexist(1, 2, 3);
@@ -106,12 +106,13 @@ class FunctionalTest extends TestCase
         if (method_exists($this, 'expectException')) {
             $this->expectException('Exception');
         } else {
+            assert(method_exists($this, 'setExpectedException'));
             $this->setExpectedException('Exception');
         }
         await($promise, $this->loop);
     }
 
-    public function testMultiExecEmpty()
+    public function testMultiExecEmpty(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
@@ -120,7 +121,7 @@ class FunctionalTest extends TestCase
         await($promise, $this->loop);
     }
 
-    public function testMultiExecQueuedExecHasValues()
+    public function testMultiExecQueuedExecHasValues(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -134,7 +135,7 @@ class FunctionalTest extends TestCase
         await($promise, $this->loop);
     }
 
-    public function testPubSub()
+    public function testPubSub(): void
     {
         $consumer = new RedisClient($this->uri, null, $this->loop);
         $producer = new RedisClient($this->uri, null, $this->loop);
@@ -155,7 +156,7 @@ class FunctionalTest extends TestCase
         await($deferred->promise(), $this->loop, 0.1);
     }
 
-    public function testClose()
+    public function testClose(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
@@ -166,7 +167,7 @@ class FunctionalTest extends TestCase
         $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
 
-    public function testCloseLazy()
+    public function testCloseLazy(): void
     {
         $redis = new RedisClient($this->uri, null, $this->loop);
 
