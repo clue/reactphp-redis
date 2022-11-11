@@ -103,12 +103,7 @@ class FunctionalTest extends TestCase
         $redis = new RedisClient($this->uri, null, $this->loop);
         $promise = $redis->doesnotexist(1, 2, 3);
 
-        if (method_exists($this, 'expectException')) {
-            $this->expectException('Exception');
-        } else {
-            assert(method_exists($this, 'setExpectedException'));
-            $this->setExpectedException('Exception');
-        }
+        $this->expectException(\Exception::class);
         await($promise, $this->loop);
     }
 

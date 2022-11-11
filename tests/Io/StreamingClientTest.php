@@ -35,6 +35,9 @@ class StreamingClientTest extends TestCase
         $this->parser = $this->createMock(ParserInterface::class);
         $this->serializer = $this->createMock(SerializerInterface::class);
 
+        assert($this->stream instanceof DuplexStreamInterface);
+        assert($this->parser instanceof ParserInterface);
+        assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($this->stream, $this->parser, $this->serializer);
     }
 
@@ -56,6 +59,8 @@ class StreamingClientTest extends TestCase
     public function testClosingStreamClosesClient(): void
     {
         $stream = new ThroughStream();
+        assert($this->parser instanceof ParserInterface);
+        assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('close', $this->expectCallableOnce());
@@ -66,6 +71,8 @@ class StreamingClientTest extends TestCase
     public function testReceiveParseErrorEmitsErrorEvent(): void
     {
         $stream = new ThroughStream();
+        assert($this->parser instanceof ParserInterface);
+        assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('error', $this->expectCallableOnceWith(
@@ -88,6 +95,8 @@ class StreamingClientTest extends TestCase
     public function testReceiveUnexpectedReplyEmitsErrorEvent(): void
     {
         $stream = new ThroughStream();
+        assert($this->parser instanceof ParserInterface);
+        assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $this->redis->on('error', $this->expectCallableOnce());
@@ -169,6 +178,9 @@ class StreamingClientTest extends TestCase
     {
         $stream = new ThroughStream(function () { return ''; });
         $this->parser->expects($this->once())->method('pushIncoming')->willReturn([]);
+
+        assert($this->parser instanceof ParserInterface);
+        assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
         $promise = $this->redis->ping();
