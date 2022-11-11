@@ -27,6 +27,7 @@ class RedisClientTest extends TestCase
         $this->factory = $this->createMock(Factory::class);
         $this->loop = $this->createMock(LoopInterface::class);
 
+        assert($this->loop instanceof LoopInterface);
         $this->redis = new RedisClient('localhost', null, $this->loop);
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
@@ -73,6 +74,7 @@ class RedisClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimerWithIdleTimeFromQueryParam(): void
     {
+        assert($this->loop instanceof LoopInterface);
         $this->redis = new RedisClient('localhost?idle=10', null, $this->loop);
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
@@ -95,6 +97,7 @@ class RedisClientTest extends TestCase
 
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndNotStartIdleTimerWhenIdleParamIsNegative(): void
     {
+        assert($this->loop instanceof LoopInterface);
         $this->redis = new RedisClient('localhost?idle=-1', null, $this->loop);
 
         $ref = new \ReflectionProperty($this->redis, 'factory');

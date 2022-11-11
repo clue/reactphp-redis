@@ -28,6 +28,9 @@ class FactoryStreamingClientTest extends TestCase
     {
         $this->loop = $this->createMock(LoopInterface::class);
         $this->connector = $this->createMock(ConnectorInterface::class);
+
+        assert($this->loop instanceof LoopInterface);
+        assert($this->connector instanceof ConnectorInterface);
         $this->factory = new Factory($this->loop, $this->connector);
     }
 
@@ -47,6 +50,7 @@ class FactoryStreamingClientTest extends TestCase
      */
     public function testCtor(): void
     {
+        assert($this->loop instanceof LoopInterface);
         $this->factory = new Factory($this->loop);
     }
 
