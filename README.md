@@ -1,6 +1,8 @@
 # clue/reactphp-redis
 
 [![CI status](https://github.com/clue/reactphp-redis/actions/workflows/ci.yml/badge.svg)](https://github.com/clue/reactphp-redis/actions)
+[![code coverage](https://img.shields.io/badge/code%20coverage-100%25-success)](#tests)
+[![PHPStan level](https://img.shields.io/badge/PHPStan%20level-max-success)](#tests)
 [![installs on Packagist](https://img.shields.io/packagist/dt/clue/redis-react?color=blue&label=installs%20on%20Packagist)](https://packagist.org/packages/clue/redis-react)
 
 Async [Redis](https://redis.io/) client implementation, built on top of [ReactPHP](https://reactphp.org/).
@@ -496,7 +498,7 @@ Once released, this project will follow [SemVer](https://semver.org/).
 At the moment, this will install the latest development version:
 
 ```bash
-$ composer require clue/redis-react:^3@dev
+composer require clue/redis-react:^3@dev
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.
@@ -510,7 +512,7 @@ smooth upgrade path. You may target multiple versions at the same time to
 support a wider range of PHP versions like this:
 
 ```bash
-$ composer require "clue/redis-react:^3@dev || ^2"
+composer require "clue/redis-react:^3@dev || ^2"
 ```
 
 ## Tests
@@ -519,13 +521,21 @@ To run the test suite, you first need to clone this repo and then install all
 dependencies [through Composer](https://getcomposer.org/):
 
 ```bash
-$ composer install
+composer install
 ```
 
 To run the test suite, go to the project root and run:
 
 ```bash
-$ vendor/bin/phpunit
+vendor/bin/phpunit
+```
+
+The test suite is set up to always ensure 100% code coverage across all
+supported environments. If you have the Xdebug extension installed, you can also
+generate a code coverage report locally like this:
+
+```bash
+XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text
 ```
 
 The test suite contains both unit tests and functional integration tests.
@@ -535,14 +545,20 @@ and will be skipped by default.
 If you don't have access to a running Redis server, you can also use a temporary `Redis` Docker image:
 
 ```bash
-$ docker run --net=host redis
+docker run --net=host redis
 ```
 
 To now run the functional tests, you need to supply *your* login
 details in an environment variable like this:
 
 ```bash
-$ REDIS_URI=localhost:6379 vendor/bin/phpunit
+REDIS_URI=localhost:6379 vendor/bin/phpunit
+```
+
+On top of this, we use PHPStan on max level to ensure type safety across the project:
+
+```bash
+vendor/bin/phpstan
 ```
 
 ## License
