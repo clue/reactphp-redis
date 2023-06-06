@@ -21,8 +21,8 @@
     },
     "require-dev": {
         "clue/block-react": "^1.5",
-        "phpstan/phpstan": "1.9.2 || 1.4.10",
-        "phpunit/phpunit": "^9.5 || ^7.5"
+        "phpstan/phpstan": "1.10.15 || 1.4.10",
+        "phpunit/phpunit": "^9.6 || ^7.5"
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }
