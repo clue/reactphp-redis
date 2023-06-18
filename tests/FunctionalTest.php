@@ -4,10 +4,9 @@ namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\RedisClient;
 use React\EventLoop\Loop;
-use React\Promise\Deferred;
+use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use function React\Async\await;
-use function React\Promise\Timer\timeout;
 
 class FunctionalTest extends TestCase
 {
@@ -144,10 +143,7 @@ class FunctionalTest extends TestCase
         $channel = 'channel:test:' . mt_rand();
 
         // consumer receives a single message
-        /** @var Deferred<void> */
-        $deferred = new Deferred();
         $consumer->on('message', $this->expectCallableOnce());
-        $consumer->on('message', [$deferred, 'resolve']);
         $once = $this->expectCallableOnceWith(1);
         $consumer->subscribe($channel)->then(function() use ($producer, $channel, $once){
             // producer sends a single message
@@ -155,8 +151,16 @@ class FunctionalTest extends TestCase
         })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
-
-        await(timeout($deferred->promise(), 0.1));
+        await(new Promise(function (callable $resolve, callable $reject) use ($consumer): void {
+            $timeout = Loop::addTimer(0.1, function () use ($consumer, $reject): void {
+                $consumer->close();
+                $reject(new \RuntimeException('Timed out'));
+            });
+            $consumer->on('message', function () use ($timeout, $resolve): void {
+                Loop::cancelTimer($timeout);
+                $resolve(null);
+            });
+        }));
 
         /** @var PromiseInterface<array{0:"unsubscribe",1:string,2:0}> */
         $promise = $consumer->unsubscribe($channel);

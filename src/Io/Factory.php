@@ -6,13 +6,12 @@ use Clue\Redis\Protocol\Factory as ProtocolFactory;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
+use React\Promise\Promise;
 use React\Promise\PromiseInterface;
-use React\Promise\Timer\TimeoutException;
 use React\Socket\ConnectionInterface;
 use React\Socket\Connector;
 use React\Socket\ConnectorInterface;
 use function React\Promise\reject;
-use function React\Promise\Timer\timeout;
 
 /**
  * @internal
@@ -175,14 +174,53 @@ class Factory
             return $deferred->promise();
         }
 
-        return timeout($deferred->promise(), $timeout, $this->loop)->then(null, function (\Throwable $e) use ($uri) {
-            if ($e instanceof TimeoutException) {
-                throw new \RuntimeException(
-                    'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds (ETIMEDOUT)',
-                    defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110
-                );
+        $promise = $deferred->promise();
+
+        /** @var Promise<StreamingClient> */
+        $ret = new Promise(function (callable $resolve, callable $reject) use ($timeout, $promise, $uri): void {
+            /** @var ?\React\EventLoop\TimerInterface */
+            $timer = null;
+            $promise = $promise->then(function (StreamingClient $v) use (&$timer, $resolve): void {
+                if ($timer) {
+                    $this->loop->cancelTimer($timer);
+                }
+                $timer = false;
+                $resolve($v);
+            }, function (\Throwable $e) use (&$timer, $reject): void {
+                if ($timer) {
+                    $this->loop->cancelTimer($timer);
+                }
+                $timer = false;
+                $reject($e);
+            });
+
+            // promise already settled => no need to start timer
+            if ($timer === false) {
+                return;
             }
-            throw $e;
+
+            // start timeout timer which will cancel the pending promise
+            $timer = $this->loop->addTimer($timeout, function () use ($timeout, &$promise, $reject, $uri): void {
+                $reject(new \RuntimeException(
+                    'Connection to ' . $uri . ' timed out after ' . $timeout . ' seconds (ETIMEDOUT)',
+                    \defined('SOCKET_ETIMEDOUT') ? \SOCKET_ETIMEDOUT : 110
+                ));
+
+                // Cancel pending connection to clean up any underlying resources and references.
+                // Avoid garbage references in call stack by passing pending promise by reference.
+                \assert($promise instanceof PromiseInterface);
+                $promise->cancel();
+                $promise = null;
+            });
+        }, function () use (&$promise): void {
+            // Cancelling this promise will cancel the pending connection, thus triggering the rejection logic above.
+            // Avoid garbage references in call stack by passing pending promise by reference.
+            \assert($promise instanceof PromiseInterface);
+            $promise->cancel();
+            $promise = null;
         });
+
+        // variable assignment needed for legacy PHPStan on PHP 7.1 only
+        return $ret;
     }
 }
