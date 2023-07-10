@@ -91,6 +91,8 @@ class Factory
             // either close successful connection or cancel pending connection attempt
             $connecting->then(function (ConnectionInterface $connection) {
                 $connection->close();
+            }, function () {
+                // ignore to avoid reporting unhandled rejection
             });
             assert(\method_exists($connecting, 'cancel'));
             $connecting->cancel();

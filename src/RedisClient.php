@@ -220,6 +220,8 @@ class RedisClient extends EventEmitter
         if ($this->promise !== null) {
             $this->promise->then(function (StreamingClient $redis) {
                 $redis->close();
+            }, function () {
+                // ignore to avoid reporting unhandled rejection
             });
             if ($this->promise !== null) {
                 assert(\method_exists($this->promise, 'cancel'));
