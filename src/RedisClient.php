@@ -37,7 +37,7 @@ class RedisClient extends EventEmitter
     /** @var bool */
     private $closed = false;
 
-    /** @var ?PromiseInterface */
+    /** @var ?PromiseInterface<StreamingClient> */
     private $promise = null;
 
     /** @var LoopInterface */
@@ -76,6 +76,9 @@ class RedisClient extends EventEmitter
         $this->factory = new Factory($this->loop, $connector);
     }
 
+    /**
+     * @return PromiseInterface<StreamingClient>
+     */
     private function client(): PromiseInterface
     {
         if ($this->promise !== null) {
@@ -132,7 +135,9 @@ class RedisClient extends EventEmitter
             );
 
             return $redis;
-        }, function (\Exception $e) {
+        }, function (\Throwable $e) {
+            assert($e instanceof \Exception);
+
             // connection failed => discard connection attempt
             $this->promise = null;
 
@@ -148,7 +153,7 @@ class RedisClient extends EventEmitter
      *
      * @param string   $name
      * @param string[] $args
-     * @return PromiseInterface Promise<mixed,Exception>
+     * @return PromiseInterface<mixed>
      */
     public function __call(string $name, array $args): PromiseInterface
     {

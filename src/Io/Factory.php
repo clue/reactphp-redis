@@ -44,7 +44,7 @@ class Factory
      * Create Redis client connected to address of given redis instance
      *
      * @param string $uri Redis server URI to connect to
-     * @return PromiseInterface<StreamingClient,\Exception> Promise that will
+     * @return PromiseInterface<StreamingClient> Promise that will
      *     be fulfilled with `StreamingClient` on success or rejects with `\Exception` on error.
      */
     public function createClient(string $uri): PromiseInterface
@@ -79,6 +79,8 @@ class Factory
             $authority = 'unix://' . substr($parts['path'], 1);
             unset($parts['path']);
         }
+
+        /** @var PromiseInterface<ConnectionInterface> $connecting */
         $connecting = $this->connector->connect($authority);
 
         $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
@@ -100,7 +102,7 @@ class Factory
 
         $promise = $connecting->then(function (ConnectionInterface $stream) {
             return new StreamingClient($stream, $this->protocol->createResponseParser(), $this->protocol->createSerializer());
-        }, function (\Exception $e) use ($uri) {
+        }, function (\Throwable $e) use ($uri) {
             throw new \RuntimeException(
                 'Connection to ' . $uri . ' failed: ' . $e->getMessage(),
                 $e->getCode(),
@@ -175,7 +177,7 @@ class Factory
             return $deferred->promise();
         }
 
-        return timeout($deferred->promise(), $timeout, $this->loop)->then(null, function ($e) use ($uri) {
+        return timeout($deferred->promise(), $timeout, $this->loop)->then(null, function (\Throwable $e) use ($uri) {
             if ($e instanceof TimeoutException) {
                 throw new \RuntimeException(
                     'Connection to ' . $uri . ' timed out after ' . $e->getTimeout() . ' seconds (ETIMEDOUT)',
