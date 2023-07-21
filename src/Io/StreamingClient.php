@@ -24,7 +24,7 @@ class StreamingClient extends EventEmitter
     /** @var SerializerInterface */
     private $serializer;
 
-    /** @var Deferred[] */
+    /** @var Deferred<mixed>[] */
     private $requests = [];
 
     /** @var bool */
@@ -71,7 +71,10 @@ class StreamingClient extends EventEmitter
         $this->serializer = $serializer;
     }
 
-    /** @param string[] $args */
+    /**
+     * @param string[] $args
+     * @return PromiseInterface<mixed>
+     */
     public function __call(string $name, array $args): PromiseInterface
     {
         $request = new Deferred();

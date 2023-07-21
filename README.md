@@ -421,7 +421,7 @@ given event loop instance.
 
 #### __call()
 
-The `__call(string $name, string[] $args): PromiseInterface<mixed,Exception>` method can be used to
+The `__call(string $name, string[] $args): PromiseInterface<mixed>` method can be used to
 invoke the given command.
 
 This is a magic method that will be invoked when calling any Redis command on this instance.
