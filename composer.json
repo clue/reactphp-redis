@@ -16,13 +16,13 @@
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
         "react/event-loop": "^1.2",
         "react/promise": "^3 || ^2.0 || ^1.1",
-        "react/promise-timer": "^1.9",
+        "react/promise-timer": "^1.10",
         "react/socket": "^1.12"
     },
     "require-dev": {
         "clue/block-react": "^1.5",
-        "phpstan/phpstan": "1.9.2 || 1.4.10",
-        "phpunit/phpunit": "^9.5 || ^7.5"
+        "phpstan/phpstan": "1.10.15 || 1.4.10",
+        "phpunit/phpunit": "^9.6 || ^7.5"
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }

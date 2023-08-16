@@ -48,30 +48,17 @@ class TestCase extends BaseTestCase
         }
     }
 
-    protected function expectPromiseResolve(PromiseInterface $promise): PromiseInterface
+    /**
+     * @param PromiseInterface<mixed> $promise
+     */
+    protected function expectPromiseResolve(PromiseInterface $promise): void
     {
         $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $promise->then(null, function(\Exception $error) {
+        $promise->then(null, function(\Throwable $error) {
             $this->assertNull($error);
             $this->fail('promise rejected');
         });
         $promise->then($this->expectCallableOnce(), $this->expectCallableNever());
-
-        return $promise;
-    }
-
-    protected function expectPromiseReject(PromiseInterface $promise): PromiseInterface
-    {
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
-
-        $promise->then(function($value) {
-            $this->assertNull($value);
-            $this->fail('promise resolved');
-        });
-
-        $promise->then($this->expectCallableNever(), $this->expectCallableOnce());
-
-        return $promise;
     }
 }

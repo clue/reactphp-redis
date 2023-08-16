@@ -161,15 +161,4 @@ class FunctionalTest extends TestCase
 
         $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
-
-    public function testCloseLazy(): void
-    {
-        $redis = new RedisClient($this->uri, null, $this->loop);
-
-        $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
-
-        $redis->close();
-
-        $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
-    }
 }

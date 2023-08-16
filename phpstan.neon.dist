@@ -8,7 +8,7 @@ parameters:
 
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:
-        # ignore generic usage like `PromiseInterface<T>` until fixed upstream
+        # ignore generic usage like `PromiseInterface<T>` for Promise v2/v1
         - '/^PHPDoc tag @return contains generic type React\\Promise\\PromiseInterface<.+> but interface React\\Promise\\PromiseInterface is not generic\.$/'
         # ignore undefined methods due to magic `__call()` method
         - '/^Call to an undefined method Clue\\React\\Redis\\RedisClient::.+\(\)\.$/'

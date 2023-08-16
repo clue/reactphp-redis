@@ -161,7 +161,10 @@ class RedisClientTest extends TestCase
             new Promise(function () { })
         );
 
-        $this->redis->ping();
+        $promise = $this->redis->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
+
         $deferred->reject($error);
 
         $this->redis->ping();
@@ -308,7 +311,10 @@ class RedisClientTest extends TestCase
         $this->redis->on('error', $this->expectCallableNever());
         $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->redis->ping();
+        $promise = $this->redis->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
+
         $this->redis->close();
     }
 
