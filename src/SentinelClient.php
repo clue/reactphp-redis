@@ -45,7 +45,7 @@ class SentinelClient
 
     public function masterAddress(): PromiseInterface
     {
-        $chain = reject();
+        $chain = reject(new \RuntimeException('Initial reject promise'));
         foreach ($this->urls as $url) {
             $chain = $chain->then(function ($masterUrl) {
                 return $masterUrl;
