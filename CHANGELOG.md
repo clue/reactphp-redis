@@ -139,7 +139,7 @@ affected by any BC breaks, see below for more details.
         `ConnectorInterface` and then update to this version without causing a
         BC break.
 
-*   BC break: Remove uneeded `data` event and support for advanced `MONITOR`
+*   BC break: Remove unneeded `data` event and support for advanced `MONITOR`
     command for performance and consistency reasons and
     remove underdocumented `isBusy()` method.
     (#62, #63 and #64 by @clue)

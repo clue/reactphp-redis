@@ -90,7 +90,7 @@ class RedisClient extends EventEmitter
             $redis->on('close', function () {
                 $this->promise = null;
 
-                // foward unsubscribe/punsubscribe events when underlying connection closes
+                // forward unsubscribe/punsubscribe events when underlying connection closes
                 $n = count($this->subscribed);
                 foreach ($this->subscribed as $channel => $_) {
                     $this->emit('unsubscribe', [$channel, --$n]);
