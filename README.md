@@ -291,7 +291,7 @@ create a new underlying connection if this idle time is expired.
 From a consumer side this means that you can start sending commands to the
 database right away while the underlying connection may still be
 outstanding. Because creating this underlying connection may take some
-time, it will enqueue all oustanding commands and will ensure that all
+time, it will enqueue all outstanding commands and will ensure that all
 commands will be executed in correct order once the connection is ready.
 
 If the underlying database connection fails, it will reject all
