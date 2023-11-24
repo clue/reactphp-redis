@@ -25,9 +25,13 @@
         "phpunit/phpunit": "^9.6 || ^7.5"
     },
     "autoload": {
-        "psr-4": { "Clue\\React\\Redis\\": "src/" }
+        "psr-4": { 
+            "Clue\\React\\Redis\\": "src/"
+        }
     },
     "autoload-dev": {
-        "psr-4": { "Clue\\Tests\\React\\Redis\\": "tests/" }
+        "psr-4": { 
+            "Clue\\Tests\\React\\Redis\\": "tests/"
+        }
     }
 }
