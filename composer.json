@@ -17,7 +17,7 @@
         "react/event-loop": "^1.2",
         "react/promise": "^3 || ^2.0 || ^1.1",
         "react/promise-timer": "^1.10",
-        "react/socket": "^1.12"
+        "react/socket": "dev-cancel-happy as 1.15.0"
     },
     "require-dev": {
         "clue/block-react": "^1.5",
@@ -29,5 +29,11 @@
     },
     "autoload-dev": {
         "psr-4": { "Clue\\Tests\\React\\Redis\\": "tests/" }
+    },
+    "repositories": {
+        "clue": {
+            "type": "vcs",
+            "url": "https://github.com/clue-labs/socket"
+        }
     }
 }

@@ -3,15 +3,14 @@
 namespace Clue\Tests\React\Redis;
 
 use Clue\React\Redis\RedisClient;
-use React\EventLoop\StreamSelectLoop;
+use React\EventLoop\Loop;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
 use function Clue\React\Block\await;
+use function React\Promise\Timer\timeout;
 
 class FunctionalTest extends TestCase
 {
-    /** @var StreamSelectLoop */
-    private $loop;
 
     /** @var string */
     private $uri;
@@ -22,30 +21,28 @@ class FunctionalTest extends TestCase
         if ($this->uri === '') {
             $this->markTestSkipped('No REDIS_URI environment variable given');
         }
-
-        $this->loop = new StreamSelectLoop();
     }
 
     public function testPing(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = await($promise, $this->loop);
+        $ret = await($promise);
 
         $this->assertEquals('PONG', $ret);
     }
 
     public function testPingLazy(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $promise = $redis->ping();
         $this->assertInstanceOf(PromiseInterface::class, $promise);
 
-        $ret = await($promise, $this->loop);
+        $ret = await($promise);
 
         $this->assertEquals('PONG', $ret);
     }
@@ -55,11 +52,11 @@ class FunctionalTest extends TestCase
      */
     public function testPingLazyWillNotBlockLoop(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $redis->ping();
 
-        $this->loop->run();
+        Loop::run();
     }
 
     /**
@@ -67,58 +64,58 @@ class FunctionalTest extends TestCase
      */
     public function testLazyClientWithoutCommandsWillNotBlockLoop(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
-        $this->loop->run();
+        Loop::run();
 
         unset($redis);
     }
 
     public function testMgetIsNotInterpretedAsSubMessage(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $redis->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
         $promise = $redis->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $redis->on('message', $this->expectCallableNever());
 
-        await($promise, $this->loop);
+        await($promise);
     }
 
     public function testPipeline(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $redis->set('a', 1)->then($this->expectCallableOnceWith('OK'));
         $redis->incr('a')->then($this->expectCallableOnceWith(2));
         $redis->incr('a')->then($this->expectCallableOnceWith(3));
         $promise = $redis->get('a')->then($this->expectCallableOnceWith('3'));
 
-        await($promise, $this->loop);
+        await($promise);
     }
 
     public function testInvalidCommand(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
         $promise = $redis->doesnotexist(1, 2, 3);
 
         $this->expectException(\Exception::class);
-        await($promise, $this->loop);
+        await($promise);
     }
 
     public function testMultiExecEmpty(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
         $promise = $redis->exec()->then($this->expectCallableOnceWith([]));
 
-        await($promise, $this->loop);
+        await($promise);
     }
 
     public function testMultiExecQueuedExecHasValues(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
         $redis->set('b', 10)->then($this->expectCallableOnceWith('QUEUED'));
@@ -127,13 +124,13 @@ class FunctionalTest extends TestCase
         $redis->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
         $promise = $redis->exec()->then($this->expectCallableOnceWith(['OK', 1, 12, 20]));
 
-        await($promise, $this->loop);
+        await($promise);
     }
 
     public function testPubSub(): void
     {
-        $consumer = new RedisClient($this->uri, null, $this->loop);
-        $producer = new RedisClient($this->uri, null, $this->loop);
+        $consumer = new RedisClient($this->uri);
+        $producer = new RedisClient($this->uri);
 
         $channel = 'channel:test:' . mt_rand();
 
@@ -148,12 +145,15 @@ class FunctionalTest extends TestCase
         })->then($this->expectCallableOnce());
 
         // expect "message" event to take no longer than 0.1s
-        await($deferred->promise(), $this->loop, 0.1);
+
+        await(timeout($deferred->promise(), 0.1));
+
+        await($consumer->unsubscribe($channel));
     }
 
     public function testClose(): void
     {
-        $redis = new RedisClient($this->uri, null, $this->loop);
+        $redis = new RedisClient($this->uri);
 
         $redis->get('willBeCanceledAnyway')->then(null, $this->expectCallableOnce());
 
