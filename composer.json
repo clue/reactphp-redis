@@ -20,9 +20,9 @@
         "react/socket": "dev-cancel-happy as 1.15.0"
     },
     "require-dev": {
-        "clue/block-react": "^1.5",
         "phpstan/phpstan": "1.10.15 || 1.4.10",
-        "phpunit/phpunit": "^9.6 || ^7.5"
+        "phpunit/phpunit": "^9.6 || ^7.5",
+        "react/async": "^4.2 || ^3.2"
     },
     "autoload": {
         "psr-4": { "Clue\\React\\Redis\\": "src/" }

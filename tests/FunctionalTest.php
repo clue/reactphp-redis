@@ -6,7 +6,7 @@ use Clue\React\Redis\RedisClient;
 use React\EventLoop\Loop;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
-use function Clue\React\Block\await;
+use function React\Async\await;
 use function React\Promise\Timer\timeout;
 
 class FunctionalTest extends TestCase
@@ -27,8 +27,8 @@ class FunctionalTest extends TestCase
     {
         $redis = new RedisClient($this->uri);
 
+        /** @var PromiseInterface<string> */
         $promise = $redis->ping();
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
         $ret = await($promise);
 
@@ -39,8 +39,8 @@ class FunctionalTest extends TestCase
     {
         $redis = new RedisClient($this->uri);
 
+        /** @var PromiseInterface<string> */
         $promise = $redis->ping();
-        $this->assertInstanceOf(PromiseInterface::class, $promise);
 
         $ret = await($promise);
 
@@ -77,6 +77,7 @@ class FunctionalTest extends TestCase
 
         $redis->mset('message', 'message', 'channel', 'channel', 'payload', 'payload');
 
+        /** @var PromiseInterface<never> */
         $promise = $redis->mget('message', 'channel', 'payload')->then($this->expectCallableOnce());
         $redis->on('message', $this->expectCallableNever());
 
@@ -90,6 +91,8 @@ class FunctionalTest extends TestCase
         $redis->set('a', 1)->then($this->expectCallableOnceWith('OK'));
         $redis->incr('a')->then($this->expectCallableOnceWith(2));
         $redis->incr('a')->then($this->expectCallableOnceWith(3));
+
+        /** @var PromiseInterface<void> */
         $promise = $redis->get('a')->then($this->expectCallableOnceWith('3'));
 
         await($promise);
@@ -98,6 +101,8 @@ class FunctionalTest extends TestCase
     public function testInvalidCommand(): void
     {
         $redis = new RedisClient($this->uri);
+
+        /** @var PromiseInterface<never> */
         $promise = $redis->doesnotexist(1, 2, 3);
 
         $this->expectException(\Exception::class);
@@ -108,6 +113,8 @@ class FunctionalTest extends TestCase
     {
         $redis = new RedisClient($this->uri);
         $redis->multi()->then($this->expectCallableOnceWith('OK'));
+
+        /** @var PromiseInterface<void> */
         $promise = $redis->exec()->then($this->expectCallableOnceWith([]));
 
         await($promise);
@@ -122,6 +129,8 @@ class FunctionalTest extends TestCase
         $redis->expire('b', 20)->then($this->expectCallableOnceWith('QUEUED'));
         $redis->incrBy('b', 2)->then($this->expectCallableOnceWith('QUEUED'));
         $redis->ttl('b')->then($this->expectCallableOnceWith('QUEUED'));
+
+        /** @var PromiseInterface<void> */
         $promise = $redis->exec()->then($this->expectCallableOnceWith(['OK', 1, 12, 20]));
 
         await($promise);
@@ -135,6 +144,7 @@ class FunctionalTest extends TestCase
         $channel = 'channel:test:' . mt_rand();
 
         // consumer receives a single message
+        /** @var Deferred<void> */
         $deferred = new Deferred();
         $consumer->on('message', $this->expectCallableOnce());
         $consumer->on('message', [$deferred, 'resolve']);
@@ -148,7 +158,9 @@ class FunctionalTest extends TestCase
 
         await(timeout($deferred->promise(), 0.1));
 
-        await($consumer->unsubscribe($channel));
+        /** @var PromiseInterface<array{0:"unsubscribe",1:string,2:0}> */
+        $promise = $consumer->unsubscribe($channel);
+        await($promise);
     }
 
     public function testClose(): void
