@@ -17,12 +17,12 @@
         "react/event-loop": "^1.2",
         "react/promise": "^3 || ^2.0 || ^1.1",
         "react/promise-timer": "^1.10",
-        "react/socket": "^1.12"
+        "react/socket": "^1.15"
     },
     "require-dev": {
-        "clue/block-react": "^1.5",
         "phpstan/phpstan": "1.10.15 || 1.4.10",
-        "phpunit/phpunit": "^9.6 || ^7.5"
+        "phpunit/phpunit": "^9.6 || ^7.5",
+        "react/async": "^4.2 || ^3.2"
     },
     "autoload": {
         "psr-4": { 
