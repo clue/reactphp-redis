@@ -34,13 +34,13 @@ class FactoryLazyClientTest extends TestCase
 
     public function testWillConnectWithDefaultPort()
     {
-        $this->connector->expects($this->never())->method('connect')->with('redis.example.com:6379')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->connector->expects($this->never())->method('connect');
         $this->factory->createLazyClient('redis.example.com');
     }
 
     public function testWillConnectToLocalhost()
     {
-        $this->connector->expects($this->never())->method('connect')->with('localhost:1337')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->connector->expects($this->never())->method('connect');
         $this->factory->createLazyClient('localhost:1337');
     }
 
@@ -147,7 +147,7 @@ class FactoryLazyClientTest extends TestCase
 
     public function testWillRejectIfConnectorRejects()
     {
-        $this->connector->expects($this->never())->method('connect')->with('127.0.0.1:2')->willReturn(Promise\reject(new \RuntimeException()));
+        $this->connector->expects($this->never())->method('connect');
         $redis = $this->factory->createLazyClient('redis://127.0.0.1:2');
 
         $this->assertInstanceOf('Clue\React\Redis\Client', $redis);

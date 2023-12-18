@@ -148,7 +148,10 @@ class LazyClientTest extends TestCase
             new Promise(function () { })
         );
 
-        $this->redis->ping();
+        $promise = $this->redis->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
+
         $deferred->reject($error);
 
         $this->redis->ping();
@@ -213,7 +216,7 @@ class LazyClientTest extends TestCase
 
         $this->redis->ping();
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
     }
 
     public function testPingAfterPingWillStartAndCancelIdleTimerWhenSecondPingStartsAfterFirstResolves()
@@ -232,15 +235,15 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
         $this->redis->ping();
     }
 
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent()
     {
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
-        $client->expects($this->once())->method('close')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('close');
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
 
@@ -295,14 +298,17 @@ class LazyClientTest extends TestCase
         $this->redis->on('error', $this->expectCallableNever());
         $this->redis->on('close', $this->expectCallableOnce());
 
-        $this->redis->ping();
+        $promise = $this->redis->ping();
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
+
         $this->redis->close();
     }
 
     public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved()
     {
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->once())->method('close');
 
         $deferred = new Deferred();
@@ -327,7 +333,7 @@ class LazyClientTest extends TestCase
         $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
         $this->redis->close();
     }
 
@@ -404,7 +410,7 @@ class LazyClientTest extends TestCase
         $error = new \RuntimeException();
 
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -419,7 +425,7 @@ class LazyClientTest extends TestCase
     public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose()
     {
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -453,7 +459,7 @@ class LazyClientTest extends TestCase
         $this->redis->on('close', $this->expectCallableNever());
 
         $this->redis->ping();
-        $deferred->resolve();
+        $deferred->resolve(null);
 
         $this->assertTrue(is_callable($closeHandler));
         $closeHandler();
@@ -463,7 +469,7 @@ class LazyClientTest extends TestCase
     {
         $messageHandler = null;
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$messageHandler) {
             if ($event === 'message') {
                 $messageHandler = $callback;
@@ -485,7 +491,7 @@ class LazyClientTest extends TestCase
     {
         $allHandler = null;
         $client = $this->getMockBuilder('Clue\React\Redis\Client')->getMock();
-        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve());
+        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$allHandler) {
             if (!isset($allHandler[$event])) {
                 $allHandler[$event] = $callback;
