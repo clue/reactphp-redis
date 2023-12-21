@@ -229,7 +229,6 @@ class RedisClient extends EventEmitter
                 // ignore to avoid reporting unhandled rejection
             });
             if ($this->promise !== null) {
-                assert(\method_exists($this->promise, 'cancel'));
                 $this->promise->cancel();
                 $this->promise = null;
             }

@@ -80,7 +80,6 @@ class Factory
             unset($parts['path']);
         }
 
-        /** @var PromiseInterface<ConnectionInterface> $connecting */
         $connecting = $this->connector->connect($authority);
 
         $deferred = new Deferred(function ($_, $reject) use ($connecting, $uri) {
@@ -96,7 +95,6 @@ class Factory
             }, function () {
                 // ignore to avoid reporting unhandled rejection
             });
-            assert(\method_exists($connecting, 'cancel'));
             $connecting->cancel();
         });
 

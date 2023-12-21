@@ -2,7 +2,6 @@
 
 namespace Clue\Tests\React\Redis;
 
-use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase as BaseTestCase;
 use React\Promise\PromiseInterface;
@@ -39,12 +38,13 @@ class TestCase extends BaseTestCase
 
     protected function createCallableMock(): MockObject
     {
-        if (method_exists(MockBuilder::class, 'addMethods')) {
-            // @phpstan-ignore-next-line requires PHPUnit 9+
-            return $this->getMockBuilder(\stdClass::class)->addMethods(['__invoke'])->getMock();
+        $builder = $this->getMockBuilder(\stdClass::class);
+        if (method_exists($builder, 'addMethods')) {
+            // PHPUnit 9+
+            return $builder->addMethods(['__invoke'])->getMock();
         } else {
             // legacy PHPUnit < 9
-            return $this->getMockBuilder(\stdClass::class)->setMethods(['__invoke'])->getMock();
+            return $builder->setMethods(['__invoke'])->getMock();
         }
     }
 
