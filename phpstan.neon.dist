@@ -9,4 +9,3 @@ parameters:
     ignoreErrors:
         # ignore undefined methods due to magic `__call()` method
         - '/^Call to an undefined method Clue\\React\\Redis\\RedisClient::.+\(\)\.$/'
-        - '/^Call to an undefined method Clue\\React\\Redis\\Io\\StreamingClient::.+\(\)\.$/'

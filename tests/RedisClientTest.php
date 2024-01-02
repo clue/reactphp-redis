@@ -152,7 +152,7 @@ class RedisClientTest extends TestCase
     public function testPingWillResolveWhenUnderlyingClientResolvesPingAndStartIdleTimer(): void
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -177,7 +177,7 @@ class RedisClientTest extends TestCase
         $ref->setValue($this->redis, $this->factory);
 
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -202,7 +202,7 @@ class RedisClientTest extends TestCase
         $ref->setValue($this->redis, $this->factory);
 
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -222,7 +222,7 @@ class RedisClientTest extends TestCase
     {
         $error = new \RuntimeException();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\reject($error));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\reject($error));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -277,7 +277,7 @@ class RedisClientTest extends TestCase
     {
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->any())->method('on')->withConsecutive(
             ['close', $this->callback(function ($arg) use (&$closeHandler) {
                 $closeHandler = $arg;
@@ -321,7 +321,7 @@ class RedisClientTest extends TestCase
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
+        $client->expects($this->exactly(2))->method('callAsync')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
         );
@@ -342,7 +342,7 @@ class RedisClientTest extends TestCase
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls(
+        $client->expects($this->exactly(2))->method('callAsync')->willReturnOnConsecutiveCalls(
             $deferred->promise(),
             new Promise(function () { })
         );
@@ -364,7 +364,7 @@ class RedisClientTest extends TestCase
     public function testPingFollowedByIdleTimerWillCloseUnderlyingConnectionWithoutCloseEvent(): void
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('callAsync')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->once())->method('close');
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -433,7 +433,7 @@ class RedisClientTest extends TestCase
     public function testCloseAfterPingWillCloseUnderlyingClientConnectionWhenAlreadyResolved(): void
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('callAsync')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->once())->method('close');
 
         $deferred = new Deferred();
@@ -448,7 +448,7 @@ class RedisClientTest extends TestCase
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('callAsync')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close');
 
         $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
@@ -469,7 +469,7 @@ class RedisClientTest extends TestCase
     {
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('callAsync')->willReturn($deferred->promise());
         $client->expects($this->once())->method('close')->willReturnCallback(function () use ($client) {
             assert($client instanceof StreamingClient);
             $client->emit('close');
@@ -500,7 +500,7 @@ class RedisClientTest extends TestCase
     public function testEndAfterPingWillEndUnderlyingClient(): void
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
 
         $deferred = new Deferred();
@@ -515,7 +515,7 @@ class RedisClientTest extends TestCase
     {
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
+        $client->expects($this->once())->method('callAsync')->with('ping')->willReturn(\React\Promise\resolve('PONG'));
         $client->expects($this->once())->method('end');
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$closeHandler) {
             if ($event === 'close') {
@@ -541,7 +541,7 @@ class RedisClientTest extends TestCase
         $error = new \RuntimeException();
 
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('callAsync')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -557,7 +557,7 @@ class RedisClientTest extends TestCase
     public function testEmitsNoCloseEventWhenUnderlyingClientEmitsClose(): void
     {
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('callAsync')->willReturn(\React\Promise\resolve(null));
 
         $deferred = new Deferred();
         $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
@@ -575,7 +575,7 @@ class RedisClientTest extends TestCase
         $closeHandler = null;
         $client = $this->createMock(StreamingClient::class);
         $deferred = new Deferred();
-        $client->expects($this->once())->method('__call')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('callAsync')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->withConsecutive(
             ['close', $this->callback(function ($arg) use (&$closeHandler) {
                 $closeHandler = $arg;
@@ -605,7 +605,7 @@ class RedisClientTest extends TestCase
     {
         $messageHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->once())->method('callAsync')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$messageHandler) {
             if ($event === 'message') {
                 $messageHandler = $callback;
@@ -627,7 +627,7 @@ class RedisClientTest extends TestCase
     {
         $allHandler = null;
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->exactly(6))->method('__call')->willReturn(\React\Promise\resolve(null));
+        $client->expects($this->exactly(6))->method('callAsync')->willReturn(\React\Promise\resolve(null));
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$allHandler) {
             if (!isset($allHandler[$event])) {
                 $allHandler[$event] = $callback;
@@ -670,7 +670,7 @@ class RedisClientTest extends TestCase
         $subscribeHandler = null;
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('subscribe')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('callAsync')->with('subscribe')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$subscribeHandler) {
             if ($event === 'subscribe' && $subscribeHandler === null) {
                 $subscribeHandler = $callback;
@@ -699,7 +699,7 @@ class RedisClientTest extends TestCase
         $deferredSubscribe = new Deferred();
         $deferredUnsubscribe = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->exactly(2))->method('__call')->willReturnOnConsecutiveCalls($deferredSubscribe->promise(), $deferredUnsubscribe->promise());
+        $client->expects($this->exactly(2))->method('callAsync')->willReturnOnConsecutiveCalls($deferredSubscribe->promise(), $deferredUnsubscribe->promise());
         $client->expects($this->any())->method('on')->willReturnCallback(function ($event, $callback) use (&$subscribeHandler, &$unsubscribeHandler) {
             if ($event === 'subscribe' && $subscribeHandler === null) {
                 $subscribeHandler = $callback;
@@ -734,7 +734,7 @@ class RedisClientTest extends TestCase
         $closeHandler = null;
         $deferred = new Deferred();
         $client = $this->createMock(StreamingClient::class);
-        $client->expects($this->once())->method('__call')->with('blpop')->willReturn($deferred->promise());
+        $client->expects($this->once())->method('callAsync')->with('blpop')->willReturn($deferred->promise());
         $client->expects($this->any())->method('on')->withConsecutive(
             ['close', $this->callback(function ($arg) use (&$closeHandler) {
                 $closeHandler = $arg;

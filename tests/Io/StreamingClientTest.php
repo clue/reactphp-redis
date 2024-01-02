@@ -46,7 +46,7 @@ class StreamingClientTest extends TestCase
         $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('ping'))->will($this->returnValue('message'));
         $this->stream->expects($this->once())->method('write')->with($this->equalTo('message'));
 
-        $this->redis->ping();
+        $this->redis->callAsync('ping');
     }
 
     public function testClosingClientEmitsEvent(): void
@@ -121,7 +121,7 @@ class StreamingClientTest extends TestCase
     {
         $this->serializer->expects($this->once())->method('getRequestMessage')->with($this->equalTo('ping'));
 
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
 
         $this->redis->handleMessage(new BulkReply('PONG'));
 
@@ -131,7 +131,7 @@ class StreamingClientTest extends TestCase
 
     public function testMonitorCommandIsNotSupported(): void
     {
-        $promise = $this->redis->monitor();
+        $promise = $this->redis->callAsync('monitor');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -148,7 +148,7 @@ class StreamingClientTest extends TestCase
 
     public function testErrorReply(): void
     {
-        $promise = $this->redis->invalid();
+        $promise = $this->redis->callAsync('invalid');
 
         $err = new ErrorReply("ERR unknown command 'invalid'");
         $this->redis->handleMessage($err);
@@ -158,7 +158,7 @@ class StreamingClientTest extends TestCase
 
     public function testClosingClientRejectsAllRemainingRequests(): void
     {
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
         $this->redis->close();
 
         $promise->then(null, $this->expectCallableOnceWith(
@@ -183,7 +183,7 @@ class StreamingClientTest extends TestCase
         assert($this->serializer instanceof SerializerInterface);
         $this->redis = new StreamingClient($stream, $this->parser, $this->serializer);
 
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
         $stream->close();
 
         $promise->then(null, $this->expectCallableOnceWith(
@@ -201,9 +201,9 @@ class StreamingClientTest extends TestCase
 
     public function testEndingClientRejectsAllNewRequests(): void
     {
-        $this->redis->ping();
+        $this->redis->callAsync('ping');
         $this->redis->end();
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -221,7 +221,7 @@ class StreamingClientTest extends TestCase
     public function testClosedClientRejectsAllNewRequests(): void
     {
         $this->redis->close();
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -250,7 +250,7 @@ class StreamingClientTest extends TestCase
             ++$closed;
         });
 
-        $promise = $this->redis->ping();
+        $promise = $this->redis->callAsync('ping');
         $this->assertEquals(0, $closed);
 
         $this->redis->end();
@@ -277,7 +277,7 @@ class StreamingClientTest extends TestCase
 
     public function testPubsubSubscribe(): StreamingClient
     {
-        $promise = $this->redis->subscribe('test');
+        $promise = $this->redis->callAsync('subscribe', 'test');
         $this->expectPromiseResolve($promise);
 
         $this->redis->on('subscribe', $this->expectCallableOnce());
@@ -291,7 +291,7 @@ class StreamingClientTest extends TestCase
      */
     public function testPubsubPatternSubscribe(StreamingClient $client): StreamingClient
     {
-         $promise = $client->psubscribe('demo_*');
+         $promise = $client->callAsync('psubscribe', 'demo_*');
          $this->expectPromiseResolve($promise);
 
          $client->on('psubscribe', $this->expectCallableOnce());
@@ -311,7 +311,7 @@ class StreamingClientTest extends TestCase
 
     public function testSubscribeWithMultipleArgumentsRejects(): void
     {
-        $promise = $this->redis->subscribe('a', 'b');
+        $promise = $this->redis->callAsync('subscribe', 'a', 'b');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(
@@ -328,7 +328,7 @@ class StreamingClientTest extends TestCase
 
     public function testUnsubscribeWithoutArgumentsRejects(): void
     {
-        $promise = $this->redis->unsubscribe();
+        $promise = $this->redis->callAsync('unsubscribe');
 
         $promise->then(null, $this->expectCallableOnceWith(
             $this->logicalAnd(

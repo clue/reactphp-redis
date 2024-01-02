@@ -178,17 +178,17 @@ class RedisClient extends EventEmitter
             ));
         }
 
-        return $this->client()->then(function (StreamingClient $redis) use ($name, $args) {
+        return $this->client()->then(function (StreamingClient $redis) use ($name, $args): PromiseInterface {
             $this->awake();
-            assert(\is_callable([$redis, $name])); // @phpstan-ignore-next-line
-            return \call_user_func_array([$redis, $name], $args)->then(
+            return $redis->callAsync($name, ...$args)->then(
                 function ($result) {
                     $this->idle();
                     return $result;
                 },
-                function (\Exception $error) {
+                function (\Throwable $e) {
+                    \assert($e instanceof \Exception);
                     $this->idle();
-                    throw $error;
+                    throw $e;
                 }
             );
         });
