@@ -168,6 +168,8 @@ class LazyClient extends EventEmitter implements Client
         if ($this->promise !== null) {
             $this->promise->then(function (Client $redis) {
                 $redis->close();
+            }, function () {
+                // ignore to avoid reporting unhandled rejection
             });
             if ($this->promise !== null) {
                 $this->promise->cancel();

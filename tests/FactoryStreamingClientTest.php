@@ -44,13 +44,17 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillConnectWithDefaultPort()
     {
         $this->connector->expects($this->once())->method('connect')->with('redis.example.com:6379')->willReturn(Promise\reject(new \RuntimeException()));
-        $this->factory->createClient('redis.example.com');
+        $promise = $this->factory->createClient('redis.example.com');
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
     }
 
     public function testWillConnectToLocalhost()
     {
         $this->connector->expects($this->once())->method('connect')->with('localhost:1337')->willReturn(Promise\reject(new \RuntimeException()));
-        $this->factory->createClient('localhost:1337');
+        $promise = $this->factory->createClient('localhost:1337');
+
+        $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
     }
 
     public function testWillResolveIfConnectorResolves()
