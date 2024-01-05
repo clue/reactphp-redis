@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.7.0 (2024-01-05)
+
+This is a compatibility release that contains backported features from the v3 branch.
+Once v3 is released, it will be the way forward for this project.
+
+*   Feature: Forward compatibility with Promise v3.
+    (#152 by @clue)
+
+*   Feature: Full PHP 8.3 compatibility and update test suite.
+    (#151 by @clue)
+
 ## 2.6.0 (2022-05-09)
 
 *   Feature: Support PHP 8.1 release.
