@@ -16,7 +16,6 @@
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
         "react/event-loop": "^1.2",
         "react/promise": "^3",
-        "react/promise-timer": "^1.10",
         "react/socket": "^1.15"
     },
     "require-dev": {

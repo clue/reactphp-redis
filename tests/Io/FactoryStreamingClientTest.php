@@ -7,6 +7,7 @@ use Clue\React\Redis\Io\StreamingClient;
 use Clue\Tests\React\Redis\TestCase;
 use PHPUnit\Framework\MockObject\MockObject;
 use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
 use React\Socket\ConnectionInterface;
 use React\Socket\ConnectorInterface;
@@ -632,5 +633,36 @@ class FactoryStreamingClientTest extends TestCase
         ini_set('default_socket_timeout', '42');
         $this->factory->createClient('redis://127.0.0.1:2');
         ini_set('default_socket_timeout', $old);
+    }
+
+    public function testCreateClientWillCancelTimerWhenConnectionResolves(): void
+    {
+        $timer = $this->createMock(TimerInterface::class);
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $deferred = new Deferred();
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());
+
+        $promise = $this->factory->createClient('127.0.0.1');
+        $promise->then($this->expectCallableOnce());
+
+        $deferred->resolve($this->createMock(ConnectionInterface::class));
+    }
+
+    public function testCreateClientWillCancelTimerWhenConnectionRejects(): void
+    {
+        $timer = $this->createMock(TimerInterface::class);
+        $this->loop->expects($this->once())->method('addTimer')->willReturn($timer);
+        $this->loop->expects($this->once())->method('cancelTimer')->with($timer);
+
+        $deferred = new Deferred();
+        $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());
+
+        $promise = $this->factory->createClient('127.0.0.1');
+
+        $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
+
+        $deferred->reject(new \RuntimeException());
     }
 }
