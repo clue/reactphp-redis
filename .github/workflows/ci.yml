@@ -28,9 +28,10 @@ jobs:
           ini-file: development
       - run: composer install
       - run: docker run --net=host -d redis
-      - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml
+        run: docker run --net=host -d -e REDIS_MASTER_HOST=localhost bitnami/redis-sentinel
+      - run: REDIS_URI=localhost:6379 REDIS_URIS=localhost:26379 REDIS_SENTINEL_MASTER=mymaster vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml
         if: ${{ matrix.php >= 7.3 }}
-      - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml -c phpunit.xml.legacy
+      - run: REDIS_URI=localhost:6379 REDIS_URIS=localhost:26379 REDIS_SENTINEL_MASTER=mymaster vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml -c phpunit.xml.legacy
         if: ${{ matrix.php < 7.3 }}
       - name: Check 100% code coverage
         shell: php {0}
