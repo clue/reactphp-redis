@@ -6,7 +6,6 @@ use Clue\React\Redis\Io\Factory;
 use Clue\React\Redis\Io\StreamingClient;
 use Evenement\EventEmitter;
 use React\EventLoop\Loop;
-use React\EventLoop\LoopInterface;
 use React\Promise\PromiseInterface;
 use React\Socket\ConnectorInterface;
 use React\Stream\Util;
@@ -40,9 +39,6 @@ class RedisClient extends EventEmitter
     /** @var ?PromiseInterface<StreamingClient> */
     private $promise = null;
 
-    /** @var LoopInterface */
-    private $loop;
-
     /** @var float */
     private $idlePeriod = 0.001;
 
@@ -58,12 +54,7 @@ class RedisClient extends EventEmitter
     /** @var array<string,bool> */
     private $psubscribed = [];
 
-    /**
-     * @param string $url
-     * @param ?ConnectorInterface $connector
-     * @param ?LoopInterface $loop
-     */
-    public function __construct($url, ConnectorInterface $connector = null, LoopInterface $loop = null)
+    public function __construct(string $url, ConnectorInterface $connector = null)
     {
         $args = [];
         \parse_str((string) \parse_url($url, \PHP_URL_QUERY), $args);
@@ -72,8 +63,7 @@ class RedisClient extends EventEmitter
         }
 
         $this->target = $url;
-        $this->loop = $loop ?: Loop::get();
-        $this->factory = new Factory($this->loop, $connector);
+        $this->factory = new Factory($connector);
     }
 
     /**
@@ -102,7 +92,7 @@ class RedisClient extends EventEmitter
                 $this->subscribed = $this->psubscribed = [];
 
                 if ($this->idleTimer !== null) {
-                    $this->loop->cancelTimer($this->idleTimer);
+                    Loop::cancelTimer($this->idleTimer);
                     $this->idleTimer = null;
                 }
             });
@@ -235,7 +225,7 @@ class RedisClient extends EventEmitter
         }
 
         if ($this->idleTimer !== null) {
-            $this->loop->cancelTimer($this->idleTimer);
+            Loop::cancelTimer($this->idleTimer);
             $this->idleTimer = null;
         }
 
@@ -248,7 +238,7 @@ class RedisClient extends EventEmitter
         ++$this->pending;
 
         if ($this->idleTimer !== null) {
-            $this->loop->cancelTimer($this->idleTimer);
+            Loop::cancelTimer($this->idleTimer);
             $this->idleTimer = null;
         }
     }
@@ -258,7 +248,7 @@ class RedisClient extends EventEmitter
         --$this->pending;
 
         if ($this->pending < 1 && $this->idlePeriod >= 0 && !$this->subscribed && !$this->psubscribed && $this->promise !== null) {
-            $this->idleTimer = $this->loop->addTimer($this->idlePeriod, function () {
+            $this->idleTimer = Loop::addTimer($this->idlePeriod, function () {
                 assert($this->promise instanceof PromiseInterface);
                 $this->promise->then(function (StreamingClient $redis) {
                     $redis->close();

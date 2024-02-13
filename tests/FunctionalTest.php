@@ -10,7 +10,6 @@ use function React\Async\await;
 
 class FunctionalTest extends TestCase
 {
-
     /** @var string */
     private $uri;
 
