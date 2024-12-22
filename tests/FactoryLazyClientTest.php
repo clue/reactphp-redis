@@ -32,6 +32,24 @@ class FactoryLazyClientTest extends TestCase
         $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
     }
 
+    public function testContructorThrowsExceptionForInvalidLoop()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Argument #1 ($loop) expected null|React\EventLoop\LoopInterface');
+        new Factory('loop');
+    }
+
+    public function testContructorThrowsExceptionForInvalidConnector()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
+        new Factory(null, 'connector');
+    }
+
+    public function testContructorThrowsExceptionForInvalidProtocolFactory()
+    {
+        $this->setExpectedException('InvalidArgumentException', 'Argument #3 ($protocol) expected null|Clue\Redis\Protocol\Factory');
+        new Factory(null, null, 'protocol');
+    }
+
     public function testWillConnectWithDefaultPort()
     {
         $this->connector->expects($this->never())->method('connect');
