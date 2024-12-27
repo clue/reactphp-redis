@@ -242,8 +242,8 @@ library is currently limited to single arguments for each of these methods in
 order to match exactly one response to each command request. As an alternative,
 the methods can simply be invoked multiple times with one argument each.
 
-Additionally, can listen for the following PubSub events to get notifications
-about subscribed/unsubscribed channels and patterns:
+Additionally, you can listen for the following PubSub events to get
+notifications about subscribed/unsubscribed channels and patterns:
 
 ```php
 $redis->on('subscribe', function (string $channel, int $total) {
@@ -261,7 +261,7 @@ $redis->on('punsubscribe', function (string $pattern, int $total) {
 ```
 
 When the underlying connection is lost, the `unsubscribe` and `punsubscribe` events
-will be invoked automatically. This gives you control over re-subscribing to the
+will be invoked automatically. This gives you control over re-subscribing to any
 channels and patterns as appropriate.
 
 ## API
@@ -319,7 +319,7 @@ will not have to wait for an actual underlying connection.
 
 #### __construct()
 
-The `new RedisClient(string $url, ConnectorInterface $connector = null, LoopInterface $loop = null)` constructor can be used to
+The `new RedisClient(string $url, ConnectorInterface $connector = null)` constructor can be used to
 create a new `RedisClient` instance.
 
 The `$url` can be given in the
