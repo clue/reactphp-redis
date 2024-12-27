@@ -55,7 +55,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillConnectWithDefaultPort(): void
     {
         $this->connector->expects($this->once())->method('connect')->with('redis.example.com:6379')->willReturn(reject(new \RuntimeException()));
-        $promise = $this->factory->createClient('redis.example.com');
+        $promise = $this->factory->createClient('redis://redis.example.com');
 
         $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
     }
@@ -63,7 +63,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillConnectToLocalhost(): void
     {
         $this->connector->expects($this->once())->method('connect')->with('localhost:1337')->willReturn(reject(new \RuntimeException()));
-        $promise = $this->factory->createClient('localhost:1337');
+        $promise = $this->factory->createClient('redis://localhost:1337');
 
         $promise->then(null, $this->expectCallableOnce()); // avoid reporting unhandled rejection
     }
@@ -74,7 +74,7 @@ class FactoryStreamingClientTest extends TestCase
         $stream->expects($this->never())->method('write');
 
         $this->connector->expects($this->once())->method('connect')->willReturn(resolve($stream));
-        $promise = $this->factory->createClient('localhost');
+        $promise = $this->factory->createClient('redis://localhost');
 
         $this->expectPromiseResolve($promise);
     }
@@ -483,23 +483,6 @@ class FactoryStreamingClientTest extends TestCase
         ));
     }
 
-    public function testWillRejectIfTargetIsInvalid(): void
-    {
-        $promise = $this->factory->createClient('http://invalid target');
-
-        $promise->then(null, $this->expectCallableOnceWith(
-            $this->logicalAnd(
-                $this->isInstanceOf(\InvalidArgumentException::class),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getMessage() === 'Invalid Redis URI given (EINVAL)';
-                }),
-                $this->callback(function (\InvalidArgumentException $e) {
-                    return $e->getCode() === (defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
-                })
-            )
-        ));
-    }
-
     public function testCancelWillRejectPromise(): void
     {
         $promise = new \React\Promise\Promise(function () { });
@@ -516,10 +499,6 @@ class FactoryStreamingClientTest extends TestCase
     public function provideUris(): array
     {
         return [
-            [
-                'localhost',
-                'redis://localhost'
-            ],
             [
                 'redis://localhost',
                 'redis://localhost'
@@ -705,7 +684,7 @@ class FactoryStreamingClientTest extends TestCase
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());
 
-        $promise = $this->factory->createClient('127.0.0.1');
+        $promise = $this->factory->createClient('redis://127.0.0.1');
         $promise->then($this->expectCallableOnce());
 
         $deferred->resolve($this->createMock(ConnectionInterface::class));
@@ -723,7 +702,7 @@ class FactoryStreamingClientTest extends TestCase
         $deferred = new Deferred();
         $this->connector->expects($this->once())->method('connect')->with('127.0.0.1:6379')->willReturn($deferred->promise());
 
-        $promise = $this->factory->createClient('127.0.0.1');
+        $promise = $this->factory->createClient('redis://127.0.0.1');
 
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
 

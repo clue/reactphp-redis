@@ -28,7 +28,7 @@ use function React\Promise\reject;
 class RedisClient extends EventEmitter
 {
     /** @var string */
-    private $target;
+    private $uri;
 
     /** @var Factory */
     private $factory;
@@ -54,15 +54,39 @@ class RedisClient extends EventEmitter
     /** @var array<string,bool> */
     private $psubscribed = [];
 
-    public function __construct(string $url, ?ConnectorInterface $connector = null)
+    /**
+     * @param string $uri
+     * @param ?ConnectorInterface $connector
+     * @throws \InvalidArgumentException if $uri is not a valid Redis URI
+     */
+    public function __construct(string $uri, ?ConnectorInterface $connector = null)
     {
+        // support `redis+unix://` scheme for Unix domain socket (UDS) paths
+        if (preg_match('/^(redis\+unix:\/\/(?:[^@]*@)?)(.+)$/', $uri, $match)) {
+            $parts = parse_url($match[1] . 'localhost/' . $match[2]);
+        } else {
+            if (strpos($uri, '://') === false) {
+                $uri = 'redis://' . $uri;
+            }
+
+            $parts = parse_url($uri);
+        }
+
+        $uri = (string) preg_replace(['/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'], '$1***$2', $uri);
+        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], ['redis', 'rediss', 'redis+unix'])) {
+            throw new \InvalidArgumentException(
+                'Invalid Redis URI "' . $uri . '" (EINVAL)',
+                defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
+            );
+        }
+
         $args = [];
-        \parse_str((string) \parse_url($url, \PHP_URL_QUERY), $args);
+        \parse_str($parts['query'] ?? '', $args);
         if (isset($args['idle'])) {
             $this->idlePeriod = (float)$args['idle'];
         }
 
-        $this->target = $url;
+        $this->uri = $uri;
         $this->factory = new Factory($connector);
     }
 
@@ -75,7 +99,7 @@ class RedisClient extends EventEmitter
             return $this->promise;
         }
 
-        return $this->promise = $this->factory->createClient($this->target)->then(function (StreamingClient $redis) {
+        return $this->promise = $this->factory->createClient($this->uri)->then(function (StreamingClient $redis) {
             // connection completed => remember only until closed
             $redis->on('close', function () {
                 $this->promise = null;

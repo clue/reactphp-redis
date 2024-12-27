@@ -44,10 +44,91 @@ class RedisClientTest extends TestCase
         $ref->setValue($this->redis, $this->factory);
     }
 
+    public static function provideInvalidUris(): \Generator
+    {
+        yield [
+            '',
+            'redis://'
+        ];
+        yield [
+            'localhost:100000',
+            'redis://localhost:100000'
+        ];
+        yield [
+            'tcp://localhost',
+            'tcp://localhost'
+        ];
+        yield [
+            'redis://',
+            'redis://'
+        ];
+        yield [
+            'redis+unix://',
+            'redis+unix://'
+        ];
+        yield [
+            'user@localhost:100000',
+            'redis://user@localhost:100000'
+        ];
+        yield [
+            ':pass@localhost:100000',
+            'redis://:***@localhost:100000'
+        ];
+        yield [
+            'user:@localhost:100000',
+            'redis://user:***@localhost:100000'
+        ];
+        yield [
+            'user:pass@localhost:100000',
+            'redis://user:***@localhost:100000'
+        ];
+        yield [
+            'localhost:100000?password=secret',
+            'redis://localhost:100000?password=***'
+        ];
+        yield [
+            'user@',
+            'redis://user@'
+        ];
+        yield [
+            'user:pass@',
+            'redis://user:***@'
+        ];
+    }
+
+    /** @dataProvider provideInvalidUris() */
+    public function testCtorWithInvalidUriThrows(string $uri, string $message): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid Redis URI "' . $message . '" (EINVAL)');
+        $this->expectExceptionCode(defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22);
+        new RedisClient($uri);
+    }
+
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise(): void
     {
         $promise = new Promise(function () { });
         $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $promise = $this->redis->ping();
+
+        $promise->then($this->expectCallableNever());
+    }
+
+    public function testPingWithUnixUriWillCreateUnderlyingClientAndReturnPendingPromise(): void
+    {
+        $this->redis = new RedisClient('redis+unix:///tmp/redis.sock');
+        $ref = new \ReflectionProperty($this->redis, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($this->redis, $this->factory);
+
+        $promise = new Promise(function () { });
+        $this->factory->expects($this->once())->method('createClient')->with('redis+unix:///tmp/redis.sock')->willReturn($promise);
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->never())->method('addTimer');
