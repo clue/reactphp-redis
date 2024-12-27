@@ -12,12 +12,12 @@
     ],
     "require": {
         "php": ">=5.3",
-        "clue/redis-protocol": "0.3.*",
+        "clue/redis-protocol": "^0.3.2",
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
         "react/event-loop": "^1.2",
-        "react/promise": "^3 || ^2.0 || ^1.1",
-        "react/promise-timer": "^1.9",
-        "react/socket": "^1.12"
+        "react/promise": "^3.2 || ^2.0 || ^1.1",
+        "react/promise-timer": "^1.11",
+        "react/socket": "^1.16"
     },
     "require-dev": {
         "clue/block-react": "^1.5",
