@@ -319,10 +319,10 @@ will not have to wait for an actual underlying connection.
 
 #### __construct()
 
-The `new RedisClient(string $url, ConnectorInterface $connector = null)` constructor can be used to
+The `new RedisClient(string $uri, ConnectorInterface $connector = null)` constructor can be used to
 create a new `RedisClient` instance.
 
-The `$url` can be given in the
+The `$uri` can be given in the
 [standard](https://www.iana.org/assignments/uri-schemes/prov/redis) form
 `[redis[s]://][:auth@]host[:port][/db]`.
 You can omit the URI scheme and port if you're connecting to the default port 6379:

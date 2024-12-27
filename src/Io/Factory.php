@@ -43,23 +43,15 @@ class Factory
     public function createClient(string $uri): PromiseInterface
     {
         // support `redis+unix://` scheme for Unix domain socket (UDS) paths
-        if (preg_match('/^(redis\+unix:\/\/(?:[^:]*:[^@]*@)?)(.+?)?$/', $uri, $match)) {
+        if (preg_match('/^(redis\+unix:\/\/(?:[^@]*@)?)(.+)$/', $uri, $match)) {
             $parts = parse_url($match[1] . 'localhost/' . $match[2]);
         } else {
-            if (strpos($uri, '://') === false) {
-                $uri = 'redis://' . $uri;
-            }
-
             $parts = parse_url($uri);
         }
 
         $uri = preg_replace(['/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'], '$1***$2', $uri);
-        if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], ['redis', 'rediss', 'redis+unix'])) {
-            return reject(new \InvalidArgumentException(
-                'Invalid Redis URI given (EINVAL)',
-                defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
-            ));
-        }
+        assert(is_array($parts) && isset($parts['scheme'], $parts['host']));
+        assert(in_array($parts['scheme'], ['redis', 'rediss', 'redis+unix']));
 
         $args = [];
         parse_str($parts['query'] ?? '', $args);
