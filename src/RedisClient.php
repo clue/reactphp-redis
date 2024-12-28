@@ -160,16 +160,65 @@ class RedisClient extends EventEmitter
     }
 
     /**
-     * Invoke the given command and return a Promise that will be resolved when the request has been replied to
+     * Invoke the given command and return a Promise that will be resolved when the command has been replied to
      *
      * This is a magic method that will be invoked when calling any redis
-     * command on this instance.
+     * command on this instance. See also `RedisClient::callAsync()`.
      *
      * @param string   $name
      * @param string[] $args
      * @return PromiseInterface<mixed>
+     * @see self::callAsync()
      */
     public function __call(string $name, array $args): PromiseInterface
+    {
+        return $this->callAsync($name, ...$args);
+    }
+
+    /**
+     * Invoke a Redis command.
+     *
+     * For example, the [`GET` command](https://redis.io/commands/get) can be invoked
+     * like this:
+     *
+     * ```php
+     * $redis->callAsync('GET', 'name')->then(function (?string $name): void {
+     *     echo 'Name: ' . ($name ?? 'Unknown') . PHP_EOL;
+     * }, function (Throwable $e): void {
+     *     echo 'Error: ' . $e->getMessage() . PHP_EOL;
+     * });
+     * ```
+     *
+     * The `string $command` parameter can be any valid Redis command. All
+     * [Redis commands](https://redis.io/commands/) are available through this
+     * method. As an alternative, you may also use the magic
+     * [`__call()` method](#__call), but note that not all static analysis tools
+     * may understand this magic method. Listing all available commands is out
+     * of scope here, please refer to the
+     * [Redis command reference](https://redis.io/commands).
+     *
+     * The optional `string ...$args` parameter can be used to pass any
+     * additional arguments to the Redis command. Some commands may require or
+     * support additional arguments that this method will simply forward as is.
+     * Internally, Redis requires all arguments to be coerced to `string` values,
+     * but you may also rely on PHP's type-juggling semantics and pass `int` or
+     * `float` values:
+     *
+     * ```php
+     * $redis->callAsync('SET', 'name', 'Alice', 'EX', 600);
+     * ```
+     *
+     * This method supports async operation and returns a [Promise](#promises)
+     * that eventually *fulfills* with its *results* on success or *rejects*
+     * with an `Exception` on error. See also [promises](#promises) for more
+     * details.
+     *
+     * @param string $command
+     * @param string ...$args
+     * @return PromiseInterface<mixed>
+     * @throws void
+     */
+    public function callAsync(string $command, string ...$args): PromiseInterface
     {
         if ($this->closed) {
             return reject(new \RuntimeException(
@@ -178,17 +227,17 @@ class RedisClient extends EventEmitter
             ));
         }
 
-        return $this->client()->then(function (StreamingClient $redis) use ($name, $args) {
+        return $this->client()->then(function (StreamingClient $redis) use ($command, $args): PromiseInterface {
             $this->awake();
-            assert(\is_callable([$redis, $name])); // @phpstan-ignore-next-line
-            return \call_user_func_array([$redis, $name], $args)->then(
+            return $redis->callAsync($command, ...$args)->then(
                 function ($result) {
                     $this->idle();
                     return $result;
                 },
-                function (\Exception $error) {
+                function (\Throwable $e) {
+                    \assert($e instanceof \Exception);
                     $this->idle();
-                    throw $error;
+                    throw $e;
                 }
             );
         });

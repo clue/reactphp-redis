@@ -72,15 +72,14 @@ class StreamingClient extends EventEmitter
     }
 
     /**
-     * @param string[] $args
      * @return PromiseInterface<mixed>
      */
-    public function __call(string $name, array $args): PromiseInterface
+    public function callAsync(string $command, string ...$args): PromiseInterface
     {
         $request = new Deferred();
         $promise = $request->promise();
 
-        $name = strtolower($name);
+        $command = strtolower($command);
 
         // special (p)(un)subscribe commands only accept a single parameter and have custom response logic applied
         static $pubsubs = ['subscribe', 'unsubscribe', 'psubscribe', 'punsubscribe'];
@@ -90,22 +89,22 @@ class StreamingClient extends EventEmitter
                 'Connection ' . ($this->closed ? 'closed' : 'closing'). ' (ENOTCONN)',
                 defined('SOCKET_ENOTCONN') ? SOCKET_ENOTCONN : 107
             ));
-        } elseif (count($args) !== 1 && in_array($name, $pubsubs)) {
+        } elseif (count($args) !== 1 && in_array($command, $pubsubs)) {
             $request->reject(new \InvalidArgumentException(
                 'PubSub commands limited to single argument (EINVAL)',
                 defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
             ));
-        } elseif ($name === 'monitor') {
+        } elseif ($command === 'monitor') {
             $request->reject(new \BadMethodCallException(
                 'MONITOR command explicitly not supported (ENOTSUP)',
                 defined('SOCKET_ENOTSUP') ? SOCKET_ENOTSUP : (defined('SOCKET_EOPNOTSUPP') ? SOCKET_EOPNOTSUPP : 95)
             ));
         } else {
-            $this->stream->write($this->serializer->getRequestMessage($name, $args));
+            $this->stream->write($this->serializer->getRequestMessage($command, $args));
             $this->requests []= $request;
         }
 
-        if (in_array($name, $pubsubs)) {
+        if (in_array($command, $pubsubs)) {
             $promise->then(function (array $array) {
                 $first = array_shift($array);
 

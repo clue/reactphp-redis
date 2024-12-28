@@ -23,20 +23,20 @@ Loop::addReadStream(STDIN, function () use ($redis) {
         return;
     }
 
-    $params = explode(' ', $line);
-    $method = array_shift($params);
-
-    assert(is_callable([$redis, $method]));
-    $promise = $redis->$method(...$params);
+    $args = explode(' ', $line);
+    $command = strtolower(array_shift($args));
 
     // special method such as end() / close() called
-    if (!$promise instanceof React\Promise\PromiseInterface) {
+    if (in_array($command, ['end', 'close'])) {
+        $redis->$command();
         return;
     }
 
-    $promise->then(function ($data) {
+    $promise = $redis->callAsync($command, ...$args);
+
+    $promise->then(function ($data): void {
         echo '# reply: ' . json_encode($data) . PHP_EOL;
-    }, function ($e) {
+    }, function (Throwable $e): void {
         echo '# error reply: ' . $e->getMessage() . PHP_EOL;
     });
 });
