@@ -25,7 +25,7 @@ class Factory
     /**
      * @param ?LoopInterface $loop
      * @param ?ConnectorInterface $connector
-     * @param ?ProtocolFactory $protocol
+     * @param ?ProtocolFactory $protocol (internal, should not usually be passed)
      */
     public function __construct($loop = null, $connector = null, $protocol = null)
     {
@@ -35,7 +35,7 @@ class Factory
         if ($connector !== null && !$connector instanceof ConnectorInterface) { // manual type check to support legacy PHP < 7.1
             throw new \InvalidArgumentException('Argument #2 ($connector) expected null|React\Socket\ConnectorInterface');
         }
-        if ($protocol !== null && !$protocol instanceof LoopInterface) { // manual type check to support legacy PHP < 7.1
+        if ($protocol !== null && !$protocol instanceof ProtocolFactory) { // manual type check to support legacy PHP < 7.1
             throw new \InvalidArgumentException('Argument #3 ($protocol) expected null|Clue\Redis\Protocol\Factory');
         }
 

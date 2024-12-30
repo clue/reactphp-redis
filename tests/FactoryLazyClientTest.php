@@ -32,6 +32,18 @@ class FactoryLazyClientTest extends TestCase
         $this->assertInstanceOf('React\EventLoop\LoopInterface', $loop);
     }
 
+    public function testConstructWithProtocolFactoryAssignsGivenProtocolFactory()
+    {
+        $protocol = $this->getMockBuilder('Clue\Redis\Protocol\Factory')->getMock();
+
+        $factory = new Factory(null, null, $protocol);
+
+        $ref = new \ReflectionProperty($factory, 'protocol');
+        $ref->setAccessible(true);
+
+        $this->assertSame($protocol, $ref->getValue($factory));
+    }
+
     public function testContructorThrowsExceptionForInvalidLoop()
     {
         $this->setExpectedException('InvalidArgumentException', 'Argument #1 ($loop) expected null|React\EventLoop\LoopInterface');
