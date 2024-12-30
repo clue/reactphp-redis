@@ -108,7 +108,27 @@ class RedisClientTest extends TestCase
     public function testPingWillCreateUnderlyingClientAndReturnPendingPromise(): void
     {
         $promise = new Promise(function () { });
-        $this->factory->expects($this->once())->method('createClient')->willReturn($promise);
+        $this->factory->expects($this->once())->method('createClient')->with('redis://localhost')->willReturn($promise);
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $promise = $this->redis->ping();
+
+        $promise->then($this->expectCallableNever());
+    }
+
+    public function testPingWithAuthWillCreateUnderlyingClientWithAuthAndReturnPendingPromise(): void
+    {
+        $this->redis = new RedisClient('user:pass@localhost');
+        $ref = new \ReflectionProperty($this->redis, 'factory');
+        $ref->setAccessible(true);
+        $ref->setValue($this->redis, $this->factory);
+
+        $promise = new Promise(function () { });
+        $this->factory->expects($this->once())->method('createClient')->with('redis://user:pass@localhost')->willReturn($promise);
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->never())->method('addTimer');

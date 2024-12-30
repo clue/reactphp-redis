@@ -72,8 +72,8 @@ class RedisClient extends EventEmitter
             $parts = parse_url($uri);
         }
 
-        $uri = (string) preg_replace(['/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'], '$1***$2', $uri);
         if ($parts === false || !isset($parts['scheme'], $parts['host']) || !in_array($parts['scheme'], ['redis', 'rediss', 'redis+unix'])) {
+            $uri = (string) preg_replace(['/(:)[^:\/]*(@)/', '/([?&]password=).*?($|&)/'], '$1***$2', $uri);
             throw new \InvalidArgumentException(
                 'Invalid Redis URI "' . $uri . '" (EINVAL)',
                 defined('SOCKET_EINVAL') ? SOCKET_EINVAL : 22
