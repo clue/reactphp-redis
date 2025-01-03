@@ -610,7 +610,7 @@ This project follows [SemVer](https://semver.org/).
 This will install the latest supported version:
 
 ```bash
-$ composer require clue/redis-react:^2.7
+$ composer require clue/redis-react:^2.8
 ```
 
 See also the [CHANGELOG](CHANGELOG.md) for details about version upgrades.

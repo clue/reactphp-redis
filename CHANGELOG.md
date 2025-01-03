@@ -1,8 +1,16 @@
 # Changelog
 
+## 2.8.0 (2025-01-03)
+
+This is a compatibility release that contains backported features from the `3.x` branch.
+Once v3 is released, it will be the way forward for this project.
+
+*   Feature: Improve PHP 8.4+ support by avoiding implicitly nullable types.
+    (#165 and #170 by @clue)
+
 ## 2.7.0 (2024-01-05)
 
-This is a compatibility release that contains backported features from the v3 branch.
+This is a compatibility release that contains backported features from the `3.x` branch.
 Once v3 is released, it will be the way forward for this project.
 
 *   Feature: Forward compatibility with Promise v3.
