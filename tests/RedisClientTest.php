@@ -407,6 +407,64 @@ class RedisClientTest extends TestCase
         $timeout();
     }
 
+    public function testBlpopWillForwardArgumentsAsStringToUnderlyingClient(): void
+    {
+        $client = $this->createMock(StreamingClient::class);
+        $client->expects($this->once())->method('callAsync')->with('BLPOP', 'foo', 'bar', '10.0')->willReturn(new Promise(function () { }));
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $this->redis->callAsync('BLPOP', 'foo', 'bar', 10.0);
+    }
+
+    public function testCallAsyncWillForwardArgumentsAsStringToUnderlyingClient(): void
+    {
+        $client = $this->createMock(StreamingClient::class);
+        $client->expects($this->once())->method('callAsync')->with('ZCOUNT', 'foo', '-INF', 'INF')->willReturn(new Promise(function () { }));
+
+        $this->factory->expects($this->once())->method('createClient')->willReturn(\React\Promise\resolve($client));
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->never())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $this->redis->callAsync('ZCOUNT', 'foo', -INF, INF);
+    }
+
+    public function testSetWithInvalidBoolArgumentThrows(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage('Argument must be of type string|int|float, boolean given');
+        $this->redis->set('foo', true);
+    }
+
+    public function testSetWithInvalidObjectArgumentThrows(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage('Argument must be of type string|int|float, stdClass given');
+        $this->redis->set('foo', (object) []);
+    }
+
+    public function testCallAsyncWithInvalidBoolArgumentThrows(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage('Argument must be of type string|int|float, boolean given');
+        $this->redis->callAsync('SET', 'foo', true); // @phpstan-ignore-line
+    }
+
+    public function testCallAsyncWithInvalidObjectArgumentThrows(): void
+    {
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage('Argument must be of type string|int|float, stdClass given');
+        $this->redis->callAsync('SET', 'foo', (object) []); // @phpstan-ignore-line
+    }
+
     public function testCloseWillEmitCloseEventWithoutCreatingUnderlyingClient(): void
     {
         $this->factory->expects($this->never())->method('createClient');

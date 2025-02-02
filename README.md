@@ -132,7 +132,7 @@ Listing all available commands is out of scope here, please refer to the
 
 Any arguments passed to the method call will be forwarded as command arguments.
 For example, the `$redis->set('name', 'Alice')` call will perform the equivalent of a
-`SET name Alice` command. It's safe to pass integer arguments where applicable (for
+`SET name Alice` command. It's safe to pass numeric arguments where applicable (for
 example `$redis->expire($key, 60)`), but internally Redis requires all arguments to
 always be coerced to string values.
 
@@ -417,7 +417,7 @@ $redis = new Clue\React\Redis\RedisClient('localhost', $connector);
 
 #### __call()
 
-The `__call(string $name, string[] $args): PromiseInterface<mixed>` method can be used to
+The `__call(string $name, list<string|int|float> $args): PromiseInterface<mixed>` method can be used to
 invoke the given command.
 
 This is a magic method that will be invoked when calling any Redis command on this instance.
@@ -441,7 +441,7 @@ Listing all available commands is out of scope here, please refer to the
 
 Any arguments passed to the method call will be forwarded as command arguments.
 For example, the `$redis->set('name', 'Alice')` call will perform the equivalent of a
-`SET name Alice` command. It's safe to pass integer arguments where applicable (for
+`SET name Alice` command. It's safe to pass numeric arguments where applicable (for
 example `$redis->expire($key, 60)`), but internally Redis requires all arguments to
 always be coerced to string values.
 
@@ -451,8 +451,11 @@ that eventually *fulfills* with its *results* on success or *rejects* with an
 
 #### callAsync()
 
-The `callAsync(string $command, string ...$args): PromiseInterface<mixed>` method can be used to
+The `callAsync(string $command, string|int|float ...$args): PromiseInterface<mixed>` method can be used to
 invoke a Redis command.
+
+For example, the [`GET` command](https://redis.io/commands/get) can be invoked
+like this:
 
 ```php
 $redis->callAsync('GET', 'name')->then(function (?string $name): void {
@@ -470,12 +473,10 @@ may understand this magic method. Listing all available commands is out
 of scope here, please refer to the
 [Redis command reference](https://redis.io/commands).
 
-The optional `string ...$args` parameter can be used to pass any
-additional arguments to the Redis command. Some commands may require or
-support additional arguments that this method will simply forward as is.
-Internally, Redis requires all arguments to be coerced to `string` values,
-but you may also rely on PHP's type-juggling semantics and pass `int` or
-`float` values:
+The optional `string|int|float ...$args` parameter can be used to pass
+any additional arguments that some Redis commands may require or support.
+Values get passed directly to Redis, with any numeric values converted
+automatically since Redis only works with `string` arguments internally:
 
 ```php
 $redis->callAsync('SET', 'name', 'Alice', 'EX', 600);
