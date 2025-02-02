@@ -165,8 +165,8 @@ class RedisClient extends EventEmitter
      * This is a magic method that will be invoked when calling any redis
      * command on this instance. See also `RedisClient::callAsync()`.
      *
-     * @param string   $name
-     * @param string[] $args
+     * @param string $name
+     * @param list<string|int|float> $args
      * @return PromiseInterface<mixed>
      * @see self::callAsync()
      */
@@ -197,12 +197,10 @@ class RedisClient extends EventEmitter
      * of scope here, please refer to the
      * [Redis command reference](https://redis.io/commands).
      *
-     * The optional `string ...$args` parameter can be used to pass any
-     * additional arguments to the Redis command. Some commands may require or
-     * support additional arguments that this method will simply forward as is.
-     * Internally, Redis requires all arguments to be coerced to `string` values,
-     * but you may also rely on PHP's type-juggling semantics and pass `int` or
-     * `float` values:
+     * The optional `string|int|float ...$args` parameter can be used to pass
+     * any additional arguments that some Redis commands may require or support.
+     * Values get passed directly to Redis, with any numeric values converted
+     * automatically since Redis only works with `string` arguments internally:
      *
      * ```php
      * $redis->callAsync('SET', 'name', 'Alice', 'EX', 600);
@@ -214,12 +212,23 @@ class RedisClient extends EventEmitter
      * details.
      *
      * @param string $command
-     * @param string ...$args
+     * @param string|int|float ...$args
      * @return PromiseInterface<mixed>
-     * @throws void
+     * @throws \TypeError if given $args are invalid
      */
-    public function callAsync(string $command, string ...$args): PromiseInterface
+    public function callAsync(string $command, ...$args): PromiseInterface
     {
+        $args = \array_map(function ($value): string {
+            /** @var mixed $value */
+            if (\is_string($value)) {
+                return $value;
+            } elseif (\is_int($value) || \is_float($value)) {
+                return \var_export($value, true);
+            } else {
+                throw new \TypeError('Argument must be of type string|int|float, ' . (\is_object($value) ? \get_class($value) : \gettype($value)) . ' given');
+            }
+        }, $args);
+
         if ($this->closed) {
             return reject(new \RuntimeException(
                 'Connection closed (ENOTCONN)',
