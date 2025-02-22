@@ -176,4 +176,46 @@ class FunctionalTest extends TestCase
 
         $redis->get('willBeRejectedRightAway')->then(null, $this->expectCallableOnce());
     }
+
+    public function testCloneWhenOriginalIsIdleReturnsClientThatWillCloseIndependently(): void
+    {
+        $prefix = 'test:' . mt_rand() . ':';
+        $original = new RedisClient($this->uri);
+
+        $this->assertNull(await($original->callAsync('GET', $prefix . 'doesnotexist')));
+
+        $redis = clone $original;
+
+        $this->assertNull(await($redis->callAsync('GET', $prefix . 'doesnotexist')));
+    }
+
+    public function testCloneWhenOriginalIsPendingReturnsClientThatWillCloseIndependently(): void
+    {
+        $prefix = 'test:' . mt_rand() . ':';
+        $original = new RedisClient($this->uri);
+
+        $this->assertNull(await($original->callAsync('GET', $prefix . 'doesnotexist')));
+        $promise = $original->callAsync('GET', $prefix . 'doesnotexist');
+
+        $redis = clone $original;
+
+        $this->assertNull(await($redis->callAsync('GET', $prefix . 'doesnotexist')));
+        $this->assertNull(await($promise));
+    }
+
+    public function testCloneReturnsClientNotAffectedByPubSubSubscriptions(): void
+    {
+        $prefix = 'test:' . mt_rand() . ':';
+        $consumer = new RedisClient($this->uri);
+
+        $consumer->on('message', $this->expectCallableNever());
+        $consumer->on('pmessage', $this->expectCallableNever());
+        await($consumer->callAsync('SUBSCRIBE', $prefix . 'demo'));
+        await($consumer->callAsync('PSUBSCRIBE', $prefix . '*'));
+
+        $redis = clone $consumer;
+        $consumer->close();
+
+        $this->assertNull(await($redis->callAsync('GET', $prefix . 'doesnotexist')));
+    }
 }

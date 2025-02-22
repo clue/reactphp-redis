@@ -46,6 +46,7 @@ It enables you to set and query its data or use its PubSub topics to react to in
 * [API](#api)
     * [RedisClient](#redisclient)
         * [__construct()](#__construct)
+        * [__clone()](#__clone)
         * [__call()](#__call)
         * [callAsync()](#callasync)
         * [end()](#end)
@@ -413,6 +414,42 @@ $connector = new React\Socket\Connector([
 ]);
 
 $redis = new Clue\React\Redis\RedisClient('localhost', $connector);
+```
+
+#### __clone()
+
+The `__clone()` method is a magic method in PHP that is called
+automatically when a `RedisClient` instance is being cloned:
+
+```php
+$original = new Clue\React\Redis\RedisClient($uri);
+$redis = clone $original;
+```
+
+This method ensures the cloned client is created in a "fresh" state and
+any connection state is reset on the clone, matching how a new instance
+would start after returning from its constructor. Accordingly, the clone
+will always start in an unconnected and unclosed state, with no event
+listeners attached and ready to accept commands. Invoking any of the
+[commands](#commands) will establish a new connection as usual:
+
+```php
+$redis = clone $original;
+$redis->set('name', 'Alice');
+```
+
+This can be especially useful if the original connection is used for a
+[PubSub subscription](#pubsub) or when using blocking commands or similar
+and you need a control connection that is not affected by any of this.
+Both instances will not be directly affected by any operations performed,
+for example you can [`close()`](#close) either instance without also
+closing the other. Similarly, you can also clone a fresh instance from a
+closed state or overwrite a dead connection:
+
+```php
+$redis->close();
+$redis = clone $redis;
+$redis->set('name', 'Alice');
 ```
 
 #### __call()

@@ -836,4 +836,36 @@ class RedisClientTest extends TestCase
 
         $promise->then(null, $this->expectCallableOnceWith($e));
     }
+
+    public function testCloneClosedClientReturnsClientThatWillCreateNewConnectionForFirstCommand(): void
+    {
+        $this->redis->close();
+
+        $redis = clone $this->redis;
+
+        $deferred = new Deferred($this->expectCallableNever());
+        $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
+
+        $promise = $redis->callAsync('PING');
+
+        $promise->then($this->expectCallableNever(), $this->expectCallableNever());
+    }
+
+    public function testCloneClientReturnsClientThatWillNotBeAffectedByOldClientClosing(): void
+    {
+        $this->redis->on('close', $this->expectCallableOnce());
+
+        $redis = clone $this->redis;
+
+        $this->assertEquals([], $redis->listeners());
+
+        $deferred = new Deferred($this->expectCallableNever());
+        $this->factory->expects($this->once())->method('createClient')->willReturn($deferred->promise());
+
+        $promise = $redis->callAsync('PING');
+
+        $this->redis->close();
+
+        $promise->then($this->expectCallableNever(), $this->expectCallableNever());
+    }
 }
