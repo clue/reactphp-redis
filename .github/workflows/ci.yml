@@ -25,7 +25,6 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: xdebug-stable # temporarily force stable Xdebug due to segfault on PHP 8.4.4 with 3.5.0-dev
           coverage: xdebug
           ini-file: development
       - run: composer install
