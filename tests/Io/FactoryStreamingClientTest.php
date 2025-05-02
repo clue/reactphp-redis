@@ -708,4 +708,55 @@ class FactoryStreamingClientTest extends TestCase
 
         $deferred->reject(new \RuntimeException());
     }
+
+    public function testWillWriteAuthCommandIfTargetContainsUsernameAndPasswordQueryParameter(): void
+    {
+        $stream = $this->createMock(ConnectionInterface::class);
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $this->connector
+            ->expects($this->once())
+            ->method('connect')
+            ->with('example.com:6379')
+            ->willReturn(resolve($stream));
+
+        $this->factory->createClient(
+            'redis://example.com?username=hello&password=world'
+        );
+    }
+
+    public function testWillResolveWhenAuthCommandReceivesOkResponseWithUsernameAndPassword(): void
+    {
+            $dataHandler = null;
+            $stream = $this->createMock(ConnectionInterface::class);
+            $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$4\r\nuser\r\n$4\r\npass\r\n");
+            $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+                    ['data', $this->callback(function ($cb) use (&$dataHandler) {
+                            $dataHandler = $cb;
+                            return true;
+            })],
+                    ['close', $this->anything()]
+                );
+
+            $this->connector
+                ->expects($this->once())
+                ->method('connect')
+                ->willReturn(resolve($stream));
+
+        $promise = $this->factory->createClient(
+                'redis://user:pass@example.com'
+            );
+
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("+OK\r\n");
+
+        $promise->then($this->expectCallableOnceWith(
+                $this->isInstanceOf(StreamingClient::class)
+            ));
+    }
 }
