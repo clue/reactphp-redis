@@ -40,7 +40,9 @@ class RedisClientTest extends TestCase
         $this->redis = new RedisClient('localhost');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($this->redis, $this->factory);
     }
 
@@ -124,7 +126,9 @@ class RedisClientTest extends TestCase
     {
         $this->redis = new RedisClient('user:pass@localhost');
         $ref = new \ReflectionProperty($this->redis, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($this->redis, $this->factory);
 
         $promise = new Promise(function () { });
@@ -144,7 +148,9 @@ class RedisClientTest extends TestCase
     {
         $this->redis = new RedisClient('redis+unix:///tmp/redis.sock');
         $ref = new \ReflectionProperty($this->redis, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($this->redis, $this->factory);
 
         $promise = new Promise(function () { });
@@ -193,7 +199,9 @@ class RedisClientTest extends TestCase
         $this->redis = new RedisClient('localhost?idle=10');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($this->redis, $this->factory);
 
         $client = $this->createMock(StreamingClient::class);
@@ -218,7 +226,9 @@ class RedisClientTest extends TestCase
         $this->redis = new RedisClient('localhost?idle=-1');
 
         $ref = new \ReflectionProperty($this->redis, 'factory');
-        $ref->setAccessible(true);
+        if (PHP_VERSION_ID < 80100) {
+            $ref->setAccessible(true);
+        }
         $ref->setValue($this->redis, $this->factory);
 
         $client = $this->createMock(StreamingClient::class);
