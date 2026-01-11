@@ -14,12 +14,12 @@
         "php": ">=7.1",
         "clue/redis-protocol": "^0.3.2",
         "evenement/evenement": "^3.0 || ^2.0 || ^1.0",
-        "react/event-loop": "^1.2",
-        "react/promise": "^3.2",
-        "react/socket": "^1.16"
+        "react/event-loop": "^1.6",
+        "react/promise": "^3.3",
+        "react/socket": "^1.17"
     },
     "require-dev": {
-        "phpstan/phpstan": "1.12.13 || 1.4.10",
+        "phpstan/phpstan": "1.12.32 || 1.4.10",
         "phpunit/phpunit": "^9.6 || ^7.5",
         "react/async": "^4.3 || ^3.2"
     },
