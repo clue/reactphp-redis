@@ -30,10 +30,7 @@ jobs:
           ini-file: development
       - run: composer install
       - run: docker run --net=host -d redis
-      - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml
-        if: ${{ matrix.php >= 7.3 }}
-      - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml -c phpunit.xml.legacy
-        if: ${{ matrix.php < 7.3 }}
+      - run: REDIS_URI=localhost:6379 vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml ${{ matrix.php < 7.3 && '-c phpunit.xml.legacy' || '' }}
       - name: Check 100% code coverage
         shell: php {0}
         run: |
