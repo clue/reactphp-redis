@@ -96,9 +96,23 @@ class Factory
         // use `?password=secret` query or `user:secret@host` password form URL
         if (isset($args['password']) || isset($parts['pass'])) {
             $pass = $args['password'] ?? rawurldecode($parts['pass']); // @phpstan-ignore-line
+
+            $user = null;
+            if (isset($args['username']) || isset($parts['user'])) {
+                $user = $args['username'] ?? rawurldecode($parts['user']); // @phpstan-ignore-line
+            }
+
             \assert(\is_string($pass));
-            $promise = $promise->then(function (StreamingClient $redis) use ($pass, $uri) {
-                return $redis->callAsync('auth', $pass)->then(
+            \assert($user === null || \is_string($user));
+
+            $promise = $promise->then(function (StreamingClient $redis) use ($user, $pass, $uri) {
+                if ($user !== null) {
+                    $authPromise = $redis->callAsync('auth', $user, $pass);
+                } else {
+                    $authPromise = $redis->callAsync('auth', $pass);
+                }
+
+                return $authPromise->then(
                     function () use ($redis) {
                         return $redis;
                     },

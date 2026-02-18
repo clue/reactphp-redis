@@ -336,9 +336,17 @@ $redis = new Clue\React\Redis\RedisClient('localhost');
 $redis = new Clue\React\Redis\RedisClient('redis://localhost:6379');
 ```
 
-Redis supports password-based authentication (`AUTH` command). Note that Redis'
-authentication mechanism does not employ a username, so you can pass the
-password `h@llo` URL-encoded (percent-encoded) as part of the URI like this:
+Starting with Redis 6, you can use ACLs and authenticate with both a 
+username and a password. Any URI containing user:pass@ will now invoke 
+the AUTH <user> <pass> command under the hood. For example:
+
+```php
+// Authenticate with username and password (Redis 6+ ACL)
+$redis = new Clue\React\Redis\RedisClient('redis://mauricio:mypass@localhost:6379');
+```
+
+If you omit the username (or use an empty userinfo part), the client will fall back 
+to the legacy AUTH <pass> behavior:
 
 ```php
 // all forms are equivalent
@@ -489,7 +497,15 @@ that eventually *fulfills* with its *results* on success or *rejects* with an
 #### callAsync()
 
 The `callAsync(string $command, string|int|float ...$args): PromiseInterface<mixed>` method can be used to
-invoke a Redis command.
+invoke a Redis command. Note that the `AUTH` command now supports **two** arguments for Redis 6+ ACL mode:
+
+```php
+// authenticate with username + password (Redis 6+)
+$redis->callAsync('AUTH', 'alice', 'hunter2');
+
+// legacy password-only mode
+$redis->callAsync('AUTH', 'hunter2');
+```
 
 For example, the [`GET` command](https://redis.io/commands/get) can be invoked
 like this:

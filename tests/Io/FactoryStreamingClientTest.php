@@ -110,7 +110,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillWriteAuthCommandIfRedisUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->once())->method('addTimer');
@@ -124,7 +124,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillWriteAuthCommandIfRedisUriContainsEncodedUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nh@llo\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$0\r\n\r\n$5\r\nh@llo\r\n");
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->once())->method('addTimer');
@@ -166,7 +166,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillWriteAuthCommandIfRedissUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->once())->method('addTimer');
@@ -203,7 +203,7 @@ class FactoryStreamingClientTest extends TestCase
     public function testWillWriteAuthCommandIfRedisUnixUriContainsUserInfo(): void
     {
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
 
         $loop = $this->createMock(LoopInterface::class);
         $loop->expects($this->once())->method('addTimer');
@@ -218,7 +218,7 @@ class FactoryStreamingClientTest extends TestCase
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$0\r\n\r\n$5\r\nworld\r\n");
         $stream->expects($this->exactly(2))->method('on')->withConsecutive(
             ['data', $this->callback(function ($arg) use (&$dataHandler) {
                 $dataHandler = $arg;
@@ -240,7 +240,7 @@ class FactoryStreamingClientTest extends TestCase
     {
         $dataHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$0\r\n\r\n$5\r\nworld\r\n");
         $stream->expects($this->once())->method('close');
         $stream->expects($this->exactly(2))->method('on')->withConsecutive(
             ['data', $this->callback(function ($arg) use (&$dataHandler) {
@@ -277,7 +277,7 @@ class FactoryStreamingClientTest extends TestCase
     {
         $closeHandler = null;
         $stream = $this->createMock(ConnectionInterface::class);
-        $stream->expects($this->once())->method('write')->with("*2\r\n$4\r\nauth\r\n$5\r\nworld\r\n");
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$0\r\n\r\n$5\r\nworld\r\n");
         $stream->expects($this->once())->method('close');
         $stream->expects($this->exactly(2))->method('on')->withConsecutive(
             ['data', $this->anything()],
@@ -707,5 +707,56 @@ class FactoryStreamingClientTest extends TestCase
         $promise->then(null, $this->expectCallableOnceWith($this->isInstanceOf('RuntimeException')));
 
         $deferred->reject(new \RuntimeException());
+    }
+
+    public function testWillWriteAuthCommandIfTargetContainsUsernameAndPasswordQueryParameter(): void
+    {
+        $stream = $this->createMock(ConnectionInterface::class);
+        $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$5\r\nhello\r\n$5\r\nworld\r\n");
+
+        $loop = $this->createMock(LoopInterface::class);
+        $loop->expects($this->once())->method('addTimer');
+        assert($loop instanceof LoopInterface);
+        Loop::set($loop);
+
+        $this->connector
+            ->expects($this->once())
+            ->method('connect')
+            ->with('example.com:6379')
+            ->willReturn(resolve($stream));
+
+        $this->factory->createClient(
+            'redis://example.com?username=hello&password=world'
+        );
+    }
+
+    public function testWillResolveWhenAuthCommandReceivesOkResponseWithUsernameAndPassword(): void
+    {
+            $dataHandler = null;
+            $stream = $this->createMock(ConnectionInterface::class);
+            $stream->expects($this->once())->method('write')->with("*3\r\n$4\r\nauth\r\n$4\r\nuser\r\n$4\r\npass\r\n");
+            $stream->expects($this->exactly(2))->method('on')->withConsecutive(
+                    ['data', $this->callback(function ($cb) use (&$dataHandler) {
+                            $dataHandler = $cb;
+                            return true;
+            })],
+                    ['close', $this->anything()]
+                );
+
+            $this->connector
+                ->expects($this->once())
+                ->method('connect')
+                ->willReturn(resolve($stream));
+
+        $promise = $this->factory->createClient(
+                'redis://user:pass@example.com'
+            );
+
+        $this->assertTrue(is_callable($dataHandler));
+        $dataHandler("+OK\r\n");
+
+        $promise->then($this->expectCallableOnceWith(
+                $this->isInstanceOf(StreamingClient::class)
+            ));
     }
 }
